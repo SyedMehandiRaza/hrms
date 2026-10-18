@@ -11,8 +11,6 @@ const base = {
   logging: false,
   dialectOptions: {
     charset: "utf8mb4",
-    dateStrings: true,
-    typeCast: true,
   },
   define: {
     charset: "utf8mb4",
