@@ -1,6 +1,6 @@
 "use strict";
 
-const { seedId, deleteIds } = require("../src/utils/seed");
+const { seedId, deleteIds } = require("../utils/seed");
 
 const COUNTRIES = [
   ["SA", "Saudi Arabia", "+966"],

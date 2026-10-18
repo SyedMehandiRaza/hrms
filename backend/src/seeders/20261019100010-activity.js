@@ -1,6 +1,6 @@
 "use strict";
 
-const { seedId, json, deleteIds } = require("../src/utils/seed");
+const { seedId, json, deleteIds } = require("../utils/seed");
 const { EMPLOYEES } = require("./20261019100008-employees");
 
 const EMPLOYER = seedId("employer:alnoor");

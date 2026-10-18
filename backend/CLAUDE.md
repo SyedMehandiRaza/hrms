@@ -17,8 +17,9 @@ backend/
 │   ├── services/           # business logic
 │   ├── models/             # Sequelize models
 │   ├── middlewares/        # requireAuth, requireRole, validate, errorHandler
+│   ├── migrations/         # sequelize-cli migrations (paths set in .sequelizerc)
+│   ├── seeders/            # sequelize-cli seeders (dev data)
 │   └── utils/ErrorHandler.js
-├── migrations/  seeders/
 └── tests/                  # <module>.test.js
 ```
 
