@@ -6,7 +6,14 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "lint": "eslint .",
-    "test": "cross-env NODE_ENV=test jest --runInBand"
+    "test": "cross-env NODE_ENV=test jest --runInBand",
+    "db:create": "sequelize-cli db:create --charset utf8mb4 --collate utf8mb4_unicode_ci",
+    "db:create:test": "cross-env NODE_ENV=test sequelize-cli db:create --charset utf8mb4 --collate utf8mb4_unicode_ci",
+    "db:migrate": "sequelize-cli db:migrate",
+    "db:migrate:test": "cross-env NODE_ENV=test sequelize-cli db:migrate",
+    "db:seed": "sequelize-cli db:seed:all",
+    "db:reset": "sequelize-cli db:migrate:undo:all && npm run db:migrate && npm run db:seed",
+    "db:setup": "npm run db:create && npm run db:create:test && npm run db:migrate && npm run db:migrate:test && npm run db:seed"
   },
   "description": "HRMS API (Express + Sequelize + MySQL)",
   "dependencies": {
