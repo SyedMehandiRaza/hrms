@@ -26,6 +26,7 @@ module.exports = (sequelize, DataTypes) => {
     Designation.belongsTo(models.Department, { as: "department", foreignKey: "department_id" });
     Designation.belongsTo(models.User, { as: "createdBy", foreignKey: "created_by" });
     Designation.belongsTo(models.User, { as: "updatedBy", foreignKey: "updated_by" });
+    Designation.hasMany(models.Employee, { as: "employees", foreignKey: "designation_id" });
   };
 
   return Designation;

@@ -37,6 +37,18 @@ const EXPECTED_MODELS = [
   "SalaryComponent",
   "LeaveType",
   "LeavePolicy",
+  // Group 3: employees
+  "Employee",
+  "EmployeeProject",
+  "EmployeeProjectHistory",
+  "EmployeeShiftHistory",
+  "EmployeeDraft",
+  "EmployeeDependent",
+  "EmployeeDocument",
+  "DocumentAuditLog",
+  "EmployeeSalary",
+  "EmployeeSalaryComponent",
+  "EmployeeLeavePolicy",
 ];
 
 afterAll(async () => {

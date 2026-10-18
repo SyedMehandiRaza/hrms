@@ -21,6 +21,8 @@ module.exports = (sequelize, DataTypes) => {
 
   SalaryComponent.associate = (models) => {
     SalaryComponent.belongsTo(models.Employer, { as: "employer", foreignKey: "employer_id" });
+    SalaryComponent.hasMany(models.EmployeeSalaryComponent, { as: "employeeSalaryComponents", foreignKey: "salary_component_id" });
+    SalaryComponent.belongsToMany(models.EmployeeSalary, { as: "employeeSalaries", through: models.EmployeeSalaryComponent, foreignKey: "salary_component_id", otherKey: "employee_salary_id" });
   };
 
   return SalaryComponent;

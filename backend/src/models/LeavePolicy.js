@@ -35,6 +35,8 @@ module.exports = (sequelize, DataTypes) => {
   LeavePolicy.associate = (models) => {
     LeavePolicy.belongsTo(models.Employer, { as: "employer", foreignKey: "employer_id" });
     LeavePolicy.belongsTo(models.LeaveType, { as: "leaveType", foreignKey: "leave_type_id" });
+    LeavePolicy.hasMany(models.EmployeeLeavePolicy, { as: "employeeLeavePolicies", foreignKey: "leave_policy_id" });
+    LeavePolicy.belongsToMany(models.Employee, { as: "employees", through: models.EmployeeLeavePolicy, foreignKey: "leave_policy_id", otherKey: "employee_id" });
   };
 
   return LeavePolicy;

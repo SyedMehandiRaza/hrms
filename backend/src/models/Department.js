@@ -23,9 +23,11 @@ module.exports = (sequelize, DataTypes) => {
 
   Department.associate = (models) => {
     Department.belongsTo(models.Employer, { as: "employer", foreignKey: "employer_id" });
+    Department.belongsTo(models.Employee, { as: "deptHead", foreignKey: "dept_head_id" });
     Department.belongsTo(models.User, { as: "createdBy", foreignKey: "created_by" });
     Department.belongsTo(models.User, { as: "updatedBy", foreignKey: "updated_by" });
     Department.hasMany(models.Designation, { as: "designations", foreignKey: "department_id" });
+    Department.hasMany(models.Employee, { as: "employees", foreignKey: "department_id" });
   };
 
   return Department;

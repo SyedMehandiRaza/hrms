@@ -25,6 +25,7 @@ module.exports = (sequelize, DataTypes) => {
   Office.associate = (models) => {
     Office.belongsTo(models.Employer, { as: "employer", foreignKey: "employer_id" });
     Office.hasMany(models.Project, { as: "projects", foreignKey: "office_id" });
+    Office.hasMany(models.Employee, { as: "employees", foreignKey: "office_id" });
   };
 
   return Office;

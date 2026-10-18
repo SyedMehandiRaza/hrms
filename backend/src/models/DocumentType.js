@@ -24,6 +24,7 @@ module.exports = (sequelize, DataTypes) => {
 
   DocumentType.associate = (models) => {
     DocumentType.belongsTo(models.Employer, { as: "employer", foreignKey: "employer_id" });
+    DocumentType.hasMany(models.EmployeeDocument, { as: "employeeDocuments", foreignKey: "document_type_id" });
   };
 
   return DocumentType;
