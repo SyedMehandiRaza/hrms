@@ -60,6 +60,10 @@ module.exports = (sequelize, DataTypes) => {
     Employer.hasMany(models.DocumentAuditLog, { as: "documentAuditLogs", foreignKey: "employer_id" });
     Employer.hasMany(models.EmployeeSalary, { as: "employeeSalaries", foreignKey: "employer_id" });
     Employer.hasMany(models.EmployeeLeavePolicy, { as: "employeeLeavePolicies", foreignKey: "employer_id" });
+    Employer.hasMany(models.ApprovalGroup, { as: "approvalGroups", foreignKey: "employer_id" });
+    Employer.hasMany(models.ApprovalAssignment, { as: "approvalAssignments", foreignKey: "employer_id" });
+    Employer.hasMany(models.EmployeeApprovalRouting, { as: "employeeApprovalRoutings", foreignKey: "employer_id" });
+    Employer.hasMany(models.ApprovalRequest, { as: "approvalRequests", foreignKey: "employer_id" });
   };
 
   return Employer;

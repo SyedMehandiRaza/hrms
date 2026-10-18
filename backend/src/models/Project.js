@@ -36,6 +36,8 @@ module.exports = (sequelize, DataTypes) => {
     Project.hasMany(models.EmployeeProject, { as: "employeeProjects", foreignKey: "project_id" });
     Project.hasMany(models.EmployeeProjectHistory, { as: "employeeProjectHistoriesAsProject", foreignKey: "project_id" });
     Project.hasMany(models.EmployeeProjectHistory, { as: "employeeProjectHistoriesAsPreviousProject", foreignKey: "previous_project_id" });
+    Project.hasMany(models.ApprovalGroup, { as: "approvalGroups", foreignKey: "project_id" });
+    Project.hasMany(models.ApprovalAssignment, { as: "approvalAssignments", foreignKey: "project_id" });
     Project.belongsToMany(models.Employee, { as: "employees", through: models.EmployeeProject, foreignKey: "project_id", otherKey: "employee_id" });
     Project.belongsToMany(models.StaffingCompany, { as: "staffingCompanies", through: models.StaffingCompanyProject, foreignKey: "project_id", otherKey: "staffing_company_id" });
   };

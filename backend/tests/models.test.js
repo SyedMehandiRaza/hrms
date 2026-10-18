@@ -49,6 +49,13 @@ const EXPECTED_MODELS = [
   "EmployeeSalary",
   "EmployeeSalaryComponent",
   "EmployeeLeavePolicy",
+  // Group 4: approvals
+  "ApprovalGroup",
+  "ApprovalGroupMember",
+  "ApprovalAssignment",
+  "EmployeeApprovalRouting",
+  "ApprovalRequest",
+  "ApprovalRequestLog",
 ];
 
 afterAll(async () => {

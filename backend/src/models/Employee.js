@@ -55,6 +55,10 @@ module.exports = (sequelize, DataTypes) => {
     Employee.hasMany(models.DocumentAuditLog, { as: "documentAuditLogs", foreignKey: "employee_id" });
     Employee.hasMany(models.EmployeeSalary, { as: "employeeSalaries", foreignKey: "employee_id" });
     Employee.hasMany(models.EmployeeLeavePolicy, { as: "employeeLeavePolicies", foreignKey: "employee_id" });
+    Employee.hasMany(models.ApprovalGroupMember, { as: "approvalGroupMembers", foreignKey: "employee_id" });
+    Employee.hasMany(models.EmployeeApprovalRouting, { as: "employeeApprovalRoutings", foreignKey: "employee_id" });
+    Employee.hasMany(models.ApprovalRequest, { as: "approvalRequests", foreignKey: "requested_by" });
+    Employee.hasMany(models.ApprovalRequestLog, { as: "approvalRequestLogs", foreignKey: "employee_id" });
     Employee.belongsToMany(models.Project, { as: "projects", through: models.EmployeeProject, foreignKey: "employee_id", otherKey: "project_id" });
     Employee.belongsToMany(models.LeavePolicy, { as: "leavePolicies", through: models.EmployeeLeavePolicy, foreignKey: "employee_id", otherKey: "leave_policy_id" });
   };
