@@ -31,6 +31,8 @@ module.exports = (sequelize, DataTypes) => {
     ApprovalRequest.belongsTo(models.ApprovalGroup, { as: "approvalGroup", foreignKey: "approval_group_id" });
     ApprovalRequest.belongsTo(models.Employee, { as: "requestedBy", foreignKey: "requested_by" });
     ApprovalRequest.hasMany(models.ApprovalRequestLog, { as: "approvalRequestLogs", foreignKey: "approval_request_id" });
+    ApprovalRequest.hasMany(models.AttendanceCorrectionRequest, { as: "attendanceCorrectionRequests", foreignKey: "approval_request_id" });
+    ApprovalRequest.hasMany(models.OvertimeRequest, { as: "overtimeRequests", foreignKey: "approval_request_id" });
   };
 
   return ApprovalRequest;

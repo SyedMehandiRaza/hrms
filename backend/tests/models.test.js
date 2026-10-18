@@ -56,6 +56,10 @@ const EXPECTED_MODELS = [
   "EmployeeApprovalRouting",
   "ApprovalRequest",
   "ApprovalRequestLog",
+  // Group 5: attendance
+  "Attendance",
+  "AttendanceCorrectionRequest",
+  "OvertimeRequest",
 ];
 
 afterAll(async () => {
