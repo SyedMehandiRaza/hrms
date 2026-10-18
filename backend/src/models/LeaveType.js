@@ -23,6 +23,9 @@ module.exports = (sequelize, DataTypes) => {
   LeaveType.associate = (models) => {
     LeaveType.belongsTo(models.Employer, { as: "employer", foreignKey: "employer_id" });
     LeaveType.hasMany(models.LeavePolicy, { as: "leavePolicies", foreignKey: "leave_type_id" });
+    LeaveType.hasMany(models.LeaveBalance, { as: "leaveBalances", foreignKey: "leave_type_id" });
+    LeaveType.hasMany(models.LeaveRequest, { as: "leaveRequests", foreignKey: "leave_type_id" });
+    LeaveType.hasMany(models.LeaveBalanceTransaction, { as: "leaveBalanceTransactions", foreignKey: "leave_type_id" });
   };
 
   return LeaveType;

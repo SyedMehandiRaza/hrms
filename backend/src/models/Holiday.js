@@ -31,6 +31,7 @@ module.exports = (sequelize, DataTypes) => {
     Holiday.belongsTo(models.City, { as: "city", foreignKey: "city_id" });
     Holiday.belongsTo(models.Holiday, { as: "sourceHoliday", foreignKey: "source_holiday_id" });
     Holiday.hasMany(models.Holiday, { as: "holidaysAsSourceHoliday", foreignKey: "source_holiday_id" });
+    Holiday.hasMany(models.LeaveRequestDay, { as: "leaveRequestDays", foreignKey: "holiday_id" });
   };
 
   return Holiday;

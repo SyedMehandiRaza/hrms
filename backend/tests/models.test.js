@@ -60,6 +60,13 @@ const EXPECTED_MODELS = [
   "Attendance",
   "AttendanceCorrectionRequest",
   "OvertimeRequest",
+  // Group 6: leave
+  "LeaveBalance",
+  "LeaveRequest",
+  "LeaveRequestDay",
+  "LeaveAttachment",
+  "LeaveBalanceTransaction",
+  "LeaveYearOverride",
 ];
 
 afterAll(async () => {

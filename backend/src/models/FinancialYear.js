@@ -33,6 +33,8 @@ module.exports = (sequelize, DataTypes) => {
     FinancialYear.belongsTo(models.User, { as: "reopenedBy", foreignKey: "reopened_by" });
     FinancialYear.hasMany(models.NumberSequence, { as: "numberSequences", foreignKey: "financial_year_id" });
     FinancialYear.hasMany(models.PeriodLock, { as: "periodLocks", foreignKey: "financial_year_id" });
+    FinancialYear.hasMany(models.LeaveBalance, { as: "leaveBalances", foreignKey: "financial_year_id" });
+    FinancialYear.hasMany(models.LeaveYearOverride, { as: "leaveYearOverrides", foreignKey: "financial_year_id" });
   };
 
   return FinancialYear;

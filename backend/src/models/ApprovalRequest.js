@@ -33,6 +33,7 @@ module.exports = (sequelize, DataTypes) => {
     ApprovalRequest.hasMany(models.ApprovalRequestLog, { as: "approvalRequestLogs", foreignKey: "approval_request_id" });
     ApprovalRequest.hasMany(models.AttendanceCorrectionRequest, { as: "attendanceCorrectionRequests", foreignKey: "approval_request_id" });
     ApprovalRequest.hasMany(models.OvertimeRequest, { as: "overtimeRequests", foreignKey: "approval_request_id" });
+    ApprovalRequest.hasMany(models.LeaveRequest, { as: "leaveRequests", foreignKey: "approval_request_id" });
   };
 
   return ApprovalRequest;
