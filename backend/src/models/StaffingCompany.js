@@ -42,6 +42,7 @@ module.exports = (sequelize, DataTypes) => {
     StaffingCompany.hasMany(models.Employee, { as: "employees", foreignKey: "staffing_company_id" });
     StaffingCompany.hasMany(models.StaffingRate, { as: "staffingRates", foreignKey: "staffing_company_id" });
     StaffingCompany.hasMany(models.StaffingBill, { as: "staffingBills", foreignKey: "staffing_company_id" });
+    StaffingCompany.hasMany(models.ContractRecipient, { as: "contractRecipients", foreignKey: "staffing_company_id" });
     StaffingCompany.belongsToMany(models.Project, { as: "projects", through: models.StaffingCompanyProject, foreignKey: "staffing_company_id", otherKey: "project_id" });
   };
 

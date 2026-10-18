@@ -95,6 +95,15 @@ const EXPECTED_MODELS = [
   "StaffingRate",
   "StaffingBill",
   "StaffingBillItem",
+  // Group 11: contracts
+  "ContractType",
+  "ContractDocument",
+  "ContractTemplate",
+  "ContractTemplateField",
+  "Contract",
+  "ContractRecipient",
+  "ContractField",
+  "ContractActivity",
 ];
 
 afterAll(async () => {

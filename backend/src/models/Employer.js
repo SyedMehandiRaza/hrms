@@ -91,6 +91,15 @@ module.exports = (sequelize, DataTypes) => {
     Employer.hasMany(models.StaffingRate, { as: "staffingRates", foreignKey: "employer_id" });
     Employer.hasMany(models.StaffingBill, { as: "staffingBills", foreignKey: "employer_id" });
     Employer.hasMany(models.StaffingBillItem, { as: "staffingBillItems", foreignKey: "employer_id" });
+    Employer.hasMany(models.ContractType, { as: "contractTypes", foreignKey: "employer_id" });
+    Employer.hasMany(models.ContractDocument, { as: "contractDocuments", foreignKey: "employer_id" });
+    Employer.hasMany(models.ContractTemplate, { as: "contractTemplates", foreignKey: "employer_id" });
+    Employer.hasMany(models.ContractTemplateField, { as: "contractTemplateFields", foreignKey: "employer_id" });
+    Employer.hasMany(models.Contract, { as: "contracts", foreignKey: "employer_id" });
+    Employer.hasMany(models.ContractRecipient, { as: "contractRecipientsAsEmployer", foreignKey: "employer_id" });
+    Employer.hasMany(models.ContractRecipient, { as: "contractRecipientsAsPartnerEmployer", foreignKey: "partner_employer_id" });
+    Employer.hasMany(models.ContractField, { as: "contractFields", foreignKey: "employer_id" });
+    Employer.hasMany(models.ContractActivity, { as: "contractActivities", foreignKey: "employer_id" });
   };
 
   return Employer;
