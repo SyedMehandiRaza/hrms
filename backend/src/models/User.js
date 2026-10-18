@@ -32,9 +32,9 @@ module.exports = (sequelize, DataTypes) => {
   User.associate = (models) => {
     User.hasMany(models.PasswordResetOtp, { as: "passwordResetOtps", foreignKey: "user_id" });
     User.hasOne(models.Employer, { as: "employer", foreignKey: "user_id" });
-    User.hasMany(models.HrmsAccount, { as: "hrmsAccountsAsUser", foreignKey: "user_id" });
+    User.hasMany(models.HrmsAccount, { as: "hrmsAccounts", foreignKey: "user_id" });
     User.hasMany(models.Notification, { as: "notifications", foreignKey: "user_id" });
-    User.hasMany(models.StaffingCompany, { as: "staffingCompaniesAsUser", foreignKey: "user_id" });
+    User.hasMany(models.StaffingCompany, { as: "staffingCompanies", foreignKey: "user_id" });
     User.hasMany(models.Employee, { as: "employees", foreignKey: "user_id" });
   };
 
