@@ -75,6 +75,13 @@ const EXPECTED_MODELS = [
   "PayrollItem",
   "SalaryIncrementBatch",
   "SalaryIncrementLine",
+  // Group 8: loans
+  "Loan",
+  "LoanInstallment",
+  "LoanPayment",
+  "LoanSkipRequest",
+  "LoanLedger",
+  "LoanAuditLog",
 ];
 
 afterAll(async () => {

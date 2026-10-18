@@ -77,6 +77,12 @@ module.exports = (sequelize, DataTypes) => {
     Employer.hasMany(models.PayrollRun, { as: "payrollRuns", foreignKey: "employer_id" });
     Employer.hasMany(models.Payroll, { as: "payrolls", foreignKey: "employer_id" });
     Employer.hasMany(models.SalaryIncrementBatch, { as: "salaryIncrementBatches", foreignKey: "employer_id" });
+    Employer.hasMany(models.Loan, { as: "loans", foreignKey: "employer_id" });
+    Employer.hasMany(models.LoanInstallment, { as: "loanInstallments", foreignKey: "employer_id" });
+    Employer.hasMany(models.LoanPayment, { as: "loanPayments", foreignKey: "employer_id" });
+    Employer.hasMany(models.LoanSkipRequest, { as: "loanSkipRequests", foreignKey: "employer_id" });
+    Employer.hasMany(models.LoanLedger, { as: "loanLedgers", foreignKey: "employer_id" });
+    Employer.hasMany(models.LoanAuditLog, { as: "loanAuditLogs", foreignKey: "employer_id" });
   };
 
   return Employer;

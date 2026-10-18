@@ -36,6 +36,7 @@ module.exports = (sequelize, DataTypes) => {
     Payroll.belongsTo(models.Employer, { as: "employer", foreignKey: "employer_id" });
     Payroll.belongsTo(models.Employee, { as: "employee", foreignKey: "employee_id" });
     Payroll.hasMany(models.PayrollItem, { as: "payrollItems", foreignKey: "payroll_id" });
+    Payroll.hasMany(models.LoanPayment, { as: "loanPayments", foreignKey: "payslip_id" });
   };
 
   return Payroll;

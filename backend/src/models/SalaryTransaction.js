@@ -31,6 +31,7 @@ module.exports = (sequelize, DataTypes) => {
     SalaryTransaction.belongsTo(models.SalaryComponent, { as: "salaryComponent", foreignKey: "salary_component_id" });
     SalaryTransaction.belongsTo(models.User, { as: "createdBy", foreignKey: "created_by" });
     SalaryTransaction.hasMany(models.LeaveEncashmentRequest, { as: "leaveEncashmentRequests", foreignKey: "salary_transaction_id" });
+    SalaryTransaction.hasMany(models.LoanPayment, { as: "loanPayments", foreignKey: "salary_transaction_id" });
   };
 
   return SalaryTransaction;
