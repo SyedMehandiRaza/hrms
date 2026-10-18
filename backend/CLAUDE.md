@@ -39,7 +39,10 @@ backend/
 - IDs: DataTypes.UUID (stored as CHAR(36)) with defaultValue DataTypes.UUIDV4.
 - Add indexes in migrations for foreign keys and columns used in filters/search (email, employee_code, status, dates).
 - Search with Op.like (`%term%`); no Postgres-only features (ILIKE, JSONB, arrays, RETURNING).
-- Money (salary/payroll) as DECIMAL(12,2), never FLOAT. Dates without time as DATEONLY.
+- Money as DECIMAL(12,2) for single amounts and DECIMAL(14,2) for aggregate totals (payroll run/payslip
+  gross and net, staffing bill total), never FLOAT. Currency CHAR(3), default 'SAR'. Dates without time as DATEONLY.
+- Tenant column is always `employer_id`. Soft delete only via `deleted_at` (paranoid models).
+- The `users` model hides `password` by default; use `User.scope("withPassword")` only for login checks.
 
 ## Tests
 - One test file per module in `tests/`. Use a separate test DB (`hrms_test`).
