@@ -113,6 +113,10 @@ const EXPECTED_MODELS = [
   "ProjectVisibilityClosure",
   "ProjectParticipantPermission",
   "ProjectEmployeeDeployment",
+  // Group 13: year-end
+  "YearCloseStep",
+  "YearDocument",
+  "YearEvent",
 ];
 
 afterAll(async () => {
