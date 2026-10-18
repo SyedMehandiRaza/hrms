@@ -22,6 +22,21 @@ const EXPECTED_MODELS = [
   "HrmsAccount",
   "HrmsSession",
   "Notification",
+  // Group 2: org setup
+  "Department",
+  "Designation",
+  "Office",
+  "Project",
+  "CompanyShift",
+  "ShiftTimeHistory",
+  "ShiftWeekOff",
+  "Holiday",
+  "StaffingCompany",
+  "StaffingCompanyProject",
+  "DocumentType",
+  "SalaryComponent",
+  "LeaveType",
+  "LeavePolicy",
 ];
 
 afterAll(async () => {

@@ -38,6 +38,20 @@ module.exports = (sequelize, DataTypes) => {
     Employer.hasMany(models.Role, { as: "roles", foreignKey: "employer_id" });
     Employer.hasMany(models.HrmsAccount, { as: "hrmsAccounts", foreignKey: "employer_id" });
     Employer.hasMany(models.Notification, { as: "notifications", foreignKey: "employer_id" });
+    Employer.hasMany(models.Department, { as: "departments", foreignKey: "employer_id" });
+    Employer.hasMany(models.Designation, { as: "designations", foreignKey: "employer_id" });
+    Employer.hasMany(models.Office, { as: "offices", foreignKey: "employer_id" });
+    Employer.hasMany(models.Project, { as: "projects", foreignKey: "employer_id" });
+    Employer.hasMany(models.CompanyShift, { as: "companyShifts", foreignKey: "employer_id" });
+    Employer.hasMany(models.ShiftTimeHistory, { as: "shiftTimeHistories", foreignKey: "employer_id" });
+    Employer.hasMany(models.ShiftWeekOff, { as: "shiftWeekOffs", foreignKey: "employer_id" });
+    Employer.hasMany(models.Holiday, { as: "holidays", foreignKey: "employer_id" });
+    Employer.hasMany(models.StaffingCompany, { as: "staffingCompanies", foreignKey: "employer_id" });
+    Employer.hasMany(models.StaffingCompanyProject, { as: "staffingCompanyProjects", foreignKey: "employer_id" });
+    Employer.hasMany(models.DocumentType, { as: "documentTypes", foreignKey: "employer_id" });
+    Employer.hasMany(models.SalaryComponent, { as: "salaryComponents", foreignKey: "employer_id" });
+    Employer.hasMany(models.LeaveType, { as: "leaveTypes", foreignKey: "employer_id" });
+    Employer.hasMany(models.LeavePolicy, { as: "leavePolicies", foreignKey: "employer_id" });
   };
 
   return Employer;

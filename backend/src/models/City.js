@@ -18,6 +18,8 @@ module.exports = (sequelize, DataTypes) => {
 
   City.associate = (models) => {
     City.belongsTo(models.Country, { as: "country", foreignKey: "country_id" });
+    City.hasMany(models.Project, { as: "projects", foreignKey: "city_id" });
+    City.hasMany(models.Holiday, { as: "holidays", foreignKey: "city_id" });
   };
 
   return City;
