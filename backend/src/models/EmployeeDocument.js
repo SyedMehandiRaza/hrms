@@ -34,6 +34,7 @@ module.exports = (sequelize, DataTypes) => {
     EmployeeDocument.belongsTo(models.DocumentType, { as: "documentType", foreignKey: "document_type_id" });
     EmployeeDocument.belongsTo(models.User, { as: "uploadedBy", foreignKey: "uploaded_by" });
     EmployeeDocument.hasMany(models.DocumentAuditLog, { as: "documentAuditLogs", foreignKey: "document_id" });
+    EmployeeDocument.hasMany(models.ExitVisa, { as: "exitVisas", foreignKey: "document_id" });
   };
 
   return EmployeeDocument;

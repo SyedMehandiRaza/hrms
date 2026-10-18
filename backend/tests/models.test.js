@@ -82,6 +82,15 @@ const EXPECTED_MODELS = [
   "LoanSkipRequest",
   "LoanLedger",
   "LoanAuditLog",
+  // Group 9: exits and visas
+  "ExitSetting",
+  "ExitChecklistTemplate",
+  "EmployeeExit",
+  "ExitChecklistItem",
+  "ExitDocument",
+  "ExitEvent",
+  "ExitVisa",
+  "ExitVisaTrip",
 ];
 
 afterAll(async () => {
