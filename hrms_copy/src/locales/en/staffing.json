@@ -1,0 +1,581 @@
+{
+  "list": {
+    "title": "Staffing Management",
+    "subtitle": "Manage and monitor your external workforce partners.",
+    "addCompany": "Add Staffing Company",
+    "stats": {
+      "totalAgencies": "TOTAL AGENCIES",
+      "activeAgencies": "ACTIVE AGENCIES",
+      "inactiveAgencies": "INACTIVE AGENCIES",
+      "complianceRate": "COMPLIANCE RATE",
+      "live": "Live",
+      "static": "Static",
+      "totalEmployees": "Total Employees"
+    },
+    "empty": "No staffing companies yet. Add your first partner.",
+    "loading": "Loading staffing companies...",
+    "table": {
+      "sn": "S.N",
+      "company": "COMPANY",
+      "contactPerson": "CONTACT PERSON",
+      "phone": "PHONE",
+      "city": "CITY",
+      "status": "STATUS",
+      "actions": "ACTIONS",
+      "totalEmployees": "Total Employees"
+    },
+    "status": {
+      "active": "ACTIVE",
+      "inactive": "INACTIVE"
+    },
+    "actions": {
+      "view": "View",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "pagination": {
+      "showing": "Showing {{from}} to {{to}} of {{total}} companies"
+    },
+    "toast": {
+      "deleted": "Staffing company deleted",
+      "deleteFailed": "Failed to delete staffing company"
+    },
+    "filters": {
+      "status": "Status",
+      "allStatus": "All Status",
+      "active": "Active",
+      "inactive": "Inactive",
+      "search": "Search",
+      "searchPlaceholder": "Search...",
+      "clearFilters": "Clear Filters"
+    },
+    "paginationLabel": "companies"
+  },
+  "add": {
+    "breadcrumbManagement": "Staffing Company Management",
+    "breadcrumbCurrent": "Add Staffing Company",
+    "title": "Add Staffing Company",
+    "subtitle": "Start the process of adding a new staffing company to your organization.",
+    "success": {
+      "title": "Company Added",
+      "message": "The staffing company has been successfully added to your organization.",
+      "back": "Back to Partners"
+    },
+    "photo": {
+      "title": "Company Photo",
+      "hint": "Upload a clear photo for the Company Profile",
+      "upload": "Upload Photo",
+      "remove": "Remove"
+    },
+    "fields": {
+      "companyName": "Company Name",
+      "companyNamePlaceholder": "Golden Spoon",
+      "contactPerson": "Contact Person Name",
+      "contactPersonPlaceholder": "Select contact...",
+      "email": "Email Address",
+      "emailPlaceholder": "john.doe@company.com",
+      "phone": "Phone Number",
+      "phonePlaceholder": "555-0123",
+      "project": "Project",
+      "projectPlaceholder": "Select",
+      "location": "Location",
+      "locationPlaceholder": "e.g. San Francisco, CA"
+    },
+    "buttons": {
+      "cancel": "Cancel",
+      "next": "Next"
+    },
+    "validation": {
+      "companyNameRequired": "Company name is required",
+      "min2Required": "At least 2 characters required",
+      "contactPersonRequired": "Contact person is required",
+      "emailRequired": "Email is required",
+      "emailValid": "Enter a valid email address",
+      "phoneRequired": "Phone number is required",
+      "phoneValid": "Enter a valid phone number (6–15 digits)",
+      "projectRequired": "Please select a project",
+      "locationRequired": "Location is required",
+      "locationMin": "Location must be at least 3 characters",
+      "locationChars": "Invalid characters in location"
+    }
+  },
+  "details": {
+    "breadcrumbManagement": "Staffing Company Management",
+    "breadcrumbCompany": "Company",
+    "companyName": "Global Talent Solutions Ltd.",
+    "activePartner": "ACTIVE PARTNER",
+    "location": "London, United Kingdom",
+    "viewInvoices": "View Invoices",
+    "editDetails": "Edit Details",
+    "companyInformation": "Company Information",
+    "companyProfile": "COMPANY PROFILE",
+    "info": {
+      "primaryContact": "PRIMARY CONTACT",
+      "primaryContactValue": "Eleanor Fitzwilliam",
+      "primaryContactSub": "Managing Director",
+      "contractExpiry": "CONTRACT EXPIRY",
+      "contractExpiryValue": "Dec 31, 2024",
+      "contractExpirySub": "Original signed: Jan 2022",
+      "renewalSoon": "RENEWAL SOON",
+      "emailAddress": "EMAIL ADDRESS",
+      "emailAddressValue": "contact@globaltalent.co.uk",
+      "phoneNumber": "PHONE NUMBER",
+      "phoneNumberValue": "+44 20 7946 0123"
+    },
+    "totalActiveEmployees": "Total Active Employees",
+    "fromLastMonth": "+12.5% from last month",
+    "hoursWorkedThisMonth": "Hours Worked (This Month)",
+    "hrs": "hrs",
+    "projectedCapacity": "85% of projected monthly capacity",
+    "assignedEmployees": "Assigned Employees",
+    "assignedSubtitle": "Currently deployed personnel from Global Talent Solutions",
+    "filter": "Filter",
+    "exportCsv": "Export CSV",
+    "table": {
+      "sn": "S.N",
+      "employeeName": "EMPLOYEE NAME",
+      "project": "PROJECT",
+      "role": "ROLE",
+      "status": "STATUS",
+      "actions": "ACTIONS"
+    },
+    "viewAllEmployees": "View All 142 Employees",
+    "support": {
+      "billingTitle": "Billing Support",
+      "billingText": "For invoice inquiries, contact our billing department at accounts@globaltalent.co.uk or call extension 402.",
+      "securityTitle": "Security & Compliance",
+      "securityText": "This partner has verified ISO 27001 certification. Last audit completed on March 12, 2024."
+    },
+    "employeeStatus": {
+      "onSite": "On-Site",
+      "remote": "Remote",
+      "onLeave": "On Leave"
+    },
+    "employees": {
+      "jamesSullivanProject": "Infrastructure Upgrade Phase II",
+      "jamesSullivanRole": "Senior DevOps Engineer",
+      "arjunMehtaProject": "Enterprise CRM Migration",
+      "arjunMehtaRole": "Database Architect",
+      "lauraChenProject": "Mobile App Refactor",
+      "lauraChenRole": "UI Designer",
+      "davidBrooksProject": "Infrastructure Upgrade Phase II",
+      "davidBrooksRole": "Network Security"
+    },
+    "editCompany": "Edit Company",
+    "stats": {
+      "totalEmployees": "Total Employees",
+      "activeEmployees": "Active Employees",
+      "inactiveEmployees": "Inactive Employees"
+    },
+    "employeesList": "Staffing Company Employees",
+    "employeesListSub": "Manage employees assigned to this staffing company.",
+    "toast": {
+      "fetchCompanyFailed": "Failed to fetch company details",
+      "fetchEmployeesFailed": "Failed to fetch employees"
+    },
+    "loadingDetails": "Loading details...",
+    "notFound": "Company not found",
+    "companyStatus": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "contactPerson": "Contact Person",
+    "contactEmail": "Contact Email",
+    "contactPhone": "Contact Phone",
+    "emailLabel": "Email",
+    "phoneLabel": "Phone",
+    "locationLabel": "Location",
+    "na": "N/A",
+    "assignedProjects": "Assigned Projects ({{n}})",
+    "unnamedProject": "Unnamed Project",
+    "live": "Live",
+    "filters": {
+      "allTypes": "All Types",
+      "fullTime": "Full Time",
+      "contract": "Contract",
+      "allStatus": "All Status",
+      "active": "Active",
+      "inactive": "Inactive",
+      "search": "Search",
+      "clearFilters": "Clear Filters"
+    },
+    "empTable": {
+      "sn": "S.N",
+      "employeeId": "Employee ID",
+      "name": "Name",
+      "role": "Role",
+      "type": "Type",
+      "project": "Project",
+      "status": "Status"
+    },
+    "loadingEmployees": "Loading employees...",
+    "noEmployees": "No employees match your filters.",
+    "empStatus": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "unknown": "Unknown"
+    },
+    "empType": {
+      "fullTime": "FULL-TIME",
+      "contract": "CONTRACT"
+    },
+    "paginationLabel": "employees"
+  },
+  "assign": {
+    "breadcrumbContracts": "Contracts",
+    "breadcrumbFlow": "Assignment Flow",
+    "title": "Assign Contract Employees",
+    "subtitle": "Onboard external resources to active projects and manage staffing company relations.",
+    "success": {
+      "title": "Assignment Confirmed",
+      "message": "The contractor has been assigned successfully and all stakeholders have been notified.",
+      "back": "Back to Contracts"
+    },
+    "assignmentDetails": "Assignment Details",
+    "fields": {
+      "selectEmployee": "Select Employee",
+      "selectEmployeePlaceholder": "Search by name or unique ID...",
+      "selectCompany": "Select Staffing Company",
+      "selectCompanyPlaceholder": "Select vendor...",
+      "assignProject": "Assign to Project",
+      "assignProjectPlaceholder": "Active project list...",
+      "role": "Designated Role",
+      "rolePlaceholder": "e.g. Senior Frontend Engineer",
+      "billingRate": "Billing Rate (USD/HR)",
+      "billingRatePlaceholder": "0.00"
+    },
+    "buttons": {
+      "cancel": "Cancel",
+      "confirm": "Confirm Assignment"
+    },
+    "summary": {
+      "title": "Contractor Role Summary",
+      "subtitle": "Estimated impact for Apollo Cloud Infrastructure",
+      "utilizationRate": "Utilization Rate",
+      "weeklyCap": "Weekly Cap",
+      "weeklyCapValue": "40 hrs",
+      "duration": "Duration",
+      "durationValue": "6 Mos"
+    },
+    "compliance": {
+      "title": "Vendor Compliance Status",
+      "msaSigned": "MSA Signed",
+      "msaStatus": "ACTIVE",
+      "insurance": "Insurance Verification",
+      "insuranceStatus": "VALID",
+      "tax": "Tax Documentation",
+      "taxStatus": "RENEWAL DUE"
+    },
+    "budget": {
+      "title": "Budget Tracking",
+      "remaining": "Remaining in Project Pool",
+      "withinVariance": "Within allocated variance"
+    },
+    "history": {
+      "title": "Recent Assignment History",
+      "viewAll": "View All Records",
+      "table": {
+        "sn": "S.N",
+        "contractor": "CONTRACTOR",
+        "company": "STAFFING COMPANY",
+        "project": "PROJECT",
+        "startDate": "START DATE",
+        "status": "STATUS"
+      },
+      "status": {
+        "onboarded": "Onboarded",
+        "pendingDocs": "Pending Docs"
+      }
+    },
+    "validation": {
+      "employeeRequired": "Please select an employee",
+      "companyRequired": "Please select a staffing company",
+      "projectRequired": "Please select a project",
+      "roleRequired": "Role is required",
+      "tooShort": "Too short",
+      "billingRateRequired": "Billing rate is required",
+      "greaterThanZero": "Must be greater than 0",
+      "validRate": "Enter a valid rate"
+    }
+  },
+  "invoice": {
+    "breadcrumbManagement": "Staffing Company Management",
+    "breadcrumbCompany": "Company",
+    "breadcrumbCurrent": "View Invoice",
+    "title": "Invoice Preview",
+    "subtitle": "Review labor costs and staffing metrics for the current billing cycle.",
+    "downloadPdf": "Download PDF",
+    "sendToCompany": "Send to Company",
+    "generateInvoice": "Generate Invoice",
+    "companyName": "Global Logistics Solutions Inc.",
+    "activeProject": "Active Project",
+    "contractId": "Contract ID:",
+    "city": "Chicago, IL",
+    "netTerms": "Net 30 Terms",
+    "billingPeriod": "Billing Period",
+    "billingPeriodValue": "Oct 01 – Oct 31, 2024",
+    "totalEmployees": "Total Employees",
+    "employeesDelta": "+4 from last month",
+    "totalHoursWorked": "Total Hours Worked",
+    "hrs": "hrs",
+    "laborBreakdown": "Employee Labor Breakdown",
+    "searchPlaceholder": "Search employee...",
+    "table": {
+      "sn": "S.N",
+      "employeeDetails": "Employee Details",
+      "department": "Department",
+      "hours": "Hours",
+      "rate": "Rate ($)",
+      "tax": "Tax (5%)",
+      "amount": "Amount ($)"
+    },
+    "mobile": {
+      "hours": "Hours",
+      "rate": "Rate",
+      "tax": "Tax 5%"
+    },
+    "additionalRows": "+ 38 additional employee rows ...",
+    "summary": {
+      "subtotal": "Subtotal Labor Costs",
+      "serviceFee": "Agency Service Fee (8%)",
+      "taxes": "Applicable Taxes",
+      "netPayable": "Net Payable Amount",
+      "due": "DUE NOV 15"
+    },
+    "footer": {
+      "gdpr": "GDPR Compliant",
+      "encryption": "256-bit AES Encryption",
+      "autoSync": "Auto-sync enabled",
+      "copyright": "© 2024 HRMS Enterprise Workforce Solutions. All rights reserved."
+    },
+    "departments": {
+      "operations": "Operations",
+      "warehouse": "Warehouse",
+      "distribution": "Distribution"
+    },
+    "roles": {
+      "seniorLogisticsLead": "Senior Logistics Lead",
+      "inventorySpecialist": "Inventory Specialist",
+      "fleetManager": "Fleet Manager",
+      "supplyChainAnalyst": "Supply Chain Analyst"
+    }
+  },
+  "modal": {
+    "title": {
+      "view": "Staffing Company Details",
+      "edit": "Edit Staffing Company",
+      "create": "Add Staffing Company"
+    },
+    "subtitle": {
+      "view": "Staffing partner information.",
+      "edit": "Provide the staffing partner's details.",
+      "create": "Provide the staffing partner's details."
+    },
+    "fields": {
+      "companyName": "Company Name",
+      "companyNamePlaceholder": "Global Staffing Solutions",
+      "companyCode": "Company Code",
+      "companyCodePlaceholder": "e.g. GSS-01",
+      "companyEmail": "Company Email",
+      "companyEmailPlaceholder": "contact@company.com",
+      "companyPhone": "Company Phone",
+      "companyPhonePlaceholder": "+1 555-0123",
+      "contactPersonName": "Contact Person Name",
+      "contactPersonNamePlaceholder": "Sarah Jenkins",
+      "contactPersonEmail": "Contact Person Email",
+      "contactPersonEmailPlaceholder": "sarah@company.com",
+      "contactPersonPhone": "Contact Person Phone",
+      "contactPersonPhonePlaceholder": "+1 555-0124",
+      "city": "City",
+      "cityPlaceholder": "San Francisco",
+      "address": "Address",
+      "addressPlaceholder": "Street, area, region",
+      "status": "Status"
+    },
+    "statusOptions": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "buttons": {
+      "close": "Close",
+      "cancel": "Cancel",
+      "saving": "Saving...",
+      "saveChanges": "Save Changes",
+      "createCompany": "Create Company",
+      "uploading": "Uploading..."
+    },
+    "credentialsHint": "A login and password will be created automatically and emailed to the company email below.",
+    "photo": {
+      "alt": "Company",
+      "title": "Company Photo",
+      "hint": "Upload a company logo or image.",
+      "upload": "Upload Photo",
+      "remove": "Remove"
+    },
+    "projects": {
+      "label": "Projects",
+      "placeholder": "Select one or more projects",
+      "selectProjects": "Select projects",
+      "loading": "Loading...",
+      "none": "No projects",
+      "fallbackName": "Project #{{id}}",
+      "hint": "The staffing company can only assign its employees to these projects."
+    },
+    "validation": {
+      "companyNameRequired": "Company name is required",
+      "minTwoChars": "At least 2 characters",
+      "companyCodeRequired": "Company code is required",
+      "tooLong": "Too long",
+      "companyEmailRequired": "Company email is required",
+      "invalidEmail": "Enter a valid email",
+      "companyPhoneRequired": "Company phone is required",
+      "invalidPhone": "Enter a valid phone number (6–15 digits)",
+      "contactNameRequired": "Contact person name is required",
+      "lettersPeriodsOnly": "Only letters and periods are allowed",
+      "contactEmailRequired": "Contact person email is required",
+      "emailTooLong": "Email too long",
+      "contactPhoneRequired": "Contact person phone is required",
+      "addressRequired": "Address is required",
+      "invalidAddressChars": "Invalid characters in address",
+      "projectsRequired": "Assign at least one project"
+    },
+    "toast": {
+      "uploadFailed": "Failed to upload image. Please try again.",
+      "missingId": "Missing staffing company id",
+      "updateSuccess": "Staffing company updated successfully",
+      "updateFailed": "Failed to update staffing company",
+      "createSuccess": "Staffing company created successfully",
+      "createFailed": "Failed to create staffing company"
+    }
+  },
+  "profile": {
+    "title": "Company Profile",
+    "subtitle": "Manage your company information and security settings",
+    "generalInformation": "General Information",
+    "primaryContactPerson": "Primary Contact Person",
+    "changePassword": "Change Password",
+    "fields": {
+      "companyName": "Company Name",
+      "companyCode": "Company Code",
+      "emailAddress": "Email Address",
+      "phoneNumber": "Phone Number",
+      "city": "City",
+      "address": "Address",
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "currentPassword": "Current Password",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm Password"
+    },
+    "validation": {
+      "companyNameRequired": "Company name is required",
+      "tooShort": "Too short",
+      "invalidPhone": "Enter a valid phone number (6–15 digits)",
+      "cityInvalid": "Only letters, spaces, and hyphens are allowed",
+      "invalidEmail": "Enter a valid email",
+      "required": "Required",
+      "minPassword": "Min 8 characters",
+      "passwordPattern": "Include uppercase & number",
+      "passwordMismatch": "Passwords do not match"
+    },
+    "toast": {
+      "loadFailed": "Failed to load profile",
+      "updateSuccess": "Profile updated successfully",
+      "updateFailed": "Failed to update profile",
+      "passwordSuccess": "Password updated successfully",
+      "passwordFailed": "Failed to update password"
+    },
+    "confirm": {
+      "saveTitle": "Save Changes",
+      "saveMessage": "Are you sure you want to save these changes to your profile?",
+      "passwordTitle": "Update Password",
+      "passwordMessage": "Are you sure you want to update your password?"
+    },
+    "buttons": {
+      "saveChanges": "Save Changes",
+      "saving": "Saving...",
+      "updatePassword": "Update Password",
+      "updating": "Updating..."
+    }
+  },
+  "billing": {
+    "title": "Billing",
+    "subtitle": "Approved labour invoices for your company, by month.",
+    "backToInvoices": "Back to invoices",
+    "labourInvoice": "Labour Invoice",
+    "detailMeta": "{{month}} {{year}} · {{count}} line(s) · {{amount}}",
+    "loading": "Loading…",
+    "noLineItems": "No line items.",
+    "empty": "No invoices available yet.",
+    "filters": {
+      "allYears": "All years",
+      "allMonths": "All months",
+      "clear": "Clear Filters"
+    },
+    "months": {
+      "jan": "Jan",
+      "feb": "Feb",
+      "mar": "Mar",
+      "apr": "Apr",
+      "may": "May",
+      "jun": "Jun",
+      "jul": "Jul",
+      "aug": "Aug",
+      "sep": "Sep",
+      "oct": "Oct",
+      "nov": "Nov",
+      "dec": "Dec"
+    },
+    "status": {
+      "DRAFT": "DRAFT",
+      "PENDING": "PENDING",
+      "APPROVED": "APPROVED",
+      "PAID": "PAID",
+      "REJECTED": "REJECTED",
+      "CANCELLED": "CANCELLED"
+    },
+    "table": {
+      "sno": "S.No",
+      "employee": "Employee",
+      "project": "Project",
+      "iqama": "Iqama/Passport",
+      "designation": "Designation",
+      "workedHrs": "Worked Hrs",
+      "otHrs": "OT Hrs",
+      "otAmount": "OT Amount",
+      "amount": "Amount",
+      "period": "Period",
+      "lines": "Lines",
+      "status": "Status",
+      "action": "Action",
+      "billNo": "Bill No."
+    },
+    "pagination": {
+      "lineItems": "line items",
+      "invoices": "invoices",
+      "statements": "statements"
+    },
+    "toast": {
+      "loadListFailed": "Failed to load invoices",
+      "loadFailed": "Failed to load invoice"
+    },
+    "paidOn": "Paid on {{date}}",
+    "view": "View",
+    "statements": {
+      "title": "Annual Statements",
+      "hint": "Your yearly billing statement for each financial year, published at year end.",
+      "empty": "No annual statements yet.",
+      "rowTitle": "Annual statement — {{label}}",
+      "period": "{{from}} – {{to}}",
+      "generated": "Generated {{date}}",
+      "downloadPdf": "PDF",
+      "downloadCsv": "CSV",
+      "loadFailed": "Failed to load annual statements"
+    }
+  },
+  "confirmModal": {
+    "title": "Confirm Delete",
+    "deleteCompanyMessage": "Delete staffing company \"{{name}}\"? This cannot be undone."
+  }
+}

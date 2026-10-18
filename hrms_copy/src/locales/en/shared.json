@@ -1,0 +1,94 @@
+{
+  "confirmModal": {
+    "title": "Confirm Action",
+    "message": "Are you sure you want to proceed?",
+    "confirm": "Confirm",
+    "cancel": "Cancel"
+  },
+  "profile": {
+    "portal": "HRMS Portal",
+    "myProfile": "My Profile",
+    "logout": "Log out",
+    "version": "Version 1.0.0"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "tabAll": "All ({{count}})",
+    "tabUnread": "Unread ({{count}})",
+    "empty": "No notifications to show.",
+    "loading": "Loading…",
+    "refresh": "Refresh",
+    "approve": "Approve",
+    "reject": "Reject",
+    "viewAll": "View All Notifications",
+    "groups": {
+      "today": "TODAY",
+      "yesterday": "YESTERDAY",
+      "earlier": "EARLIER"
+    }
+  },
+  "search": {
+    "recentSearches": "RECENT SEARCHES",
+    "employees": "EMPLOYEES",
+    "projects": "PROJECTS",
+    "results": "{{count}} results",
+    "viewFullResults": "View Full Search Results"
+  },
+  "auth": {
+    "brandName": "Finders HRMS",
+    "heroTitle": "Workforce Core",
+    "heroSubtitle": "Empowering your workforce with intelligent management solutions.",
+    "edition": "ENTERPRISE EDITION 2.4",
+    "trustedBy": "TRUSTED BY 500+ CORPORATIONS"
+  },
+  "searchResult": {
+    "heading": "Search Results",
+    "subtitle": "Showing matches for \"{{query}}\" across all modules",
+    "filters": "Filters",
+    "categoriesTitle": "Categories",
+    "statusTitle": "Status",
+    "sort": {
+      "relevance": "Sort by Relevance",
+      "date": "Sort by Date",
+      "name": "Sort by Name",
+      "status": "Sort by Status"
+    },
+    "categories": {
+      "employees": "Employees",
+      "projects": "Projects",
+      "payroll": "Payroll",
+      "leave": "Leave",
+      "documents": "Documents",
+      "contracts": "Contracts",
+      "invoices": "Invoices"
+    },
+    "statusOptions": {
+      "activeOnly": "Active Only",
+      "pendingApproval": "Pending Approval"
+    },
+    "footerLabels": {
+      "employee": "EMPLOYEE",
+      "project": "PROJECT",
+      "document": "DOCUMENT",
+      "payroll": "PAYROLL",
+      "leave": "LEAVE",
+      "invoice": "INVOICE"
+    },
+    "actions": {
+      "viewProfile": "View Profile",
+      "viewRoadmap": "View Roadmap",
+      "download": "Download",
+      "reviewSlip": "Review Slip",
+      "actionRequest": "Action Request",
+      "viewBill": "View Bill"
+    }
+  },
+  "pageTemplate": {
+    "content": "Page content for {{title}} goes here"
+  },
+  "toast": {
+    "loggedOut": "Logged out successfully"
+  },
+  "userProfileAlt": "User Profile"
+}

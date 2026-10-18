@@ -1,0 +1,51 @@
+{
+  "language": "Language",
+  "english": "English",
+  "arabic": "العربية",
+  "ui": {
+    "loading": "Loading...",
+    "loadingAria": "Loading",
+    "selectOption": "Select an option",
+    "search": "Search...",
+    "noOptions": "No options found",
+    "entries": "entries",
+    "showing": "Showing <b>{{start}}–{{end}}</b> of <b>{{total}}</b> {{label}}"
+  },
+  "success": {
+    "title": "Success!",
+    "message": "Action completed successfully.",
+    "continue": "Continue"
+  },
+  "companyProfile": {
+    "logoUpdated": "Logo updated successfully",
+    "logoRemoved": "Logo removed successfully",
+    "loading": "Loading Company Profile..."
+  },
+  "monthPicker": {
+    "months": {
+      "jan": "Jan",
+      "feb": "Feb",
+      "mar": "Mar",
+      "apr": "Apr",
+      "may": "May",
+      "jun": "Jun",
+      "jul": "Jul",
+      "aug": "Aug",
+      "sep": "Sep",
+      "oct": "Oct",
+      "nov": "Nov",
+      "dec": "Dec"
+    },
+    "selectMonth": "Select month",
+    "thisMonth": "This month",
+    "close": "Close",
+    "prevYear": "Previous year",
+    "nextYear": "Next year",
+    "selected": "{{month}}, {{year}}"
+  },
+  "levels": {
+    "title": "Level {{level}}: {{approved}}/{{total}} approved",
+    "short": "L{{level}}"
+  },
+  "unauthorized": "Unauthorized"
+}

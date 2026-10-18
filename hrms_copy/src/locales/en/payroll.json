@@ -1,0 +1,980 @@
+{
+  "overview": {
+    "title": "Payroll Overview",
+    "subtitle": "Enterprise-wide compensation tracking and processing for October 2023.",
+    "runPayroll": "Run Payroll",
+    "stats": {
+      "totalPayrollCost": "Total Payroll Cost",
+      "employeesProcessed": "Employees Processed",
+      "pendingPayroll": "Pending Payroll",
+      "contractInvoices": "Contract Invoices",
+      "attention": "Attention"
+    },
+    "currentMonth": {
+      "title": "Current Month Status",
+      "inProgress": "In Progress",
+      "processingCycle": "Processing Cycle",
+      "cycleValue": "October 2023",
+      "completionProgress": "Completion Progress",
+      "initiated": "Initiated: Oct 01",
+      "expectedPayout": "Expected Payout: Oct 28",
+      "calculatedTax": "Calculated Tax",
+      "benefitsDist": "Benefits Dist."
+    },
+    "recentRuns": {
+      "title": "Recent Payroll Runs",
+      "viewAllHistory": "View All History",
+      "headers": {
+        "month": "Payroll Month",
+        "status": "Status",
+        "totalCost": "Total Cost",
+        "actions": "Actions"
+      },
+      "status": {
+        "completed": "Completed"
+      },
+      "months": {
+        "september2023": "September 2023",
+        "august2023": "August 2023",
+        "july2023": "July 2023",
+        "june2023": "June 2023"
+      }
+    },
+    "footer": {
+      "bankConnectivity": "Bank Connectivity",
+      "bankConnectivityValue": "4/4 Nodes Active",
+      "complianceStatus": "Compliance Status",
+      "complianceStatusValue": "Audit Ready",
+      "dataSync": "Data Sync",
+      "dataSyncValue": "Last synced 2m ago"
+    },
+    "pageSubtitle": "Enterprise-wide compensation tracking and processing.",
+    "filters": {
+      "month": "Month",
+      "project": "Project",
+      "status": "Status",
+      "all": "All",
+      "allStatuses": "All Statuses",
+      "clearFilters": "Clear Filters"
+    },
+    "table": {
+      "sn": "S.No",
+      "ref": "Payroll Ref",
+      "month": "Month",
+      "period": "Period",
+      "project": "Project",
+      "staff": "Staff",
+      "netTotal": "Net Total",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "periodRange": "01 {{month}} - {{lastDay}} {{month}}",
+    "loading": "Loading payroll runs…",
+    "empty": "No payroll runs found.",
+    "viewDetails": "View Details",
+    "deleteRun": "Delete run",
+    "paginationLabel": "runs",
+    "deleteConfirm": {
+      "title": "Delete payroll run?",
+      "message": "This permanently deletes run {{ref}} and all {{count}} payslip(s) in it. This cannot be undone.",
+      "confirm": "Delete",
+      "cancel": "Cancel"
+    },
+    "toast": {
+      "deleted": "Payroll run deleted",
+      "deleteFailed": "Failed to delete payroll run"
+    }
+  },
+  "run": {
+    "backToDashboard": "Back to Dashboard",
+    "title": "Run Payroll Setup",
+    "subtitle": "Configure the parameters for the current payroll cycle. Selecting a specific scope allows you to process payments for subsets of your workforce with precision.",
+    "selectMonth": "Select Month",
+    "selectProject": "Select Project",
+    "employeeType": "Employee Type",
+    "type": {
+      "fullTime": "Full-time",
+      "contract": "Contract",
+      "allCompany": "All Company"
+    },
+    "projects": {
+      "allProjects": "All Projects",
+      "cloudMigrationAlpha": "Cloud Migration Alpha",
+      "cyberDefense": "Cyber Defense 2.0",
+      "dataHubExpansion": "Data Hub Expansion",
+      "aiAnalyticsPlatform": "AI Analytics Platform",
+      "infrastructureRevamp": "Infrastructure Revamp",
+      "globalPayrollSync": "Global Payroll Sync"
+    },
+    "importantNote": "Important Note",
+    "importantNoteBody": "Failing to select a project will default the payroll run to the entire organizational scope for the selected month. Ensure all attendance records are approved before fetching employees.",
+    "approxBefore": "Approximately",
+    "approxCount": "{{count}} employees",
+    "approxAfter": "will be screened",
+    "fetching": "Fetching...",
+    "employeesFetched": "Employees Fetched ✓",
+    "fetchEmployees": "Fetch Employees",
+    "insights": {
+      "title": "Payroll Insights",
+      "body": "View projection and budget impact analysis before confirming the final payout execution.",
+      "viewInsights": "View Insights"
+    },
+    "systemReady": {
+      "title": "System Ready",
+      "subtitle": "All data nodes synchronized",
+      "live": "Live"
+    },
+    "ownEmployeesNote": "Only your company's own employees are included. Staffing-company employees are excluded from this payroll run.",
+    "footerNote": "Generates draft payslips for the selected period, then opens the preview."
+  },
+  "review": {
+    "breadcrumb": {
+      "payroll": "Payroll",
+      "review": "Review"
+    },
+    "role": "Senior Product Designer",
+    "employeeId": "Employee ID:",
+    "editValues": "Edit Values",
+    "saveChanges": "Save Changes",
+    "salaryStructure": "Salary Structure",
+    "baseSalary": "Base Salary",
+    "baseSalaryLabel": "Monthly Fixed Compensation",
+    "allowances": "Allowances",
+    "allowancesLabel": "Housing & Transport Stipend",
+    "timeTracking": "Time Tracking",
+    "workingDays": "Working Days",
+    "otHours": "OT Hours",
+    "overtimeAmount": "Overtime Amount",
+    "incentives": "Incentives",
+    "incentiveLabel": "Performance Bonus - Q1 Design Lead",
+    "incentiveSub": "Exceeded project milestones for the Polaris interface redesign and user testing phases.",
+    "deductions": "Deductions",
+    "deductionLabel": "Advance Repayment",
+    "deductionSub": "Installment 3 of 6 for personal travel advance granted in January 2024.",
+    "pending": "Pending",
+    "finalCalculation": "Final Calculation",
+    "netPaySummary": "Net Pay Summary",
+    "grossEarnings": "Gross Earnings",
+    "totalDeductions": "Total Deductions",
+    "takeHomeSalary": "Take Home Salary",
+    "adminNoteTitle": "Payroll Administrator Note",
+    "adminNote": "This payroll period includes a one-time performance bonus approved by the HR Director. Please ensure the advance repayment is verified against the employee contract before finalizing the bulk transfer.",
+    "loading": "Loading payslip…",
+    "loadFailed": "Could not load this payslip.",
+    "retry": "Retry",
+    "notSelected": "No payslip selected. Open one from a payroll run.",
+    "backToRun": "Back to payroll run",
+    "noLines": "None"
+  },
+  "preview": {
+    "backToDashboard": "Back to Dashboard",
+    "summaryLabel": "Payroll Summary • July 2024",
+    "estimatedPayout": "Estimated Payout:",
+    "fromLastMonth": "+2.4% from last month",
+    "finalReviewEnds": "Final review ends in 4 hours",
+    "totalHeadcount": "Total Headcount",
+    "employees": "Employees",
+    "netPayTotal": "Net Pay Total",
+    "disbursedFunds": "Disbursed Funds",
+    "anomaliesDetected": "Anomalies Detected",
+    "newContracts": "New Contracts",
+    "payrollPreview": "Payroll Preview",
+    "tabs": {
+      "allEmployees": "All Employees",
+      "flagged": "Flagged",
+      "onHold": "On-Hold"
+    },
+    "filter": "Filter",
+    "export": "Export",
+    "headers": {
+      "sn": "S.N",
+      "employeeName": "Employee Name",
+      "type": "Type",
+      "baseSalary": "Base Salary",
+      "allowances": "Allowances",
+      "overtime": "Overtime",
+      "incentives": "Incentives"
+    },
+    "type": {
+      "ft": "FT",
+      "contract": "CONTRACT"
+    },
+    "missingBankInfo": "Missing Bank Info",
+    "showingBefore": "Showing",
+    "showingMiddle": "of",
+    "showingAfter": "employees",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "months": {
+    "1": "January",
+    "2": "February",
+    "3": "March",
+    "4": "April",
+    "5": "May",
+    "6": "June",
+    "7": "July",
+    "8": "August",
+    "9": "September",
+    "10": "October",
+    "11": "November",
+    "12": "December"
+  },
+  "monthsShort": {
+    "1": "Jan",
+    "2": "Feb",
+    "3": "Mar",
+    "4": "Apr",
+    "5": "May",
+    "6": "Jun",
+    "7": "Jul",
+    "8": "Aug",
+    "9": "Sep",
+    "10": "Oct",
+    "11": "Nov",
+    "12": "Dec"
+  },
+  "projectFallback": "Project #{{id}}",
+  "status": {
+    "DRAFT": "Draft",
+    "PENDING_APPROVAL": "Pending Approval",
+    "APPROVED": "Approved",
+    "REJECTED": "Rejected",
+    "CREDITED": "Credited",
+    "PAID": "Paid",
+    "PENDING": "Pending",
+    "HOLD": "Hold"
+  },
+  "componentType": {
+    "EARNING": "Earning",
+    "DEDUCTION": "Deduction"
+  },
+  "componentStatus": {
+    "ACTIVE": "Active",
+    "INACTIVE": "Inactive"
+  },
+  "calcMode": {
+    "MONTHLY_FIXED": "Monthly — fixed",
+    "MONTHLY_HOURLY": "Monthly — hours-based",
+    "HOURLY": "Hourly"
+  },
+  "runToast": {
+    "generatedOne": "Payroll generated for {{count}} employee",
+    "generatedMany": "Payroll generated for {{count}} employees",
+    "generatedOneSkipped": "Payroll generated for {{count}} employee · {{skipped}} skipped (no active salary)",
+    "generatedManySkipped": "Payroll generated for {{count}} employees · {{skipped}} skipped (no active salary)",
+    "failed": "Failed to run payroll",
+    "runIdMissing": "Run id missing"
+  },
+  "runActions": {
+    "submitTitle": "Submit for approval",
+    "submitMessage": "Send this payroll run to the salary approval group? You won't be able to edit payslips after submitting.",
+    "submitConfirm": "Submit",
+    "submitted": "Submitted for approval",
+    "approveTitle": "Approve payroll run",
+    "approveMessage": "Approve this payroll run at your level?",
+    "approveConfirm": "Approve",
+    "approved": "Run approved",
+    "creditTitle": "Credit payroll run",
+    "creditMessage": "Credit all approved payslips? Employees will be notified and can then view their payslip.",
+    "creditConfirm": "Credit",
+    "credited": "Payroll credited",
+    "rejectTitle": "Reject payroll run",
+    "rejectBody": "Provide a reason. The run will be rejected and can be re-created for the period.",
+    "rejectPlaceholder": "Reason for rejection…",
+    "rejectRun": "Reject Run",
+    "reasonRequired": "A rejection reason is required",
+    "rejected": "Run rejected",
+    "notApprover": "You're not an approver on this run",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "actionFailed": "Action failed"
+  },
+  "runModal": {
+    "title": "Run Payroll",
+    "subtitle": "Generate payroll for your company's employees for a selected month.",
+    "payrollMonth": "PAYROLL MONTH",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "project": "Project",
+    "allProjects": "All Projects",
+    "scopeNote": "Includes your company's own employees only (full-time & contract). Staffing-company employees are excluded.",
+    "cancel": "CANCEL",
+    "running": "RUNNING…",
+    "run": "RUN PAYROLL"
+  },
+  "breakdown": {
+    "title": "Salary Breakdown",
+    "earnings": "Earnings",
+    "noEarnings": "No earnings",
+    "grossEarnings": "Gross Earnings",
+    "deductions": "Deductions",
+    "noDeductions": "No deductions",
+    "totalDeductions": "Total Deductions",
+    "netPayable": "Net Payable"
+  },
+  "components": {
+    "title": "Salary Component",
+    "subtitle": "Manage earnings and deduction components used in payroll calculations.",
+    "create": "Create Component",
+    "search": "Search",
+    "searchPlaceholder": "Search component name...",
+    "type": "Type",
+    "status": "Status",
+    "all": "All",
+    "allStatuses": "All Statuses",
+    "clearFilters": "Clear Filters",
+    "table": {
+      "sn": "S.NO",
+      "name": "COMPONENT NAME",
+      "type": "COMPONENT TYPE",
+      "status": "STATUS",
+      "actions": "ACTIONS"
+    },
+    "loading": "Loading components…",
+    "empty": "No salary components found.",
+    "default": "Default",
+    "view": "View",
+    "locked": "Default component — locked",
+    "edit": "Edit",
+    "delete": "Delete",
+    "paginationLabel": "Component(s)",
+    "deleteConfirm": {
+      "title": "Delete Component",
+      "message": "Are you sure you want to deactivate {{name}}? It will no longer be selectable, but existing payslips keep their reference.",
+      "thisComponent": "this component"
+    },
+    "toast": {
+      "deactivated": "Component deactivated",
+      "deactivateFailed": "Failed to deactivate component"
+    }
+  },
+  "componentModal": {
+    "titleCreate": "Create Salary Component",
+    "titleEdit": "Edit Salary Component",
+    "titleView": "View Salary Component",
+    "subtitle": "Add a new earning or deduction component for payroll calculations.",
+    "name": "Component Name",
+    "nameRequired": "Component Name is required",
+    "namePlaceholder": "e.g., Performance Bonus",
+    "type": "Component Type",
+    "typeRequired": "Component Type is required",
+    "selectType": "Select type",
+    "status": "Status",
+    "statusRequired": "Status is required",
+    "description": "Description",
+    "descriptionPlaceholder": "Explain the purpose of this component...",
+    "close": "Close",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "update": "Update Component",
+    "create": "Create Component",
+    "toast": {
+      "updated": "Component updated",
+      "updateFailed": "Failed to update component",
+      "created": "Component created",
+      "createFailed": "Failed to create component"
+    }
+  },
+  "transactions": {
+    "title": "Salary Transactions",
+    "subtitle": "Add or deduct amounts per employee for a month. Applied at payroll generation; locked once the run leaves DRAFT.",
+    "add": "Add Transaction",
+    "searchPlaceholder": "Search employee...",
+    "allTypes": "All Types",
+    "earningAdd": "Earning (add)",
+    "deduction": "Deduction",
+    "clearFilters": "Clear Filters",
+    "table": {
+      "sn": "S.No",
+      "employee": "Employee",
+      "project": "Project",
+      "month": "Month",
+      "type": "Type",
+      "label": "Label",
+      "amount": "Amount",
+      "action": "Action"
+    },
+    "loading": "Loading…",
+    "empty": "No transactions for this month.",
+    "all": "All",
+    "badge": {
+      "advance": "Advance",
+      "deduct": "Deduct",
+      "earning": "Earning"
+    },
+    "remove": "Remove",
+    "paginationLabel": "transactions",
+    "deleteConfirm": {
+      "title": "Remove transaction?",
+      "message": "Remove \"{{label}}\" ({{amount}}) for {{name}}?",
+      "employeeFallback": "employee",
+      "confirm": "Remove"
+    },
+    "toast": {
+      "loadFailed": "Failed to load transactions",
+      "removed": "Transaction removed",
+      "removeFailed": "Failed to remove"
+    }
+  },
+  "transactionModal": {
+    "title": "Add Salary Transaction",
+    "employee": "Employee",
+    "employeeSearch": "Search employee...",
+    "employeeFallback": "Employee #{{id}}",
+    "employeeRequired": "Employee is required",
+    "project": "Project",
+    "allCompanyWide": "All (company-wide)",
+    "month": "Month",
+    "monthRequired": "Month is required",
+    "advanceToggle": "This is a cash advance (deducted at month-end, shown as ADV)",
+    "type": "Type",
+    "typeAdd": "Add (Earning)",
+    "typeDeduct": "Deduct (Deduction)",
+    "amount": "Amount",
+    "amountRequired": "Amount is required",
+    "amountMin": "Must be > 0",
+    "component": "Salary component",
+    "componentHint": "(optional — for a one-month component)",
+    "componentNone": "None (free-form)",
+    "componentOption": "{{name}} ({{type}})",
+    "label": "Label",
+    "labelRequired": "Label is required",
+    "labelPlaceholder": "e.g. Transportation, Advance",
+    "cancel": "Cancel",
+    "saving": "Saving…",
+    "submit": "Add Transaction",
+    "toast": {
+      "invalidMonth": "Pick a valid month",
+      "added": "Transaction added",
+      "addFailed": "Failed to add transaction"
+    }
+  },
+  "report": {
+    "title": "Salary Report",
+    "subtitle": "Monthly salary sheet for own employees, grouped by project. ADV is auto-filled from advance transactions.",
+    "month": "Month",
+    "project": "Project",
+    "allProjects": "All projects",
+    "download": "Download Excel",
+    "head": {
+      "sn": "S.No",
+      "employeeName": "Employee Name",
+      "idNumber": "Iqama / Passport",
+      "designation": "Designation",
+      "workHrs": "Work Hrs",
+      "allotted": "Allotted",
+      "perHour": "Per Hour",
+      "basic": "Basic",
+      "allowances": "Allowances",
+      "otHrs": "OT Hrs",
+      "otPay": "OT Pay",
+      "gross": "Gross",
+      "adv": "ADV",
+      "deductions": "Deductions",
+      "netPayable": "Net Payable",
+      "sign": "Sign",
+      "figure": "Figure"
+    },
+    "loading": "Loading…",
+    "notGenerated": "No payroll generated for this month yet.",
+    "noEmployees": "No employees for this selection.",
+    "projectHeader": "Project: {{name}} · {{count}} employee(s)",
+    "subtotal": "Subtotal — {{name}}",
+    "grandTotal": "GRAND TOTAL · {{count}} employee(s)",
+    "excel": {
+      "title": "Monthly Salary Report — {{month}}",
+      "subtitle": "Own employees, grouped by project",
+      "subtitleWithProject": "Own employees, grouped by project · {{project}}",
+      "project": "Project: {{name}}",
+      "grandTotal": "GRAND TOTAL"
+    },
+    "toast": {
+      "nothingToExport": "Nothing to export",
+      "loadFailed": "Failed to load salary report"
+    }
+  },
+  "billing": {
+    "title": "Staffing Company Billing",
+    "subtitle": "Generate a labour invoice (salary + overtime, one line per employee-project) for a staffing company — or all at once.",
+    "company": "Staffing Company",
+    "allCompanies": "All Staffing Companies",
+    "month": "Month",
+    "generating": "Generating…",
+    "generateAll": "Generate All Invoices",
+    "generate": "Generate Invoice",
+    "allNote": "Note: One invoice will be generated per staffing company. If an invoice already exists for the selected month, it will be automatically skipped to prevent duplicates.",
+    "history": {
+      "title": "Generated Invoices",
+      "hint": "Click a row to view line items",
+      "table": {
+        "sn": "S.No",
+        "company": "Staffing Company",
+        "period": "Period",
+        "lines": "Lines",
+        "amount": "Amount",
+        "status": "Status",
+        "action": "Action",
+        "billNo": "Bill No."
+      },
+      "empty": "No invoices generated yet.",
+      "paginationLabel": "invoices",
+      "allStatuses": "All Statuses",
+      "paidOn": "Paid on {{date}}"
+    },
+    "loading": "Loading…",
+    "detail": {
+      "back": "Back to invoices",
+      "companyFallback": "Staffing Company",
+      "meta": "Labour Invoice · {{month}} {{year}} · {{count}} line(s) · {{amount}}",
+      "sentToPortal": "Sent to portal",
+      "submitting": "Submitting…",
+      "submit": "Submit for approval",
+      "approve": "Approve",
+      "reject": "Reject",
+      "sendToPortal": "Send to portal",
+      "table": {
+        "sn": "S.No",
+        "employee": "Employee",
+        "project": "Project",
+        "idNumber": "Iqama/Passport",
+        "designation": "Designation",
+        "workedHrs": "Worked Hrs",
+        "gross": "Gross",
+        "otHrs": "OT Hrs",
+        "otAmount": "OT Amount",
+        "net": "Net"
+      },
+      "empty": "No line items.",
+      "paginationLabel": "line items",
+      "paidOn": "Paid on {{date}}",
+      "markPaid": "Mark as paid"
+    },
+    "rejectPrompt": "Reason for rejection:",
+    "toast": {
+      "loadBillsFailed": "Failed to load bills",
+      "loadBillFailed": "Failed to load bill",
+      "allExistOne": "Invoices already exist for all {{count}} staffing company for this month.",
+      "allExistMany": "Invoices already exist for all {{count}} staffing companies for this month.",
+      "generatedSkippedOne": "Generated {{count}} new invoice ({{skipped}} already existed for this month).",
+      "generatedSkippedMany": "Generated {{count}} new invoices ({{skipped}} already existed for this month).",
+      "generatedOne": "Successfully generated {{count}} invoice!",
+      "generatedMany": "Successfully generated {{count}} invoices!",
+      "noCompanies": "No staffing companies found to generate invoices for.",
+      "generated": "Invoice generated",
+      "generateFailed": "Failed to generate",
+      "submitted": "Bill submitted for approval",
+      "submitFailed": "Failed to submit",
+      "actionFailed": "Action failed",
+      "approved": "Bill approved",
+      "reasonRequired": "A reason is required to reject",
+      "rejected": "Bill rejected",
+      "sent": "Bill sent to the staffing company portal",
+      "paid": "Bill marked as paid"
+    },
+    "paidConfirm": {
+      "title": "Mark bill as paid?",
+      "message": "Mark {{bill}} ({{amount}}) as paid? Today is recorded as the payment date.",
+      "confirm": "Mark as paid"
+    }
+  },
+  "approvals": {
+    "eyebrow": "Payroll",
+    "title": "Salary Approvals",
+    "subtitle": "Approve or reject submitted payroll runs, then credit them to employees.",
+    "tabs": {
+      "pending": "Pending Approval",
+      "awaitingCredit": "Awaiting Credit",
+      "credited": "Credited",
+      "all": "All"
+    },
+    "table": {
+      "sn": "S.No",
+      "period": "Period",
+      "project": "Project",
+      "employees": "Employees",
+      "netPayroll": "Net Payroll",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "loading": "Loading…",
+    "empty": "Nothing here right now.",
+    "allEmployees": "All employees",
+    "actions": "Actions",
+    "loadingPayslips": "Loading payslips…",
+    "noPayslips": "No payslips in this run.",
+    "payslipTable": {
+      "employee": "Employee",
+      "gross": "Gross",
+      "deductions": "Deductions",
+      "net": "Net"
+    },
+    "paginationLabel": "runs",
+    "menu": {
+      "hidePayslips": "Hide payslips",
+      "viewPayslips": "View payslips",
+      "approve": "Approve",
+      "reject": "Reject",
+      "credit": "Credit"
+    },
+    "toast": {
+      "loadFailed": "Failed to load approvals",
+      "loadPayslipsFailed": "Failed to load payslips"
+    }
+  },
+  "runDetail": {
+    "breadcrumb": "Payroll",
+    "titleWithPeriod": "{{month}} {{year}} Payroll",
+    "titleFallback": "Payroll",
+    "submitForApproval": "Submit for Approval",
+    "reject": "Reject",
+    "approve": "Approve",
+    "creditPayroll": "Credit Payroll",
+    "cards": {
+      "totalEmployees": "Total Employees",
+      "processed": "Processed this run",
+      "grossPayroll": "Gross Payroll",
+      "totalEarnings": "Total earnings",
+      "totalDeductions": "Total Deductions",
+      "deductionsHint": "Tax, Insurance & Social Sec.",
+      "netPayroll": "Net Payroll",
+      "netPayable": "Net payable"
+    },
+    "searchLabel": "Search Employees",
+    "searchPlaceholder": "Search by name, ID...",
+    "status": "Status",
+    "allStatuses": "All Statuses",
+    "clearFilters": "Clear Filters",
+    "recordsTitle": "Employee Payroll Records",
+    "showingRecords": "Showing {{shown}} of {{total}} records",
+    "table": {
+      "sn": "S.No",
+      "employeeName": "Employee Name",
+      "department": "Department",
+      "basicSalary": "Basic Salary",
+      "allowances": "Allowances",
+      "deductions": "Deductions",
+      "netPay": "Net Pay",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "loading": "Loading payslips…",
+    "empty": "No payslips found for this run.",
+    "downloadSlip": "Download salary slip",
+    "workingDays": "Working Days",
+    "presentDays": "Present Days",
+    "leaveDays": "Leave Days",
+    "overtime": "Overtime",
+    "hours": "{{count}} hrs",
+    "earnings": "EARNINGS",
+    "deductions": "DEDUCTIONS",
+    "added": "added",
+    "removeLine": "Remove line",
+    "totalEarnings": "Total Earnings",
+    "totalDeductions": "Total Deductions",
+    "line": {
+      "type": "Type",
+      "incentive": "Incentive (+)",
+      "deduction": "Deduction (−)",
+      "label": "Label",
+      "labelPlaceholder": "e.g. Performance bonus",
+      "amount": "Amount",
+      "cancel": "Cancel",
+      "add": "Add",
+      "addButton": "Add incentive / deduction"
+    },
+    "pagination": "Showing <b>{{from}} to {{to}}</b> of <b>{{total}}</b> Employee",
+    "toast": {
+      "downloadFailed": "Failed to download salary slip",
+      "actionFailed": "Action failed. Please try again.",
+      "lineInvalid": "Enter a label and a valid amount",
+      "lineAdded": "Line added",
+      "lineAddFailed": "Failed to add line",
+      "lineRemoved": "Line removed",
+      "lineRemoveFailed": "Failed to remove line"
+    },
+    "openPayslip": "Open payslip"
+  },
+  "payrollTab": {
+    "loading": "Loading payroll…",
+    "noSalary": "No salary configured",
+    "noSalaryHint": "Set up this employee's salary to see payroll details.",
+    "mode": "Mode:",
+    "currency": "Currency:",
+    "effectiveFrom": "Effective from:",
+    "hoursPerDay": "Hours/day:",
+    "minHoursPerDay": "Min hours/day:",
+    "grossPay": "Gross Pay",
+    "monthlyGross": "Monthly gross",
+    "totalDeductions": "Total Deductions",
+    "perMonth": "Per month",
+    "netPay": "Net Pay",
+    "takeHome": "Take-home",
+    "salaryBreakdown": "Salary Breakdown",
+    "noEarnings": "No earning components.",
+    "percentOfBase": "{{amount}}% of base",
+    "fixed": "Fixed",
+    "grossTotal": "Gross Total",
+    "deductions": "Deductions",
+    "noDeductions": "No deduction components.",
+    "historyTitle": "Payslip History",
+    "historySubtitle": "Generated payslips for this employee",
+    "table": {
+      "period": "Period",
+      "gross": "Gross",
+      "deductions": "Deductions",
+      "net": "Net",
+      "status": "Status",
+      "ytdNet": "YTD Net"
+    },
+    "empty": "No payslips yet.",
+    "pdf": "PDF",
+    "downloadFailed": "Failed to download payslip"
+  },
+  "myPayslips": {
+    "eyebrow": "Payroll",
+    "title": "My Payslips",
+    "subtitle": "Your credited salary slips. A payslip appears here once payroll is credited for that month.",
+    "loading": "Loading payslips…",
+    "empty": "No payslips yet.",
+    "emptyHint": "You'll see a payslip here once your payroll is credited.",
+    "payslipFallback": "Payslip",
+    "netPay": "Net pay",
+    "pdf": "PDF",
+    "earnings": "Earnings",
+    "gross": "Gross",
+    "deductions": "Deductions",
+    "none": "None",
+    "totalDeductions": "Total Deductions",
+    "downloadFailed": "Failed to download payslip"
+  },
+  "validation": {
+    "labelMax": "Label must be at most {{max}} characters",
+    "lineType": "Choose incentive or deduction",
+    "lineLabel": "Label must be 1–{{max}} characters",
+    "lineAmount": "Enter an amount of 0 or more",
+    "increment": {
+      "title": "Title must be between 2 and 150 characters",
+      "type": "Choose PERCENT or AMOUNT",
+      "percent": "Enter a percentage between 0.01 and 100 (max 2 decimals)",
+      "amount": "Enter an amount greater than 0 (max 2 decimals)",
+      "appliesTo": "Choose BASIC_ONLY or ALL_FIXED",
+      "month": "Choose a month (1-12)",
+      "year": "Choose a year between 2000 and 2100",
+      "filters": "Choose valid filters",
+      "excluded": "excluded must be true or false",
+      "note": "Note must be at most 500 characters",
+      "effectiveDate": "Enter a valid date (YYYY-MM-DD)",
+      "reason": "Reason must be between 5 and 500 characters"
+    }
+  },
+  "ytd": {
+    "title": "Year to date",
+    "titleWithFy": "Year to date ({{label}})",
+    "gross": "YTD Gross",
+    "deductions": "YTD Deductions",
+    "net": "YTD Net",
+    "months": "Months credited: {{count}}"
+  },
+  "increments": {
+    "title": "Salary Increments",
+    "subtitle": "Raise salaries in bulk — preview, apply and revert increments for {{label}}.",
+    "new": "New Increment",
+    "searchPlaceholder": "Search by title...",
+    "allStatuses": "All Statuses",
+    "clearFilters": "Clear Filters",
+    "empty": "No salary increments in {{label}} yet.",
+    "emptyFiltered": "No increments match your filters.",
+    "view": "View",
+    "paginationLabel": "increments",
+    "status": {
+      "DRAFT": "Draft",
+      "APPLIED": "Applied",
+      "REVERTED": "Reverted"
+    },
+    "type": {
+      "PERCENT": "Percentage",
+      "AMOUNT": "Fixed amount"
+    },
+    "appliesTo": {
+      "BASIC_ONLY": "Basic only",
+      "ALL_FIXED": "All fixed earnings"
+    },
+    "table": {
+      "sn": "S.No",
+      "title": "Title",
+      "increment": "Increment",
+      "appliesTo": "Applies To",
+      "effective": "Effective From",
+      "employees": "Employees",
+      "employeesValue": "{{included}} of {{total}}",
+      "status": "Status",
+      "action": "Action"
+    },
+    "detail": {
+      "back": "Back to increments",
+      "meta": "{{value}} · {{applies}} · effective {{month}}",
+      "appliedOn": "Applied on {{date}}",
+      "revertedOn": "Reverted on {{date}}",
+      "edit": "Edit",
+      "preview": "Preview",
+      "refreshPreview": "Refresh preview",
+      "apply": "Apply",
+      "applyHint": "Preview the increment and include at least one employee first",
+      "delete": "Delete",
+      "revert": "Revert",
+      "totals": {
+        "employees": "Employees",
+        "included": "Included",
+        "oldGross": "Current gross (included)",
+        "newGross": "New gross (included)"
+      },
+      "skippedNoSalary": "{{count}} matching employee(s) have no salary for that month and were skipped.",
+      "table": {
+        "include": "Include",
+        "employee": "Employee",
+        "oldGross": "Current Gross",
+        "newGross": "New Gross",
+        "difference": "Difference"
+      },
+      "noLinesDraft": "No preview yet — click Preview to list the matching employees.",
+      "noLines": "No employees in this increment.",
+      "include": "Include in the increment",
+      "exclude": "Exclude from the increment",
+      "employeeFallback": "Employee #{{id}}",
+      "singleMeta": "Effective date {{date}} · Reason: {{reason}}"
+    },
+    "confirm": {
+      "apply": {
+        "title": "Apply increment?",
+        "message": "Apply \"{{title}}\" to {{count}} employee(s)? A new salary effective {{month}} is created for each.",
+        "confirm": "Apply"
+      },
+      "revert": {
+        "title": "Revert increment?",
+        "message": "Revert \"{{title}}\"? The salaries it created (effective {{month}}) are removed. This is not possible once a payroll run exists for {{month}}.",
+        "confirm": "Revert"
+      },
+      "delete": {
+        "title": "Delete increment?",
+        "message": "Delete the draft \"{{title}}\"? This cannot be undone.",
+        "confirm": "Delete"
+      }
+    },
+    "toast": {
+      "loadFailed": "Failed to load increments",
+      "loadOneFailed": "Failed to load the increment",
+      "previewed": "Preview ready — {{count}} employee(s)",
+      "previewFailed": "Failed to preview the increment",
+      "lineFailed": "Failed to update the line",
+      "deleted": "Increment deleted",
+      "applied": "Increment applied to {{count}} employee(s)",
+      "reverted": "Increment reverted for {{count}} employee(s)",
+      "actionFailed": "Action failed",
+      "saved": "Increment saved",
+      "saveFailed": "Failed to save the increment"
+    },
+    "modal": {
+      "createTitle": "New Salary Increment",
+      "editTitle": "Edit Salary Increment",
+      "subtitle": "Saved as a draft — preview the employees before applying.",
+      "title": "Title",
+      "titlePlaceholder": "e.g. Annual increment",
+      "type": "Increment type",
+      "percent": "Percentage",
+      "amount": "Amount",
+      "appliesTo": "Applies to",
+      "amountHint": "A fixed amount is added to the basic (or hourly) rate.",
+      "appliesHint": {
+        "BASIC_ONLY": "Raises the basic (or hourly) rate; percentage components follow.",
+        "ALL_FIXED": "Raises every fixed earning component."
+      },
+      "effectiveMonth": "Effective month",
+      "effectiveHint": "Any month of an open financial year.",
+      "whoTitle": "Who gets it",
+      "whoHint": "Leave all empty for every direct employee. Each filter narrows the list.",
+      "departments": "Departments",
+      "designations": "Designations",
+      "projects": "Projects",
+      "employees": "Employees",
+      "allDepartments": "All departments",
+      "allDesignations": "All designations",
+      "allProjects": "All projects",
+      "allEmployees": "All employees",
+      "itemFallback": "#{{id}}",
+      "remove": "Remove",
+      "cancel": "Cancel",
+      "saving": "Saving…",
+      "saveEdit": "Save Changes",
+      "saveCreate": "Create Draft"
+    },
+    "allKinds": "All kinds",
+    "kind": {
+      "BULK": "Bulk",
+      "SINGLE": "Single"
+    }
+  },
+  "addIncrement": {
+    "button": "Add increment",
+    "title": "Add salary increment",
+    "subtitle": "The new salary applies to the whole month of the effective date.",
+    "type": "Increment type",
+    "percent": "Percentage",
+    "amount": "Amount",
+    "appliesTo": "Applies to",
+    "effectiveDate": "Effective date",
+    "effectiveHint": "Payroll uses the new salary from the 1st of this month.",
+    "preview": "Preview",
+    "basic": "Basic",
+    "hourlyRate": "Hourly rate",
+    "gross": "Gross",
+    "reason": "Reason",
+    "reasonPlaceholder": "e.g. Annual appraisal 2026",
+    "cancel": "Cancel",
+    "save": "Apply increment",
+    "saving": "Applying…",
+    "toast": {
+      "saved": "Salary increment applied",
+      "failed": "Could not apply the increment"
+    }
+  },
+  "salaryHistory": {
+    "title": "Salary history",
+    "subtitle": "Every salary change, newest first, with the increment that made it.",
+    "myTitle": "My salary history",
+    "mySubtitle": "Your salary changes over time.",
+    "empty": "No salary history yet.",
+    "entered": "Entered as {{date}}",
+    "salarySetup": "Salary set up",
+    "revert": "Revert",
+    "paginationLabel": "salary changes",
+    "table": {
+      "effective": "Effective from",
+      "basic": "Basic",
+      "gross": "Gross",
+      "change": "Change",
+      "reason": "Reason",
+      "by": "By",
+      "status": "Status"
+    },
+    "status": {
+      "CURRENT": "Current",
+      "SCHEDULED": "Scheduled",
+      "PAST": "Past"
+    },
+    "kind": {
+      "BULK": "Bulk increment",
+      "SINGLE": "Individual increment"
+    },
+    "confirm": {
+      "title": "Revert this increment?",
+      "message": "The salary change from {{date}} will be removed and the previous salary applies again.",
+      "confirm": "Revert"
+    },
+    "toast": {
+      "loadFailed": "Could not load the salary history",
+      "reverted": "Increment reverted",
+      "revertFailed": "Could not revert the increment"
+    }
+  }
+}

@@ -1,0 +1,383 @@
+{
+  "role": {
+    "OWNER": "Owner",
+    "CONSULTANT": "Consultant",
+    "EPC": "EPC",
+    "SUBCONTRACTOR": "Sub-Contractor"
+  },
+  "status": {
+    "PENDING": "PENDING",
+    "ACCEPTED": "ACCEPTED",
+    "DECLINED": "DECLINED",
+    "CANCELLED": "CANCELLED",
+    "EXPIRED": "EXPIRED",
+    "APPROVED": "APPROVED",
+    "REJECTED": "REJECTED",
+    "NOT_REQUIRED": "NOT_REQUIRED"
+  },
+  "invitations": {
+    "title": "Invitations",
+    "subtitle": "Invite companies to collaborate on your projects.",
+    "inviteCompany": "Invite a company",
+    "tabs": {
+      "received": "Received",
+      "sent": "Sent",
+      "approvals": "Approvals",
+      "collaborations": "My Collaborations",
+      "hierarchy": "Hierarchy",
+      "roles": "Roles"
+    },
+    "empty": {
+      "received": {
+        "title": "No invitations for you",
+        "subtitle": "When another company invites you to collaborate on a project, it'll show up here to accept or decline."
+      },
+      "sent": {
+        "title": "You haven't invited anyone yet",
+        "subtitle": "Invite a company as a Consultant, EPC or Sub-Contractor to collaborate on your projects."
+      },
+      "approvals": {
+        "title": "Nothing awaiting your approval",
+        "subtitle": "When a company accepts a placement under you, you'll approve or reject it here."
+      },
+      "collaborations": {
+        "title": "No collaborations yet",
+        "subtitle": "Projects you share with other companies — and who's above and below you — will appear here."
+      }
+    },
+    "table": {
+      "sno": "S.No",
+      "from": "From",
+      "to": "To",
+      "role": "Role",
+      "project": "Project",
+      "under": "Under",
+      "status": "Status",
+      "actions": "Actions",
+      "company": "Company",
+      "yourRole": "Your Role",
+      "invitedBy": "Invited by",
+      "aboveYou": "Above you",
+      "underYou": "Under you"
+    },
+    "actions": {
+      "accept": "Accept",
+      "decline": "Decline",
+      "approve": "Approve",
+      "reject": "Reject",
+      "cancel": "Cancel",
+      "link": "Link"
+    },
+    "toast": {
+      "actionFailed": "Action failed",
+      "linkCopied": "Invite link copied",
+      "accepted": "Invitation accepted",
+      "declined": "Invitation declined",
+      "cancelled": "Invitation cancelled",
+      "placementApproved": "Placement approved",
+      "placementRejected": "Placement rejected"
+    },
+    "copyLinkPrompt": "Copy this invite link:",
+    "copyLinkTitle": "Copy invite link",
+    "aCompany": "A company",
+    "awaitingParent": "awaiting parent",
+    "parentStatus": "parent: {{status}}",
+    "projectFallback": "Project #{{id}}",
+    "projectOwnerDash": "— (project owner)",
+    "paginationLabel": "invitations"
+  },
+  "roles": {
+    "actions": {
+      "read": "Read",
+      "create": "Create",
+      "update": "Update",
+      "delete": "Delete"
+    },
+    "abbr": {
+      "read": "R",
+      "create": "C",
+      "update": "U",
+      "delete": "D"
+    },
+    "toast": {
+      "loadFailed": "Failed to load roles",
+      "nameRequired": "Role name is required",
+      "updated": "Role updated",
+      "created": "Role created",
+      "saveFailed": "Failed to save role",
+      "deleted": "Role deleted",
+      "deleteFailed": "Failed to delete role"
+    },
+    "confirmDelete": "Delete role \"{{name}}\"? Companies holding it will lose its access.",
+    "moduleCount_one": "{{count}} module",
+    "moduleCount_other": "{{count}} modules",
+    "noAccess": "No access",
+    "project": "Project",
+    "noOwnedProjects": "You don't own any projects yet.",
+    "newRole": "New role",
+    "loading": "Loading roles…",
+    "empty": {
+      "title": "No roles yet",
+      "subtitle": "Create a role with the permissions you want to grant, then assign it to a company when you invite it to this project."
+    },
+    "inactive": "Inactive",
+    "edit": "Edit",
+    "delete": "Delete",
+    "editRole": "Edit role",
+    "form": {
+      "name": "Role name",
+      "namePlaceholder": "e.g. Consultant – View only",
+      "description": "Description",
+      "optional": "(optional)",
+      "descriptionPlaceholder": "What this role can do",
+      "permissions": "Permissions",
+      "module": "Module",
+      "tip": "Tip: click a module name to toggle its whole row."
+    },
+    "cancel": "Cancel",
+    "saveChanges": "Save changes",
+    "createRole": "Create role"
+  },
+  "tree": {
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "companiesBelow": "{{count}} companies below",
+    "loadingProjects": "Loading projects…",
+    "selectProject": "Select a project",
+    "searchCompany": "Search a company…",
+    "expandAll": "Expand all",
+    "empty": {
+      "title": "No collaborations yet",
+      "subtitle": "Invite companies to a project to build the hierarchy."
+    },
+    "selectToView": "Select a project to view its hierarchy.",
+    "projectHierarchy": "{{name}} · hierarchy"
+  },
+  "employmentType": {
+    "FULL_TIME": "FULL-TIME",
+    "CONTRACT": "CONTRACT",
+    "PART_TIME": "PART-TIME"
+  },
+  "userStatus": {
+    "ACTIVE": "ACTIVE",
+    "INACTIVE": "INACTIVE",
+    "SUSPENDED": "SUSPENDED",
+    "TERMINATED": "TERMINATED"
+  },
+  "partner": {
+    "toast": {
+      "loadProjectsFailed": "Failed to load projects",
+      "loadEmployeesFailed": "Failed to load employees"
+    },
+    "backToHierarchy": "Back to hierarchy",
+    "sharedProjects": "Shared projects",
+    "project": "Project",
+    "loading": "Loading…",
+    "selectProject": "Select project",
+    "deployedHere": "Deployed here",
+    "scope": "Scope",
+    "scopeText": "Only the projects you assigned to this company are shown.",
+    "employeesOnProject": "<name>{{name}}</name> employees on this project",
+    "searchEmployee": "Search employee…",
+    "table": {
+      "sno": "S.No",
+      "employee": "Employee",
+      "role": "Role",
+      "type": "Type",
+      "status": "Status"
+    },
+    "emptyEmployees": "No employees deployed to this project yet.",
+    "paginationLabel": "employees"
+  },
+  "months": {
+    "january": "January",
+    "february": "February",
+    "march": "March",
+    "april": "April",
+    "may": "May",
+    "june": "June",
+    "july": "July",
+    "august": "August",
+    "september": "September",
+    "october": "October",
+    "november": "November",
+    "december": "December"
+  },
+  "employeeDetail": {
+    "toast": {
+      "loadEmployeeFailed": "Failed to load employee",
+      "loadAttendanceFailed": "Failed to load attendance"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "attendance": "Attendance"
+    },
+    "backToEmployees": "Back to employees",
+    "fields": {
+      "fullName": "Full Name",
+      "employeeCode": "Employee Code",
+      "role": "Role",
+      "employmentType": "Employment Type",
+      "email": "Email",
+      "phone": "Phone",
+      "company": "Company",
+      "mainProject": "Main Project",
+      "status": "Status"
+    },
+    "loadingAttendance": "Loading attendance…",
+    "stats": {
+      "workingDays": "Working Days",
+      "present": "Present",
+      "absent": "Absent",
+      "paidLeave": "Paid Leave",
+      "workedHrs": "Worked Hrs"
+    },
+    "attendanceNote": "Attendance as reported by {{company}} — read-only.",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month"
+  },
+  "wizard": {
+    "toast": {
+      "sent": "Invitation sent successfully",
+      "sendFailed": "Failed to send invitation"
+    },
+    "title": "Invite a company",
+    "company": "Company",
+    "companyPlaceholder": "Search existing companies, or type an email",
+    "unnamed": "(unnamed)",
+    "hint": {
+      "selected": "Existing company selected.",
+      "searching": "Searching…",
+      "emailInvite": "Not registered? They'll get an invite link by email.",
+      "pick": "Pick a registered company or type an email address."
+    },
+    "projects": "Project(s)",
+    "loadingProjects": "Loading projects…",
+    "noProjects": "You're not on any projects you can invite into.",
+    "inviteAs": "Invite as",
+    "selectProjectFirst": "Select a project first.",
+    "cannotInvite": "You can't invite anyone on the selected project(s).",
+    "underParent": "Under {{role}}",
+    "loading": "Loading…",
+    "noEligibleParent": "No eligible parent on the selected project(s)",
+    "selectParent": "Select a parent",
+    "companyFallback": "Company #{{id}}",
+    "parentHint": "They'll be placed under this company (which must approve).",
+    "collabRole": "Collaboration role",
+    "optional": "(optional)",
+    "noRole": "No role (assign later)",
+    "noRolesHint": "No roles for this project yet — create one in the Roles tab.",
+    "roleHint": "Grants this company the role's permissions on the project.",
+    "cancel": "Cancel",
+    "send": "Send invitation"
+  },
+  "landing": {
+    "invalidLink": "This invitation link is invalid or has expired.",
+    "toast": {
+      "registered": "Registered successfully. Please log in.",
+      "registerFailed": "Registration failed. Please try again."
+    },
+    "loading": "Loading invitation…",
+    "unavailable": "Invitation unavailable",
+    "goToLogin": "Go to login",
+    "title": "You've been invited",
+    "aCompany": "A company",
+    "invitedText": "<b>{{company}}</b> invited you to join as <b>{{role}}</b>{{under}}{{on}}",
+    "underParent": " under {{name}}",
+    "onProjects_one": " on {{count}} project.",
+    "onProjects_other": " on {{count}} projects.",
+    "fullStop": ".",
+    "registeringAs": "Registering as <b>{{email}}</b>",
+    "form": {
+      "companyName": "Company Name",
+      "yourName": "Your Name",
+      "phone": "Phone Number (optional)",
+      "password": "Password",
+      "confirmPassword": "Confirm Password"
+    },
+    "validation": {
+      "companyNameRequired": "Company name is required",
+      "tooShort": "Too short",
+      "nameRequired": "Your name is required",
+      "invalidPhone": "Invalid phone number",
+      "passwordRequired": "Password is required",
+      "minPassword": "Min 8 characters",
+      "confirmRequired": "Please confirm your password",
+      "mismatch": "Passwords do not match"
+    },
+    "submit": "Register & Join",
+    "haveAccount": "Already have an account?",
+    "login": "Log in"
+  },
+  "projectStatus": {
+    "ACTIVE": "ACTIVE",
+    "COMPLETED": "COMPLETED",
+    "INACTIVE": "INACTIVE"
+  },
+  "workspace": {
+    "toast": {
+      "loadFailed": "Failed to load deployed employees",
+      "deployed_one": "{{count}} employee deployed",
+      "deployed_other": "{{count}} employees deployed",
+      "deployFailed": "Failed to deploy",
+      "removed": "Removed from project",
+      "removeFailed": "Failed to remove"
+    },
+    "back": "Back to assigned projects",
+    "you": "You: {{role}}",
+    "status": "Status",
+    "start": "Start",
+    "location": "Location",
+    "myEmployees": "My employees on this project",
+    "deployEmployees": "Deploy employees",
+    "empty": "No employees deployed yet — use “Deploy employees” to add your people.",
+    "remove": "Remove",
+    "removeTitle": "Remove employee",
+    "removeMessage": "Remove {{name}} from {{project}}?"
+  },
+  "deploy": {
+    "toast": {
+      "loadFailed": "Failed to load your employees"
+    },
+    "title": "Deploy my employees",
+    "subtitle": "Select employees from your company to put on this project.",
+    "searchPlaceholder": "Search my employees…",
+    "loading": "Loading your employees…",
+    "empty": "No employees found.",
+    "deployedBadge": "Deployed",
+    "selected": "{{count}} selected",
+    "cancel": "Cancel",
+    "deploying": "Deploying…",
+    "deploy": "Deploy ",
+    "deployCount": "Deploy ({{count}})"
+  },
+  "assigned": {
+    "toast": {
+      "loadFailed": "Failed to load assigned projects"
+    },
+    "title": "Projects assigned to me",
+    "subtitle": "Projects other companies invited you onto — open one to deploy your employees.",
+    "searchPlaceholder": "Search project…",
+    "table": {
+      "sno": "S.No",
+      "project": "Project",
+      "ownerCompany": "Owner Company",
+      "myRole": "My Role",
+      "status": "Status"
+    },
+    "empty": {
+      "title": "No projects assigned to you yet",
+      "subtitle": "When a company invites you onto a project, it appears here."
+    },
+    "paginationLabel": "projects"
+  },
+  "workforce": {
+    "onMyProjects": "On my projects",
+    "deployedToPartners": "Deployed to partners",
+    "onBench": "On the bench",
+    "title": "Workforce distribution",
+    "totalEmployees": "Total employees:",
+    "assigned": "{{count}} assigned",
+    "onBenchCount": "{{count}} on bench"
+  }
+}

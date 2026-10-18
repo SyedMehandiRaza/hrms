@@ -1,0 +1,35 @@
+import { toast } from "react-toastify";
+import { serverErrors, serverMessage } from "./applyFieldErrors";
+
+// Pure error helpers (no network layer in the static build). They still accept
+// an error object shaped like { response: { data: { errName, message, errors } } }.
+export const isPeriodClosedError = (error) =>
+  error?.response?.data?.errName === "PeriodClosed";
+
+// One toast for a failed action — never a second one for PeriodClosed.
+//
+//   catch (err) { toastApiError(err, t("…failed")); }
+export const toastApiError = (err, fallback) => {
+  if (isPeriodClosedError(err)) {
+    const [first] = serverErrors(err);
+    if (first) toast.error(first.message, { toastId: "period-closed" });
+    return;
+  }
+  toast.error(serverMessage(err, fallback));
+};
+
+// Map field errors into a { field: message } object (forms that keep errors in
+// local state instead of react-hook-form). Returns the leftovers' messages (no
+// matching field) so the caller can toast them.
+export const fieldErrorsOf = (err, knownFields) => {
+  const map = {};
+  const unmapped = [];
+  serverErrors(err).forEach(({ field, message }) => {
+    if (!knownFields || knownFields.some((k) => (k.endsWith(".") ? field.startsWith(k) : field === k))) {
+      if (!map[field]) map[field] = message;
+    } else {
+      unmapped.push(message);
+    }
+  });
+  return { map, unmapped };
+};

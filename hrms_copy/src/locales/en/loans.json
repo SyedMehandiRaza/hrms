@@ -1,0 +1,207 @@
+{
+  "page": {
+    "title": "My Loans",
+    "subtitle": "Apply for a company loan and track your EMIs."
+  },
+  "approvals": {
+    "title": "Loan Approvals",
+    "subtitle": "Review, approve and manage employee loan requests.",
+    "newLoanForEmployee": "New Loan (for employee)",
+    "tabs": {
+      "all": "All Loans",
+      "skips": "Skip Requests"
+    },
+    "filters": {
+      "all": "All",
+      "pending": "Pending",
+      "needsChanges": "Needs Changes",
+      "approved": "Approved",
+      "completed": "Completed",
+      "rejected": "Rejected"
+    },
+    "searchPlaceholder": "Search loan or employee...",
+    "emptyLoans": "No loans in this view.",
+    "skipRequestsHeading": "Skip Requests",
+    "levelChip": "L{{done}}/{{total}}"
+  },
+  "common": {
+    "loading": "Loading…",
+    "loanFallback": "Loan #{{id}}",
+    "employeeFallback": "Employee #{{id}}",
+    "loan": "Loan",
+    "cancel": "Cancel",
+    "clearFilters": "Clear Filters",
+    "back": "Back",
+    "loanDetails": "Loan Details",
+    "notFound": "Loan not found.",
+    "purpose": "Purpose: {{purpose}}",
+    "rejected": "Rejected: {{reason}}",
+    "optional": "Optional"
+  },
+  "filters": {
+    "searchLabel": "Search Loans",
+    "searchPlaceholder": "Search by loan ID or purpose...",
+    "status": "Status",
+    "allStatuses": "All Statuses"
+  },
+  "table": {
+    "sno": "S.No",
+    "loan": "Loan",
+    "employee": "Employee",
+    "amount": "Amount",
+    "emi": "EMI",
+    "installments": "Installments",
+    "outstanding": "Outstanding",
+    "status": "Status",
+    "action": "Action",
+    "emiNo": "EMI #",
+    "due": "Due",
+    "reason": "Reason",
+    "number": "#",
+    "balance": "Balance"
+  },
+  "empty": {
+    "title": "No loans yet",
+    "description": "Apply for a company loan — it's repaid automatically from your salary each month."
+  },
+  "pagination": {
+    "loans": "loans",
+    "skipRequests": "skip requests"
+  },
+  "actions": {
+    "applyForLoan": "Apply for Loan",
+    "updateReapply": "Update & Re-apply",
+    "view": "View",
+    "approve": "Approve",
+    "requestChanges": "Request changes",
+    "reject": "Reject",
+    "skip": "Skip",
+    "requestSkip": "Request skip",
+    "approveSkip": "Approve Skip",
+    "rejectSkip": "Reject Skip",
+    "submitting": "Submitting...",
+    "skipRequested": "Skip Requested"
+  },
+  "detail": {
+    "emiSchedule": "EMI Schedule",
+    "paymentHistory": "Payment History"
+  },
+  "apply": {
+    "titleResubmit": "Update & Re-apply",
+    "titleOnBehalf": "New Loan (for employee)",
+    "title": "Apply for a Loan",
+    "changesRequested": "Approver requested changes",
+    "suggestedInstallments": "Suggested installments: <strong>{{n}}</strong>",
+    "employee": "Employee",
+    "searchEmployee": "Search employee…",
+    "noEmployees": "No employees found.",
+    "loanAmount": "Loan Amount",
+    "installments": "Installments",
+    "purposeOptional": "Purpose (optional)",
+    "purposePlaceholder": "Reason for the loan…",
+    "insufficientSalary": "If salary can't cover the EMI",
+    "policy": {
+      "SKIP": "Skip & defer",
+      "PARTIAL": "Partial",
+      "FORCE": "Force"
+    },
+    "monthlyEmi": "Monthly EMI",
+    "installmentsCount": "{{n}} installments",
+    "last": "last: {{amount}}",
+    "submitting": "Submitting…",
+    "resubmit": "Resubmit",
+    "createLoan": "Create Loan",
+    "submitRequest": "Submit Request"
+  },
+  "approve": {
+    "title": "Approve {{loan}}",
+    "levelOf": "Level {{level}} of {{total}} approval",
+    "note": "Approving accepts the request as submitted. To change the amount or installments, use <hl>Request changes</hl> to send it back to the employee.",
+    "amount": "Amount",
+    "installments": "Installments",
+    "monthlyEmi": "Monthly EMI",
+    "emisCount": "{{n}} EMIs",
+    "last": "last: {{amount}}",
+    "approving": "Approving…",
+    "approveLevel": "Approve Level {{level}}",
+    "approveGenerate": "Approve & Generate EMIs"
+  },
+  "reject": {
+    "title": "Reject {{loan}}",
+    "reasonOptional": "Reason (Optional)",
+    "reasonPlaceholder": "Enter reason for rejection...",
+    "rejecting": "Rejecting…",
+    "confirm": "Confirm Rejection"
+  },
+  "modify": {
+    "title": "Request changes · {{loan}}",
+    "description": "Send this request back to the employee to correct. They'll update the terms and re-apply on the same loan.",
+    "reason": "Reason",
+    "reasonPlaceholder": "e.g. Please reduce to 6 installments so the EMI fits your salary.",
+    "suggestedInstallments": "Suggested Installments",
+    "suggestedAmount": "Suggested Amount",
+    "sending": "Sending…",
+    "sendBack": "Send Back for Changes"
+  },
+  "toast": {
+    "errorLoadingEmployees": "Error loading employees: {{error}}",
+    "selectEmployee": "Select an employee.",
+    "invalidAmount": "Enter a valid amount.",
+    "invalidInstallments": "Enter number of installments.",
+    "resubmitted": "Loan resubmitted for approval",
+    "createdForEmployee": "Loan created for employee",
+    "submitted": "Loan request submitted",
+    "submitFailed": "Could not submit the loan",
+    "notInApprovalGroup": "You're not in the payroll approval group.",
+    "skipApproved": "Skip approved",
+    "skipRejected": "Skip rejected",
+    "actionFailed": "Action failed",
+    "levelApproved": "Level {{level}} approved",
+    "loanApproved": "Loan approved — schedule generated",
+    "approveFailed": "Could not approve",
+    "loanRejected": "Loan rejected",
+    "rejectFailed": "Could not reject",
+    "reasonRequired": "Add a reason so the employee knows what to correct.",
+    "sentBack": "Sent back to the employee for changes",
+    "sendBackFailed": "Could not send back",
+    "skipSubmitted": "Skip request submitted",
+    "skipFailed": "Could not request skip"
+  },
+  "status": {
+    "PENDING": "Pending",
+    "APPROVED": "Approved",
+    "DISBURSED": "Disbursed",
+    "ACTIVE": "Active",
+    "COMPLETED": "Completed",
+    "CLOSED": "Closed",
+    "FORECLOSED": "Foreclosed",
+    "REJECTED": "Rejected",
+    "MODIFICATION_REQUESTED": "Needs Changes",
+    "CANCELLED": "Cancelled"
+  },
+  "installmentStatus": {
+    "PENDING": "PENDING",
+    "PAID": "PAID",
+    "PARTIALLY_PAID": "PARTIALLY_PAID",
+    "SKIPPED": "SKIPPED",
+    "OVERDUE": "OVERDUE"
+  },
+  "skipStatus": {
+    "PENDING": "PENDING",
+    "APPROVED": "APPROVED",
+    "REJECTED": "REJECTED"
+  },
+  "paymentMethod": {
+    "SALARY_DEDUCTION": "SALARY_DEDUCTION",
+    "ONLINE": "ONLINE",
+    "ADJUSTMENT": "ADJUSTMENT",
+    "FNF_RECOVERY": "FNF_RECOVERY"
+  },
+  "paymentStatus": {
+    "INITIATED": "INITIATED",
+    "SUCCESS": "SUCCESS",
+    "PARTIAL": "PARTIAL",
+    "FAILED": "FAILED",
+    "REVERSED": "REVERSED"
+  }
+}

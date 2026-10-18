@@ -1,0 +1,139 @@
+{
+  "title": "Holidays",
+  "subtitle": "View the upcoming company holidays and plan your schedule.",
+  "viewCalendar": "View Calendar",
+  "createHoliday": "Create Holiday",
+  "filters": {
+    "searchLabel": "Search Holiday",
+    "searchPlaceholder": "Search by name...",
+    "searchPlaceholderEmployee": "Search by name or type...",
+    "filterByType": "Filter by Type",
+    "holidayType": "Holiday Type",
+    "allTypes": "All Types",
+    "clearFilters": "Clear Filters",
+    "financialYear": "Financial year"
+  },
+  "table": {
+    "sn": "S.N",
+    "holidayName": "Holiday Name",
+    "date": "Date",
+    "day": "Day",
+    "type": "Type",
+    "action": "Action"
+  },
+  "loading": "Loading holidays...",
+  "empty": "No holidays found.",
+  "emptySearch": "No holidays match your search.",
+  "defaultType": "Public Holiday",
+  "card": {
+    "dateLabel": "Date:",
+    "dayLabel": "Day:"
+  },
+  "edit": "Edit",
+  "delete": "Delete",
+  "pagination": {
+    "showing": "Showing",
+    "of": "of",
+    "holidays": "holidays"
+  },
+  "deleteConfirm": {
+    "title": "Delete Holiday",
+    "message": "Are you sure you want to delete {{name}}? This action cannot be undone.",
+    "confirm": "Delete"
+  },
+  "types": {
+    "public": "Public",
+    "festival": "Festival",
+    "national": "National",
+    "company": "Company",
+    "optional": "Optional",
+    "weeklyOff": "Weekly Off"
+  },
+  "modal": {
+    "editTitle": "Edit Holiday",
+    "createTitle": "Create New Holiday",
+    "editSubtitle": "Update details for the selected holiday.",
+    "createSubtitle": "Add a new holiday to the company calendar.",
+    "detailsSection": "Holiday Details",
+    "configSection": "Holiday Configuration",
+    "holidayName": "Holiday Name",
+    "holidayNamePlaceholder": "e.g. Diwali",
+    "date": "Date",
+    "holidayType": "Holiday Type",
+    "description": "Description",
+    "descriptionPlaceholder": "e.g. Festival of lights...",
+    "globalTitle": "Global Holiday",
+    "globalSubtitle": "Applies to all office locations automatically",
+    "optionalTitle": "Optional Holiday",
+    "optionalSubtitle": "Employees can choose whether to take this day off",
+    "halfDayTitle": "Half Day",
+    "halfDaySubtitle": "This holiday is only for half a working day",
+    "activeTitle": "Active",
+    "activeSubtitle": "Is this holiday currently active?",
+    "cancel": "Cancel",
+    "update": "Update Holiday",
+    "create": "Create Holiday",
+    "fromTime": "Start time",
+    "toTime": "End time"
+  },
+  "toast": {
+    "loadFailed": "Failed to load holidays",
+    "loadOneFailed": "Failed to load holiday",
+    "deleted": "Holiday deleted",
+    "deleteFailed": "Failed to delete holiday",
+    "updated": "Holiday updated",
+    "created": "Holiday created",
+    "saveFailed": "Failed to save holiday"
+  },
+  "validation": {
+    "nameRequired": "Holiday Name is required",
+    "dateRequired": "Date is required",
+    "timeRequired": "Start and end time are required for a half-day holiday",
+    "timeOrder": "Start time must be before the end time",
+    "dateInFy": "Date must be inside {{label}}",
+    "copyName": "Holiday name must be 2–200 characters",
+    "copyDate": "Enter a valid date (YYYY-MM-DD)",
+    "copyDateInFy": "Date must be inside {{label}}",
+    "copyConflict": "An active holiday already exists for this date",
+    "copyDuplicate": "Two holidays in this list fall on the same date",
+    "copyAlready": "This holiday was already copied to that year"
+  },
+  "paginationLabel": "holidays",
+  "copy": {
+    "button": "Copy to next year",
+    "buttonHint": "Copy {{from}} holidays to {{to}}",
+    "noNextYear": "The next financial year isn't set up yet",
+    "targetLocked": "{{label}} is closed — reopen it to make changes",
+    "title": "Copy holidays to {{to}}",
+    "subtitle": "From {{from}} — check each new date before copying",
+    "loading": "Loading holidays...",
+    "loadFailed": "Failed to load the holidays to copy",
+    "emptyTitle": "Nothing to copy",
+    "empty": "There are no active holidays in {{from}}.",
+    "selectAll": "Select all",
+    "table": {
+      "holiday": "Holiday",
+      "sourceDate": "Current date",
+      "newDate": "New date",
+      "flags": "Check"
+    },
+    "flags": {
+      "CHECK_DATE": "Check date",
+      "CONFLICT": "Conflict",
+      "ALREADY_COPIED": "Already copied",
+      "OK": "Ready"
+    },
+    "flagHints": {
+      "CHECK_DATE": "date moves every year — confirm it",
+      "CONFLICT": "another holiday is on the proposed date",
+      "ALREADY_COPIED": "copied to that year before"
+    },
+    "noneSelected": "Select at least one holiday",
+    "fixRows": "Fix the {{count}} highlighted rows",
+    "selectedCount": "{{selected}} of {{total}} selected",
+    "copying": "Copying...",
+    "submit": "Copy {{count}} holidays",
+    "success": "{{count}} holidays copied to {{label}}",
+    "failed": "Failed to copy the holidays"
+  }
+}

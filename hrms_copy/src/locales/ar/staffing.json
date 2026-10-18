@@ -1,0 +1,581 @@
+{
+  "list": {
+    "title": "إدارة التوظيف",
+    "subtitle": "إدارة ومراقبة شركاء القوى العاملة الخارجيين.",
+    "addCompany": "إضافة شركة توظيف",
+    "stats": {
+      "totalAgencies": "إجمالي الوكالات",
+      "activeAgencies": "الوكالات النشطة",
+      "inactiveAgencies": "الوكالات غير النشطة",
+      "complianceRate": "معدل الامتثال",
+      "live": "مباشر",
+      "static": "ثابت",
+      "totalEmployees": "إجمالي الموظفين"
+    },
+    "empty": "لا توجد شركات توظيف بعد. أضف شريكك الأول.",
+    "loading": "جارٍ تحميل شركات التوظيف...",
+    "table": {
+      "sn": "م",
+      "company": "الشركة",
+      "contactPerson": "جهة الاتصال",
+      "phone": "الهاتف",
+      "city": "المدينة",
+      "status": "الحالة",
+      "actions": "الإجراءات",
+      "totalEmployees": "إجمالي الموظفين"
+    },
+    "status": {
+      "active": "نشط",
+      "inactive": "غير نشط"
+    },
+    "actions": {
+      "view": "عرض",
+      "edit": "تعديل",
+      "delete": "حذف"
+    },
+    "pagination": {
+      "showing": "عرض {{from}} إلى {{to}} من {{total}} شركة"
+    },
+    "toast": {
+      "deleted": "تم حذف شركة التوظيف",
+      "deleteFailed": "تعذّر حذف شركة التوظيف"
+    },
+    "filters": {
+      "status": "الحالة",
+      "allStatus": "جميع الحالات",
+      "active": "نشط",
+      "inactive": "غير نشط",
+      "search": "بحث",
+      "searchPlaceholder": "بحث...",
+      "clearFilters": "مسح عوامل التصفية"
+    },
+    "paginationLabel": "شركات"
+  },
+  "add": {
+    "breadcrumbManagement": "إدارة شركات التوظيف",
+    "breadcrumbCurrent": "إضافة شركة توظيف",
+    "title": "إضافة شركة توظيف",
+    "subtitle": "ابدأ عملية إضافة شركة توظيف جديدة إلى مؤسستك.",
+    "success": {
+      "title": "تمت إضافة الشركة",
+      "message": "تمت إضافة شركة التوظيف بنجاح إلى مؤسستك.",
+      "back": "العودة إلى الشركاء"
+    },
+    "photo": {
+      "title": "صورة الشركة",
+      "hint": "قم بتحميل صورة واضحة لملف الشركة",
+      "upload": "تحميل صورة",
+      "remove": "إزالة"
+    },
+    "fields": {
+      "companyName": "اسم الشركة",
+      "companyNamePlaceholder": "الملعقة الذهبية",
+      "contactPerson": "اسم جهة الاتصال",
+      "contactPersonPlaceholder": "اختر جهة الاتصال...",
+      "email": "البريد الإلكتروني",
+      "emailPlaceholder": "مثال: john.doe@company.com",
+      "phone": "رقم الهاتف",
+      "phonePlaceholder": "555-0123",
+      "project": "المشروع",
+      "projectPlaceholder": "اختر",
+      "location": "الموقع",
+      "locationPlaceholder": "مثال: سان فرانسيسكو، كاليفورنيا"
+    },
+    "buttons": {
+      "cancel": "إلغاء",
+      "next": "التالي"
+    },
+    "validation": {
+      "companyNameRequired": "اسم الشركة مطلوب",
+      "min2Required": "حرفان على الأقل مطلوبان",
+      "contactPersonRequired": "جهة الاتصال مطلوبة",
+      "emailRequired": "البريد الإلكتروني مطلوب",
+      "emailValid": "أدخل عنوان بريد إلكتروني صالحًا",
+      "phoneRequired": "رقم الهاتف مطلوب",
+      "phoneValid": "أدخل رقم هاتف صالحًا (من 6 إلى 15 رقمًا)",
+      "projectRequired": "يرجى اختيار مشروع",
+      "locationRequired": "الموقع مطلوب",
+      "locationMin": "يجب أن يتكون الموقع من 3 أحرف على الأقل",
+      "locationChars": "يحتوي الموقع على أحرف غير صالحة"
+    }
+  },
+  "details": {
+    "breadcrumbManagement": "إدارة شركات التوظيف",
+    "breadcrumbCompany": "الشركة",
+    "companyName": "شركة حلول المواهب العالمية المحدودة",
+    "activePartner": "شريك نشط",
+    "location": "لندن، المملكة المتحدة",
+    "viewInvoices": "عرض الفواتير",
+    "editDetails": "تعديل التفاصيل",
+    "companyInformation": "معلومات الشركة",
+    "companyProfile": "ملف الشركة",
+    "info": {
+      "primaryContact": "جهة الاتصال الرئيسية",
+      "primaryContactValue": "إليانور فيتزويليام",
+      "primaryContactSub": "المدير العام",
+      "contractExpiry": "انتهاء العقد",
+      "contractExpiryValue": "31 ديسمبر 2024",
+      "contractExpirySub": "تاريخ التوقيع الأصلي: يناير 2022",
+      "renewalSoon": "التجديد قريباً",
+      "emailAddress": "البريد الإلكتروني",
+      "emailAddressValue": "مثال: contact@globaltalent.co.uk",
+      "phoneNumber": "رقم الهاتف",
+      "phoneNumberValue": "+44 20 7946 0123"
+    },
+    "totalActiveEmployees": "إجمالي الموظفين النشطين",
+    "fromLastMonth": "+12.5% عن الشهر الماضي",
+    "hoursWorkedThisMonth": "ساعات العمل (هذا الشهر)",
+    "hrs": "ساعة",
+    "projectedCapacity": "85% من الطاقة الشهرية المتوقعة",
+    "assignedEmployees": "الموظفون المعيَّنون",
+    "assignedSubtitle": "الموظفون المنتشرون حالياً من Global Talent Solutions",
+    "filter": "تصفية",
+    "exportCsv": "تصدير CSV",
+    "table": {
+      "sn": "م",
+      "employeeName": "اسم الموظف",
+      "project": "المشروع",
+      "role": "الدور",
+      "status": "الحالة",
+      "actions": "الإجراءات"
+    },
+    "viewAllEmployees": "عرض جميع الموظفين الـ 142",
+    "support": {
+      "billingTitle": "دعم الفوترة",
+      "billingText": "لاستفسارات الفواتير، تواصل مع قسم الفوترة على accounts@globaltalent.co.uk أو اتصل على التحويلة 402.",
+      "securityTitle": "الأمان والامتثال",
+      "securityText": "تم التحقق من حصول هذا الشريك على شهادة ISO 27001. آخر تدقيق اكتمل في 12 مارس 2024."
+    },
+    "employeeStatus": {
+      "onSite": "في الموقع",
+      "remote": "عن بُعد",
+      "onLeave": "في إجازة"
+    },
+    "employees": {
+      "jamesSullivanProject": "ترقية البنية التحتية المرحلة الثانية",
+      "jamesSullivanRole": "مهندس DevOps أول",
+      "arjunMehtaProject": "ترحيل نظام إدارة علاقات العملاء للمؤسسة",
+      "arjunMehtaRole": "مهندس قواعد بيانات",
+      "lauraChenProject": "إعادة هيكلة تطبيق الجوال",
+      "lauraChenRole": "مصممة واجهات المستخدم",
+      "davidBrooksProject": "ترقية البنية التحتية المرحلة الثانية",
+      "davidBrooksRole": "أمن الشبكات"
+    },
+    "editCompany": "تعديل الشركة",
+    "stats": {
+      "totalEmployees": "إجمالي الموظفين",
+      "activeEmployees": "الموظفون النشطون",
+      "inactiveEmployees": "الموظفون غير النشطين"
+    },
+    "employeesList": "موظفو شركة التوظيف",
+    "employeesListSub": "إدارة الموظفين المعيّنين لشركة التوظيف هذه.",
+    "toast": {
+      "fetchCompanyFailed": "تعذّر جلب تفاصيل الشركة",
+      "fetchEmployeesFailed": "تعذّر جلب الموظفين"
+    },
+    "loadingDetails": "جارٍ تحميل التفاصيل...",
+    "notFound": "لم يتم العثور على الشركة",
+    "companyStatus": {
+      "active": "نشط",
+      "inactive": "غير نشط"
+    },
+    "contactPerson": "جهة الاتصال",
+    "contactEmail": "البريد الإلكتروني لجهة الاتصال",
+    "contactPhone": "هاتف جهة الاتصال",
+    "emailLabel": "البريد الإلكتروني",
+    "phoneLabel": "الهاتف",
+    "locationLabel": "الموقع",
+    "na": "غير متوفر",
+    "assignedProjects": "المشاريع المعيّنة ({{n}})",
+    "unnamedProject": "مشروع بدون اسم",
+    "live": "مباشر",
+    "filters": {
+      "allTypes": "جميع الأنواع",
+      "fullTime": "دوام كامل",
+      "contract": "عقد",
+      "allStatus": "جميع الحالات",
+      "active": "نشط",
+      "inactive": "غير نشط",
+      "search": "بحث",
+      "clearFilters": "مسح عوامل التصفية"
+    },
+    "empTable": {
+      "sn": "م",
+      "employeeId": "رقم الموظف",
+      "name": "الاسم",
+      "role": "الدور",
+      "type": "النوع",
+      "project": "المشروع",
+      "status": "الحالة"
+    },
+    "loadingEmployees": "جارٍ تحميل الموظفين...",
+    "noEmployees": "لا يوجد موظفون يطابقون عوامل التصفية.",
+    "empStatus": {
+      "active": "نشط",
+      "inactive": "غير نشط",
+      "unknown": "غير معروف"
+    },
+    "empType": {
+      "fullTime": "دوام كامل",
+      "contract": "عقد"
+    },
+    "paginationLabel": "موظفين"
+  },
+  "assign": {
+    "breadcrumbContracts": "العقود",
+    "breadcrumbFlow": "مسار التعيين",
+    "title": "تعيين موظفي العقود",
+    "subtitle": "إلحاق الموارد الخارجية بالمشاريع النشطة وإدارة علاقات شركات التوظيف.",
+    "success": {
+      "title": "تم تأكيد التعيين!",
+      "message": "تم تعيين المتعاقد بنجاح وتم إخطار جميع المعنيين.",
+      "back": "العودة إلى العقود"
+    },
+    "assignmentDetails": "تفاصيل التعيين",
+    "fields": {
+      "selectEmployee": "اختر الموظف",
+      "selectEmployeePlaceholder": "ابحث بالاسم أو المعرّف الفريد...",
+      "selectCompany": "اختر شركة التوظيف",
+      "selectCompanyPlaceholder": "اختر المورّد...",
+      "assignProject": "التعيين إلى مشروع",
+      "assignProjectPlaceholder": "قائمة المشاريع النشطة...",
+      "role": "الدور المخصص",
+      "rolePlaceholder": "مثال: مهندس واجهات أمامية أول",
+      "billingRate": "معدل الفوترة (دولار/ساعة)",
+      "billingRatePlaceholder": "0.00"
+    },
+    "buttons": {
+      "cancel": "إلغاء",
+      "confirm": "تأكيد التعيين"
+    },
+    "summary": {
+      "title": "ملخص دور المتعاقد",
+      "subtitle": "الأثر المقدَّر لمشروع Apollo Cloud Infrastructure",
+      "utilizationRate": "معدل الاستخدام",
+      "weeklyCap": "الحد الأسبوعي",
+      "weeklyCapValue": "40 ساعة",
+      "duration": "المدة",
+      "durationValue": "6 أشهر"
+    },
+    "compliance": {
+      "title": "حالة امتثال المورّد",
+      "msaSigned": "تم توقيع اتفاقية الخدمة الرئيسية",
+      "msaStatus": "نشط",
+      "insurance": "التحقق من التأمين",
+      "insuranceStatus": "صالح",
+      "tax": "الوثائق الضريبية",
+      "taxStatus": "التجديد مستحق"
+    },
+    "budget": {
+      "title": "تتبع الميزانية",
+      "remaining": "المتبقي في مجمع المشروع",
+      "withinVariance": "ضمن التباين المخصص"
+    },
+    "history": {
+      "title": "سجل التعيينات الأخير",
+      "viewAll": "عرض جميع السجلات",
+      "table": {
+        "sn": "م",
+        "contractor": "المتعاقد",
+        "company": "شركة التوظيف",
+        "project": "المشروع",
+        "startDate": "تاريخ البدء",
+        "status": "الحالة"
+      },
+      "status": {
+        "onboarded": "تم الإلحاق",
+        "pendingDocs": "بانتظار المستندات"
+      }
+    },
+    "validation": {
+      "employeeRequired": "يرجى اختيار موظف",
+      "companyRequired": "يرجى اختيار شركة توظيف",
+      "projectRequired": "يرجى اختيار مشروع",
+      "roleRequired": "الدور مطلوب",
+      "tooShort": "قصير جدًا",
+      "billingRateRequired": "سعر الفوترة مطلوب",
+      "greaterThanZero": "يجب أن تكون القيمة أكبر من 0",
+      "validRate": "أدخل سعرًا صالحًا"
+    }
+  },
+  "invoice": {
+    "breadcrumbManagement": "إدارة شركات التوظيف",
+    "breadcrumbCompany": "الشركة",
+    "breadcrumbCurrent": "عرض الفاتورة",
+    "title": "معاينة الفاتورة",
+    "subtitle": "راجع تكاليف العمالة ومقاييس التوظيف لدورة الفوترة الحالية.",
+    "downloadPdf": "تنزيل PDF",
+    "sendToCompany": "إرسال إلى الشركة",
+    "generateInvoice": "إنشاء الفاتورة",
+    "companyName": "شركة حلول اللوجستيات العالمية",
+    "activeProject": "مشروع نشط",
+    "contractId": "معرّف العقد:",
+    "city": "شيكاغو، إلينوي",
+    "netTerms": "شروط السداد خلال 30 يوماً",
+    "billingPeriod": "فترة الفوترة",
+    "billingPeriodValue": "1 أكتوبر – 31 أكتوبر 2024",
+    "totalEmployees": "إجمالي الموظفين",
+    "employeesDelta": "+4 عن الشهر الماضي",
+    "totalHoursWorked": "إجمالي ساعات العمل",
+    "hrs": "ساعة",
+    "laborBreakdown": "تفصيل عمالة الموظفين",
+    "searchPlaceholder": "ابحث عن موظف...",
+    "table": {
+      "sn": "م",
+      "employeeDetails": "تفاصيل الموظف",
+      "department": "القسم",
+      "hours": "الساعات",
+      "rate": "المعدل (دولار)",
+      "tax": "الضريبة (5%)",
+      "amount": "المبلغ (دولار)"
+    },
+    "mobile": {
+      "hours": "الساعات",
+      "rate": "المعدل",
+      "tax": "ضريبة 5%"
+    },
+    "additionalRows": "+ 38 صف موظف إضافي ...",
+    "summary": {
+      "subtotal": "المجموع الفرعي لتكاليف العمالة",
+      "serviceFee": "رسوم خدمة الوكالة (8%)",
+      "taxes": "الضرائب المطبقة",
+      "netPayable": "صافي المبلغ المستحق",
+      "due": "مستحق في 15 نوفمبر"
+    },
+    "footer": {
+      "gdpr": "متوافق مع اللائحة العامة لحماية البيانات",
+      "encryption": "تشفير AES بـ 256 بت",
+      "autoSync": "المزامنة التلقائية مُفعّلة",
+      "copyright": "© 2024 HRMS Enterprise Workforce Solutions. جميع الحقوق محفوظة."
+    },
+    "departments": {
+      "operations": "العمليات",
+      "warehouse": "المستودع",
+      "distribution": "التوزيع"
+    },
+    "roles": {
+      "seniorLogisticsLead": "قائد لوجستيات أول",
+      "inventorySpecialist": "أخصائي مخزون",
+      "fleetManager": "مدير الأسطول",
+      "supplyChainAnalyst": "محلل سلسلة التوريد"
+    }
+  },
+  "modal": {
+    "title": {
+      "view": "تفاصيل شركة التوظيف",
+      "edit": "تعديل شركة التوظيف",
+      "create": "إضافة شركة توظيف"
+    },
+    "subtitle": {
+      "view": "معلومات شريك التوظيف.",
+      "edit": "أدخل تفاصيل شريك التوظيف.",
+      "create": "أدخل تفاصيل شريك التوظيف."
+    },
+    "fields": {
+      "companyName": "اسم الشركة",
+      "companyNamePlaceholder": "حلول التوظيف العالمية",
+      "companyCode": "رمز الشركة",
+      "companyCodePlaceholder": "مثال: GSS-01",
+      "companyEmail": "البريد الإلكتروني للشركة",
+      "companyEmailPlaceholder": "مثال: contact@company.com",
+      "companyPhone": "هاتف الشركة",
+      "companyPhonePlaceholder": "+1 555-0123",
+      "contactPersonName": "اسم جهة الاتصال",
+      "contactPersonNamePlaceholder": "سارة جنكينز",
+      "contactPersonEmail": "البريد الإلكتروني لجهة الاتصال",
+      "contactPersonEmailPlaceholder": "مثال: sarah@company.com",
+      "contactPersonPhone": "هاتف جهة الاتصال",
+      "contactPersonPhonePlaceholder": "+1 555-0124",
+      "city": "المدينة",
+      "cityPlaceholder": "سان فرانسيسكو",
+      "address": "العنوان",
+      "addressPlaceholder": "الشارع، المنطقة، الإقليم",
+      "status": "الحالة"
+    },
+    "statusOptions": {
+      "active": "نشط",
+      "inactive": "غير نشط"
+    },
+    "buttons": {
+      "close": "إغلاق",
+      "cancel": "إلغاء",
+      "saving": "جارٍ الحفظ...",
+      "saveChanges": "حفظ التغييرات",
+      "createCompany": "إنشاء الشركة",
+      "uploading": "جارٍ التحميل..."
+    },
+    "credentialsHint": "سيتم إنشاء اسم مستخدم وكلمة مرور تلقائياً وإرسالهما إلى البريد الإلكتروني للشركة أدناه.",
+    "photo": {
+      "alt": "الشركة",
+      "title": "صورة الشركة",
+      "hint": "قم بتحميل شعار الشركة أو صورة لها.",
+      "upload": "تحميل صورة",
+      "remove": "إزالة"
+    },
+    "projects": {
+      "label": "المشاريع",
+      "placeholder": "اختر مشروعاً أو أكثر",
+      "selectProjects": "اختر المشاريع",
+      "loading": "جارٍ التحميل...",
+      "none": "لا توجد مشاريع",
+      "fallbackName": "مشروع #{{id}}",
+      "hint": "لا يمكن لشركة التوظيف تعيين موظفيها إلا في هذه المشاريع."
+    },
+    "validation": {
+      "companyNameRequired": "اسم الشركة مطلوب",
+      "minTwoChars": "حرفان على الأقل",
+      "companyCodeRequired": "رمز الشركة مطلوب",
+      "tooLong": "طويل جداً",
+      "companyEmailRequired": "البريد الإلكتروني للشركة مطلوب",
+      "invalidEmail": "أدخل بريداً إلكترونياً صالحاً",
+      "companyPhoneRequired": "هاتف الشركة مطلوب",
+      "invalidPhone": "أدخل رقم هاتف صالحاً (6–15 رقماً)",
+      "contactNameRequired": "اسم جهة الاتصال مطلوب",
+      "lettersPeriodsOnly": "يُسمح فقط بالأحرف والنقاط",
+      "contactEmailRequired": "البريد الإلكتروني لجهة الاتصال مطلوب",
+      "emailTooLong": "البريد الإلكتروني طويل جداً",
+      "contactPhoneRequired": "هاتف جهة الاتصال مطلوب",
+      "addressRequired": "العنوان مطلوب",
+      "invalidAddressChars": "يحتوي العنوان على أحرف غير صالحة",
+      "projectsRequired": "عيّن مشروعاً واحداً على الأقل"
+    },
+    "toast": {
+      "uploadFailed": "فشل تحميل الصورة. يرجى المحاولة مرة أخرى.",
+      "missingId": "معرّف شركة التوظيف مفقود",
+      "updateSuccess": "تم تحديث شركة التوظيف بنجاح",
+      "updateFailed": "فشل تحديث شركة التوظيف",
+      "createSuccess": "تم إنشاء شركة التوظيف بنجاح",
+      "createFailed": "فشل إنشاء شركة التوظيف"
+    }
+  },
+  "profile": {
+    "title": "ملف الشركة",
+    "subtitle": "إدارة معلومات شركتك وإعدادات الأمان",
+    "generalInformation": "المعلومات العامة",
+    "primaryContactPerson": "جهة الاتصال الرئيسية",
+    "changePassword": "تغيير كلمة المرور",
+    "fields": {
+      "companyName": "اسم الشركة",
+      "companyCode": "رمز الشركة",
+      "emailAddress": "البريد الإلكتروني",
+      "phoneNumber": "رقم الهاتف",
+      "city": "المدينة",
+      "address": "العنوان",
+      "name": "الاسم",
+      "email": "البريد الإلكتروني",
+      "phone": "الهاتف",
+      "currentPassword": "كلمة المرور الحالية",
+      "newPassword": "كلمة المرور الجديدة",
+      "confirmPassword": "تأكيد كلمة المرور"
+    },
+    "validation": {
+      "companyNameRequired": "اسم الشركة مطلوب",
+      "tooShort": "قصير جداً",
+      "invalidPhone": "أدخل رقم هاتف صالحاً (6–15 رقماً)",
+      "cityInvalid": "يُسمح فقط بالأحرف والمسافات والشرطات",
+      "invalidEmail": "أدخل بريداً إلكترونياً صالحاً",
+      "required": "مطلوب",
+      "minPassword": "8 أحرف على الأقل",
+      "passwordPattern": "يجب أن تتضمن حرفاً كبيراً ورقماً",
+      "passwordMismatch": "كلمتا المرور غير متطابقتين"
+    },
+    "toast": {
+      "loadFailed": "فشل تحميل الملف الشخصي",
+      "updateSuccess": "تم تحديث الملف الشخصي بنجاح",
+      "updateFailed": "فشل تحديث الملف الشخصي",
+      "passwordSuccess": "تم تحديث كلمة المرور بنجاح",
+      "passwordFailed": "فشل تحديث كلمة المرور"
+    },
+    "confirm": {
+      "saveTitle": "حفظ التغييرات",
+      "saveMessage": "هل أنت متأكد من رغبتك في حفظ هذه التغييرات على ملفك الشخصي؟",
+      "passwordTitle": "تحديث كلمة المرور",
+      "passwordMessage": "هل أنت متأكد من رغبتك في تحديث كلمة المرور؟"
+    },
+    "buttons": {
+      "saveChanges": "حفظ التغييرات",
+      "saving": "جارٍ الحفظ...",
+      "updatePassword": "تحديث كلمة المرور",
+      "updating": "جارٍ التحديث..."
+    }
+  },
+  "billing": {
+    "title": "الفوترة",
+    "subtitle": "فواتير العمالة المعتمدة لشركتك، حسب الشهر.",
+    "backToInvoices": "العودة إلى الفواتير",
+    "labourInvoice": "فاتورة العمالة",
+    "detailMeta": "{{month}} {{year}} · {{count}} بند · {{amount}}",
+    "loading": "جارٍ التحميل…",
+    "noLineItems": "لا توجد بنود.",
+    "empty": "لا توجد فواتير متاحة بعد.",
+    "filters": {
+      "allYears": "جميع السنوات",
+      "allMonths": "جميع الأشهر",
+      "clear": "مسح عوامل التصفية"
+    },
+    "months": {
+      "jan": "يناير",
+      "feb": "فبراير",
+      "mar": "مارس",
+      "apr": "أبريل",
+      "may": "مايو",
+      "jun": "يونيو",
+      "jul": "يوليو",
+      "aug": "أغسطس",
+      "sep": "سبتمبر",
+      "oct": "أكتوبر",
+      "nov": "نوفمبر",
+      "dec": "ديسمبر"
+    },
+    "status": {
+      "DRAFT": "مسودة",
+      "PENDING": "قيد الانتظار",
+      "APPROVED": "معتمدة",
+      "PAID": "مدفوعة",
+      "REJECTED": "مرفوضة",
+      "CANCELLED": "ملغاة"
+    },
+    "table": {
+      "sno": "م",
+      "employee": "الموظف",
+      "project": "المشروع",
+      "iqama": "الإقامة/جواز السفر",
+      "designation": "المسمى الوظيفي",
+      "workedHrs": "ساعات العمل",
+      "otHrs": "ساعات العمل الإضافي",
+      "otAmount": "مبلغ العمل الإضافي",
+      "amount": "المبلغ",
+      "period": "الفترة",
+      "lines": "البنود",
+      "status": "الحالة",
+      "action": "الإجراء",
+      "billNo": "رقم الفاتورة"
+    },
+    "pagination": {
+      "lineItems": "بند",
+      "invoices": "فاتورة",
+      "statements": "كشوف"
+    },
+    "toast": {
+      "loadListFailed": "فشل تحميل الفواتير",
+      "loadFailed": "فشل تحميل الفاتورة"
+    },
+    "paidOn": "دُفعت في {{date}}",
+    "view": "عرض",
+    "statements": {
+      "title": "الكشوف السنوية",
+      "hint": "كشف الفوترة السنوي لكل سنة مالية، يُنشر في نهاية السنة.",
+      "empty": "لا توجد كشوف سنوية بعد.",
+      "rowTitle": "الكشف السنوي — {{label}}",
+      "period": "{{from}} – {{to}}",
+      "generated": "أُنشئ في {{date}}",
+      "downloadPdf": "PDF",
+      "downloadCsv": "CSV",
+      "loadFailed": "تعذّر تحميل الكشوف السنوية"
+    }
+  },
+  "confirmModal": {
+    "title": "تأكيد الحذف",
+    "deleteCompanyMessage": "هل تريد حذف شركة التوظيف \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء."
+  }
+}
