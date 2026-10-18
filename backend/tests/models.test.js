@@ -104,6 +104,15 @@ const EXPECTED_MODELS = [
   "ContractRecipient",
   "ContractField",
   "ContractActivity",
+  // Group 12: collaboration
+  "ProjectCollaborationRole",
+  "ProjectCollaborationRolePermission",
+  "ProjectInvitation",
+  "ProjectParticipant",
+  "ProjectParticipantEdge",
+  "ProjectVisibilityClosure",
+  "ProjectParticipantPermission",
+  "ProjectEmployeeDeployment",
 ];
 
 afterAll(async () => {

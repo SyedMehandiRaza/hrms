@@ -100,6 +100,18 @@ module.exports = (sequelize, DataTypes) => {
     Employer.hasMany(models.ContractRecipient, { as: "contractRecipientsAsPartnerEmployer", foreignKey: "partner_employer_id" });
     Employer.hasMany(models.ContractField, { as: "contractFields", foreignKey: "employer_id" });
     Employer.hasMany(models.ContractActivity, { as: "contractActivities", foreignKey: "employer_id" });
+    Employer.hasMany(models.ProjectCollaborationRole, { as: "projectCollaborationRoles", foreignKey: "employer_id" });
+    Employer.hasMany(models.ProjectInvitation, { as: "projectInvitationsAsInvitingEmployer", foreignKey: "inviting_employer_id" });
+    Employer.hasMany(models.ProjectInvitation, { as: "projectInvitationsAsInvitedEmployer", foreignKey: "invited_employer_id" });
+    Employer.hasMany(models.ProjectInvitation, { as: "projectInvitationsAsParentEmployer", foreignKey: "parent_employer_id" });
+    Employer.hasMany(models.ProjectParticipant, { as: "projectParticipants", foreignKey: "employer_id" });
+    Employer.hasMany(models.ProjectParticipantEdge, { as: "projectParticipantEdgesAsParentEmployer", foreignKey: "parent_employer_id" });
+    Employer.hasMany(models.ProjectParticipantEdge, { as: "projectParticipantEdgesAsChildEmployer", foreignKey: "child_employer_id" });
+    Employer.hasMany(models.ProjectVisibilityClosure, { as: "projectVisibilityClosuresAsAncestorEmployer", foreignKey: "ancestor_employer_id" });
+    Employer.hasMany(models.ProjectVisibilityClosure, { as: "projectVisibilityClosuresAsDescendantEmployer", foreignKey: "descendant_employer_id" });
+    Employer.hasMany(models.ProjectParticipantPermission, { as: "projectParticipantPermissionsAsEmployer", foreignKey: "employer_id" });
+    Employer.hasMany(models.ProjectParticipantPermission, { as: "projectParticipantPermissionsAsGrantedByEmployer", foreignKey: "granted_by_employer_id" });
+    Employer.hasMany(models.ProjectEmployeeDeployment, { as: "projectEmployeeDeployments", foreignKey: "partner_employer_id" });
   };
 
   return Employer;

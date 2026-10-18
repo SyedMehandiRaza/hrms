@@ -46,6 +46,13 @@ module.exports = (sequelize, DataTypes) => {
     Project.hasMany(models.EmployeeExit, { as: "employeeExits", foreignKey: "settlement_scope_project_id" });
     Project.hasMany(models.StaffingBillItem, { as: "staffingBillItems", foreignKey: "project_id" });
     Project.hasMany(models.Contract, { as: "contracts", foreignKey: "project_id" });
+    Project.hasMany(models.ProjectCollaborationRole, { as: "projectCollaborationRoles", foreignKey: "project_id" });
+    Project.hasMany(models.ProjectInvitation, { as: "projectInvitations", foreignKey: "project_id" });
+    Project.hasMany(models.ProjectParticipant, { as: "projectParticipants", foreignKey: "project_id" });
+    Project.hasMany(models.ProjectParticipantEdge, { as: "projectParticipantEdges", foreignKey: "project_id" });
+    Project.hasMany(models.ProjectVisibilityClosure, { as: "projectVisibilityClosures", foreignKey: "project_id" });
+    Project.hasMany(models.ProjectParticipantPermission, { as: "projectParticipantPermissions", foreignKey: "project_id" });
+    Project.hasMany(models.ProjectEmployeeDeployment, { as: "projectEmployeeDeployments", foreignKey: "project_id" });
     Project.belongsToMany(models.Employee, { as: "employees", through: models.EmployeeProject, foreignKey: "project_id", otherKey: "employee_id" });
     Project.belongsToMany(models.StaffingCompany, { as: "staffingCompanies", through: models.StaffingCompanyProject, foreignKey: "project_id", otherKey: "staffing_company_id" });
   };
