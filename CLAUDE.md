@@ -11,7 +11,10 @@
 - Migrations: `cd backend && npx sequelize-cli db:migrate`
 
 ## Roles
-SUPER_ADMIN, HR, MANAGER, EMPLOYEE
+Access levels (one per login, on `hrms_accounts`): ADMIN, SUB_ADMIN → Admin panel; EMPLOYEE,
+GENERAL_EMPLOYEE → Employee panel; STAFFING_COMPANY → Staffing-company panel.
+Permissions come from company-defined roles (module × read/create/update/delete); ADMIN bypasses them.
+Departments/designations are labels only. Details: `docs/backend-plan.md`.
 
 ## Workflow rules (always)
 - Tests before code. Never delete, skip or weaken a test to make it pass.
