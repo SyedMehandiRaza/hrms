@@ -29,6 +29,9 @@ module.exports = (sequelize, DataTypes) => {
 
   User.associate = (models) => {
     User.hasMany(models.PasswordResetOtp, { as: "passwordResetOtps", foreignKey: "user_id" });
+    User.hasOne(models.Employer, { as: "employer", foreignKey: "user_id" });
+    User.hasMany(models.HrmsAccount, { as: "hrmsAccountsAsUser", foreignKey: "user_id" });
+    User.hasMany(models.Notification, { as: "notifications", foreignKey: "user_id" });
   };
 
   return User;

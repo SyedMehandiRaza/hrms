@@ -15,5 +15,9 @@ module.exports = (sequelize, DataTypes) => {
     }
   );
 
+  IndustryType.associate = (models) => {
+    IndustryType.hasMany(models.Employer, { as: "employers", foreignKey: "industry_type_id" });
+  };
+
   return IndustryType;
 };

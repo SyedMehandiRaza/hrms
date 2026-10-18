@@ -15,5 +15,10 @@ module.exports = (sequelize, DataTypes) => {
     }
   );
 
+  Module.associate = (models) => {
+    Module.hasMany(models.RolePermission, { as: "rolePermissions", foreignKey: "module_id" });
+    Module.belongsToMany(models.Role, { as: "roles", through: models.RolePermission, foreignKey: "module_id", otherKey: "role_id" });
+  };
+
   return Module;
 };

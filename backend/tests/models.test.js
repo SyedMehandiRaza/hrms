@@ -11,6 +11,17 @@ const EXPECTED_MODELS = [
   "Module",
   "User",
   "PasswordResetOtp",
+  // Group 1: tenant
+  "Employer",
+  "CompanyTimeSetting",
+  "FinancialYear",
+  "NumberSequence",
+  "PeriodLock",
+  "Role",
+  "RolePermission",
+  "HrmsAccount",
+  "HrmsSession",
+  "Notification",
 ];
 
 afterAll(async () => {
