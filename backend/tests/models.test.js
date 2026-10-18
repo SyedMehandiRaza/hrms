@@ -67,6 +67,14 @@ const EXPECTED_MODELS = [
   "LeaveAttachment",
   "LeaveBalanceTransaction",
   "LeaveYearOverride",
+  // Group 7: payroll
+  "SalaryTransaction",
+  "LeaveEncashmentRequest",
+  "PayrollRun",
+  "Payroll",
+  "PayrollItem",
+  "SalaryIncrementBatch",
+  "SalaryIncrementLine",
 ];
 
 afterAll(async () => {

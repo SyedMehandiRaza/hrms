@@ -35,6 +35,8 @@ module.exports = (sequelize, DataTypes) => {
     FinancialYear.hasMany(models.PeriodLock, { as: "periodLocks", foreignKey: "financial_year_id" });
     FinancialYear.hasMany(models.LeaveBalance, { as: "leaveBalances", foreignKey: "financial_year_id" });
     FinancialYear.hasMany(models.LeaveYearOverride, { as: "leaveYearOverrides", foreignKey: "financial_year_id" });
+    FinancialYear.hasMany(models.LeaveEncashmentRequest, { as: "leaveEncashmentRequests", foreignKey: "financial_year_id" });
+    FinancialYear.hasMany(models.SalaryIncrementBatch, { as: "salaryIncrementBatches", foreignKey: "financial_year_id" });
   };
 
   return FinancialYear;

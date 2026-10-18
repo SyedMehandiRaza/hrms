@@ -35,6 +35,7 @@ module.exports = (sequelize, DataTypes) => {
     LeaveBalanceTransaction.belongsTo(models.LeaveBalance, { as: "leaveBalance", foreignKey: "leave_balance_id" });
     LeaveBalanceTransaction.belongsTo(models.LeaveType, { as: "leaveType", foreignKey: "leave_type_id" });
     LeaveBalanceTransaction.belongsTo(models.User, { as: "createdBy", foreignKey: "created_by" });
+    LeaveBalanceTransaction.hasMany(models.LeaveEncashmentRequest, { as: "leaveEncashmentRequests", foreignKey: "balance_transaction_id" });
   };
 
   return LeaveBalanceTransaction;

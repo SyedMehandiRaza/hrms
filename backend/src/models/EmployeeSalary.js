@@ -25,6 +25,8 @@ module.exports = (sequelize, DataTypes) => {
     EmployeeSalary.belongsTo(models.Employee, { as: "employee", foreignKey: "employee_id" });
     EmployeeSalary.belongsTo(models.Employer, { as: "employer", foreignKey: "employer_id" });
     EmployeeSalary.hasMany(models.EmployeeSalaryComponent, { as: "employeeSalaryComponents", foreignKey: "employee_salary_id" });
+    EmployeeSalary.hasMany(models.SalaryIncrementLine, { as: "salaryIncrementLinesAsOldSalary", foreignKey: "old_salary_id" });
+    EmployeeSalary.hasMany(models.SalaryIncrementLine, { as: "salaryIncrementLinesAsNewSalary", foreignKey: "new_salary_id" });
     EmployeeSalary.belongsToMany(models.SalaryComponent, { as: "salaryComponents", through: models.EmployeeSalaryComponent, foreignKey: "employee_salary_id", otherKey: "salary_component_id" });
   };
 

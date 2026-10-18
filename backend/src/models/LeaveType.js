@@ -26,6 +26,7 @@ module.exports = (sequelize, DataTypes) => {
     LeaveType.hasMany(models.LeaveBalance, { as: "leaveBalances", foreignKey: "leave_type_id" });
     LeaveType.hasMany(models.LeaveRequest, { as: "leaveRequests", foreignKey: "leave_type_id" });
     LeaveType.hasMany(models.LeaveBalanceTransaction, { as: "leaveBalanceTransactions", foreignKey: "leave_type_id" });
+    LeaveType.hasMany(models.LeaveEncashmentRequest, { as: "leaveEncashmentRequests", foreignKey: "leave_type_id" });
   };
 
   return LeaveType;
