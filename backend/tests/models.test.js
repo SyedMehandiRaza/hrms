@@ -91,6 +91,10 @@ const EXPECTED_MODELS = [
   "ExitEvent",
   "ExitVisa",
   "ExitVisaTrip",
+  // Group 10: staffing billing
+  "StaffingRate",
+  "StaffingBill",
+  "StaffingBillItem",
 ];
 
 afterAll(async () => {
