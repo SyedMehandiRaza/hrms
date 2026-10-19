@@ -6,7 +6,7 @@ timezone and start month. The tab's other fields and panels are left as they are
 
 **Blocked by:** 14 UI foundation, 11 Time settings API
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 Verified by the ui-tester agent:
 

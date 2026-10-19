@@ -40,6 +40,6 @@ Frontier = every ready-for-agent ticket whose blockers are all done.
 | 22 | [Active sessions list](auth-company/22-ui-active-sessions.md) | done | 21 |
 | 23 | [Header logout + Access ended](auth-company/23-ui-logout-access-ended.md) | done | 14 |
 | 24 | [Company Profile screen](auth-company/24-ui-company-profile.md) | in-progress | 14, 10 |
-| 25 | [Financial Year tab: timezone + start month](auth-company/25-ui-financial-year-tab.md) | ready-for-agent | 14, 11 |
+| 25 | [Financial Year tab: timezone + start month](auth-company/25-ui-financial-year-tab.md) | in-progress | 14, 11 |
 | 26 | [Departments list screen](auth-company/26-ui-departments-list.md) | ready-for-agent | 14, 12 |
 | 27 | [Department detail + designations screen](auth-company/27-ui-department-detail.md) | ready-for-agent | 26, 13 |

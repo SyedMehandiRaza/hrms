@@ -33,6 +33,14 @@ import {
 import { MONTH_KEYS, fyLabel, fyRange, todayIn, yearKeyFor } from "../../utils/fiscalYear";
 import { useCan } from "../../hooks/usePermission";
 import { useFormat } from "../../hooks/useFormat";
+import useApiQuery from "../../hooks/useApiQuery";
+import { getTimeSettings, updateTimeSettings } from "../../api/company";
+import { applyFieldErrors } from "../../utils/applyFieldErrors";
+import { apiErrorMessage, toastApiError } from "../../utils/apiError";
+
+// The card's fields the API saves today (D30). The others stay local until the
+// Financial Year module.
+const SAVED_FIELDS = ["timezone", "fy_start_month"];
 
 const toForm = (s = {}) => ({
   fy_start_month: String(s.fy_start_month ?? 1),
@@ -77,7 +85,7 @@ function Toggle({ checked, onChange, onBlur, disabled, label, name }) {
 }
 
 // ── A. Settings ───────────────────────────────────────────────────────────────
-function SettingsCard({ canUpdate, startMonthLocked, onSaved, loading, failed, settings, onRetry }) {
+function SettingsCard({ canUpdate, startMonthLocked, onSaved, loading, error, settings, onRetry }) {
   const { t } = useTranslation("fiscalYear");
   const { fmtDate } = useFormat();
   const R = useMemo(() => fyCoreRules(t), [t]);
@@ -87,6 +95,7 @@ function SettingsCard({ canUpdate, startMonthLocked, onSaved, loading, failed, s
     control,
     handleSubmit,
     reset,
+    setError,
     formState: { errors, isDirty, isSubmitting },
   } = useForm({ mode: "onTouched", reValidateMode: "onChange", defaultValues: toForm(settings || {}) });
 
@@ -120,9 +129,11 @@ function SettingsCard({ canUpdate, startMonthLocked, onSaved, loading, failed, s
     });
   }, [startMonth, tz, t, fmtDate]);
 
-  const onSubmit = (v) => {
-    const payload = {
-      timezone: String(v.timezone).trim(),
+  // PATCH /company/time-settings saves only the timezone and the start month (the
+  // start month not while locked). The other fields stay local for now. On an
+  // error the form keeps what the user entered.
+  const onSubmit = async (v) => {
+    const local = {
       review_days_before: Number(String(v.review_days_before).trim()),
       auto_open_next_year: !!v.auto_open_next_year,
       reopen_window_days: Number(String(v.reopen_window_days).trim()),
@@ -130,11 +141,16 @@ function SettingsCard({ canUpdate, startMonthLocked, onSaved, loading, failed, s
       pending_on_close: v.pending_on_close,
       offline_backdate_days: Number(String(v.offline_backdate_days).trim()),
     };
-    if (!startMonthLocked) payload.fy_start_month = Number(v.fy_start_month);
-    const saved = { ...settings, ...payload };
-    reset(toForm(saved));
-    toast.success(t("settingsTab.saved"));
-    onSaved?.(saved);
+    const body = { timezone: String(v.timezone).trim() };
+    if (!startMonthLocked) body.fy_start_month = Number(v.fy_start_month);
+    try {
+      const saved = await updateTimeSettings(body);
+      toast.success(t("settingsTab.saved"));
+      onSaved?.(saved, local);
+    } catch (err) {
+      const { mapped } = applyFieldErrors(err, setError, { knownFields: SAVED_FIELDS });
+      if (!mapped.length) toastApiError(err);
+    }
   };
 
   const disabled = !canUpdate || isSubmitting;
@@ -187,8 +203,8 @@ function SettingsCard({ canUpdate, startMonthLocked, onSaved, loading, failed, s
       <CardHeader icon={MdTune} title={t("settingsTab.settingsTitle")} subtitle={t("settingsTab.settingsSubtitle")} />
       {loading ? (
         <Loader className="py-12" />
-      ) : failed ? (
-        <LoadError onRetry={onRetry} />
+      ) : error ? (
+        <LoadError message={apiErrorMessage(error)} onRetry={onRetry} />
       ) : (
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="p-5 sm:p-6 space-y-6">
           {!canUpdate && (
@@ -437,14 +453,21 @@ export default function FinancialYearTab() {
   const { t } = useTranslation("fiscalYear");
   const can = useCan();
   const canUpdate = can("financial_year", "update");
-  const [settings, setSettings] = useState(FISCAL_SETTINGS);
+  // The card loads GET /company/time-settings, but only the timezone and start
+  // month are saved (D30); edits to the other fields stay local until the
+  // Financial Year module. The years list stays static too.
+  const timeSettings = useApiQuery(getTimeSettings, []);
+  const [localEdits, setLocalEdits] = useState({});
   const [years] = useState(FISCAL_YEARS);
-  const settingsState = { loading: false, failed: false };
   const yearsState = { loading: false, failed: false };
-  const loadSettings = () => {};
   const loadYears = () => {};
 
-  const startMonthLocked = years.some((y) => y.status === "CLOSED" && y.is_locked);
+  const server = timeSettings.data;
+  const settings = useMemo(
+    () => (server ? { ...server, ...localEdits, timezone: server.timezone, fy_start_month: server.fy_start_month } : null),
+    [server, localEdits],
+  );
+  const startMonthLocked = !!server?.fy_start_month_locked;
 
   return (
     <div className="space-y-6">
@@ -456,11 +479,12 @@ export default function FinancialYearTab() {
         canUpdate={canUpdate}
         startMonthLocked={startMonthLocked}
         settings={settings}
-        loading={settingsState.loading}
-        failed={settingsState.failed}
-        onRetry={loadSettings}
-        onSaved={(s) => {
-          setSettings(s);
+        loading={timeSettings.loading}
+        error={timeSettings.error}
+        onRetry={timeSettings.reload}
+        onSaved={(saved, local) => {
+          setLocalEdits(local);
+          timeSettings.setData(saved);
           loadYears();
         }}
       />
@@ -469,7 +493,7 @@ export default function FinancialYearTab() {
         loading={yearsState.loading}
         failed={yearsState.failed}
         onRetry={loadYears}
-        settings={settings}
+        settings={settings || FISCAL_SETTINGS}
         canUpdate={canUpdate}
         onLocksChanged={loadYears}
       />
