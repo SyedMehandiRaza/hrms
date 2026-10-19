@@ -188,9 +188,29 @@ describe("GET /api/company/time-settings", () => {
     expect(res.body.data.fy_start_month_locked).toBe(true);
   });
 
-  it("does not lock the start month for a CLOSED year that is not locked", async () => {
+  it("also locks the start month for a CLOSED year that is not locked (D30)", async () => {
     const { employer, token } = await ownerCompany();
     await createYear(employer, 2025, "CLOSED", { is_locked: false });
+
+    const res = await getSettings(token);
+
+    expect(res.body.data.fy_start_month_locked).toBe(true);
+  });
+
+  it("also locks the start month for a CLOSING year (D30)", async () => {
+    const { employer, token } = await ownerCompany();
+    await createYear(employer, 2025, "CLOSING");
+    await createYear(employer, 2026, "OPEN");
+
+    const res = await getSettings(token);
+
+    expect(res.body.data.fy_start_month_locked).toBe(true);
+  });
+
+  it("does not lock the start month while every year is PLANNED or OPEN", async () => {
+    const { employer, token } = await ownerCompany();
+    await createYear(employer, 2026, "OPEN");
+    await createYear(employer, 2027, "PLANNED");
 
     const res = await getSettings(token);
 
@@ -441,35 +461,42 @@ describe("PATCH /api/company/time-settings", () => {
       expect((await settingsOf(employer)).fy_start_month).toBe(7);
     });
 
-    it("re-dates years while a CLOSED year that is not locked exists, leaving the CLOSED year as it was", async () => {
+    it("returns 409 COMPANY_FY_START_LOCKED with a CLOSED year that is not locked, and changes nothing (D30)", async () => {
       const { employer, token } = await ownerCompany();
       await createYear(employer, 2024, "CLOSED", { is_locked: false });
       await createYear(employer, 2026, "OPEN");
+      const before = await yearsOf(employer);
 
       const res = await patchSettings(token, { fy_start_month: 4 });
 
-      expect(res.status).toBe(200);
-      expect(await yearsOf(employer)).toEqual([
-        { year_key: 2024, label: "FY 2024", start_date: "2024-01-01", end_date: "2024-12-31", status: "CLOSED" },
-        { year_key: 2026, label: "FY 2026-27", start_date: "2026-04-01", end_date: "2027-03-31", status: "OPEN" },
-      ]);
+      expect(res.status).toBe(409);
+      expect(res.body).toEqual(errorBody("COMPANY_FY_START_LOCKED"));
+      expect(await yearsOf(employer)).toEqual(before);
+      expect((await settingsOf(employer)).fy_start_month).toBe(1);
     });
 
-    it("leaves a CLOSING year as it was", async () => {
+    it("returns 409 COMPANY_FY_START_LOCKED with a CLOSING year, and changes nothing (D30)", async () => {
       const { employer, token } = await ownerCompany();
       await createYear(employer, 2024, "CLOSING");
       await createYear(employer, 2026, "PLANNED");
+      const before = await yearsOf(employer);
 
       const res = await patchSettings(token, { fy_start_month: 4 });
 
+      expect(res.status).toBe(409);
+      expect(res.body).toEqual(errorBody("COMPANY_FY_START_LOCKED"));
+      expect(await yearsOf(employer)).toEqual(before);
+      expect((await settingsOf(employer)).fy_start_month).toBe(1);
+    });
+
+    it("allows the current start month with a new timezone while a CLOSING year exists", async () => {
+      const { employer, token } = await ownerCompany();
+      await createYear(employer, 2025, "CLOSING");
+
+      const res = await patchSettings(token, { timezone: "Europe/London", fy_start_month: 1 });
+
       expect(res.status).toBe(200);
-      expect((await yearsOf(employer))[0]).toEqual({
-        year_key: 2024,
-        label: "FY 2024",
-        start_date: "2024-01-01",
-        end_date: "2024-12-31",
-        status: "CLOSING",
-      });
+      expect(res.body.data).toEqual({ ...SETTINGS_SHAPE, timezone: "Europe/London", fy_start_month_locked: true });
     });
 
     it("does not touch another company's years", async () => {

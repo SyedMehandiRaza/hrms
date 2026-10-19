@@ -11,9 +11,9 @@ timezone and start month. The tab's other fields and panels are left as they are
 Verified by the ui-tester agent:
 
 - [ ] The card shows the loading state, then the company's timezone and start month.
-- [ ] Owner changes timezone and start month → Save → success; reloading shows both; the years list shows the
-      re-dated open years.
-- [ ] With a closed and locked year, the start month is disabled with "The start month can't change after a
+- [ ] Owner changes timezone and start month → Save → success; reloading shows both. (The years list stays
+      static until the Financial Year module.)
+- [ ] With a closing or closed year, the start month is disabled with "The start month can't change after a
       financial year has been closed."
 - [ ] Invalid values show "Choose a valid timezone" / "Choose a month from 1 to 12" under the field.
 - [ ] A sub-admin without financial-year update sees the card read-only.

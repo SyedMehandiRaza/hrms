@@ -20,6 +20,8 @@ roles** (D4, D6, D19, D20; ADR 0002).
 - [x] Signing up with an email that has a current account (e.g. `admin@hrms.test`) → 409 `AUTH_EMAIL_TAKEN`
       "An account with this email already exists. Log in or reset your password."
 - [x] An email whose accounts have all ended: with that person's existing password → 201 and the same person
-      record is reused; with any other password → the same 409 message.
+      record is reused; with any other password → the same 409 message. A wrong existing password counts
+      toward the login lockout (D19, decided 2026-10-19): the 5th consecutive wrong one → 423
+      `AUTH_ACCOUNT_LOCKED`; while locked → 423 even with the right password; the right password clears the count.
 - [x] If any step fails, nothing is left behind (no orphan person, company or account).
 - [x] Email is stored trimmed and lowercased.

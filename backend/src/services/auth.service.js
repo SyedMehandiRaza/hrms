@@ -45,7 +45,7 @@ const LOCK_MS = 15 * 60 * 1000;
 
 const isLocked = (user, now = new Date()) => !!user.locked_until && new Date(user.locked_until) > now;
 
-// Counts one wrong password (login now; change-password reuses it). A lock that has
+// Counts one wrong password (login; change-password and sign up reuse it). A lock that has
 // already passed starts the count again from one. The failure that reaches the limit
 // sets locked_until and returns { locked: true }; the caller answers AUTH_ACCOUNT_LOCKED.
 const registerFailedPassword = async (user, transaction) => {
@@ -206,6 +206,10 @@ const yearIn = (timeZone, date) =>
 //   - a deleted or non-ACTIVE person record (login would refuse them anyway);
 //   - a person who already owns a company (employers.user_id is unique);
 //   - no stored password, or a different one.
+// The password check counts toward the login lockout exactly like login (D10, D19):
+// a locked person gets AUTH_ACCOUNT_LOCKED whatever the password, a wrong password
+// adds one failure (the one that reaches the limit answers AUTH_ACCOUNT_LOCKED), and
+// the right password clears the count (signup() does that inside its transaction).
 const assertEmailReusable = async (user, password) => {
   const taken = () => new ErrorHandler("AUTH_EMAIL_TAKEN");
   if (isDeleted(user) || user.user_status !== ACTIVE) throw taken();
@@ -216,7 +220,13 @@ const assertEmailReusable = async (user, password) => {
   const owned = await Employer.count({ where: { user_id: user.id }, paranoid: false });
   if (owned > 0) throw taken();
 
-  if (!user.password || !(await bcrypt.compare(password, user.password))) throw taken();
+  const matches = !!user.password && (await bcrypt.compare(password, user.password));
+  if (isLocked(user)) throw new ErrorHandler("AUTH_ACCOUNT_LOCKED");
+  if (!matches) {
+    const { locked } = await registerFailedPassword(user);
+    if (locked) throw new ErrorHandler("AUTH_ACCOUNT_LOCKED");
+    throw taken();
+  }
 };
 
 // POST /auth/signup. One transaction creates (or reuses) the person, then the company,
@@ -231,6 +241,7 @@ const signup = async ({ companyName, name, email, phone, password, ip, userAgent
   try {
     created = await sequelize.transaction(async (transaction) => {
       const now = new Date();
+      if (existing) await clearLockout(existing, transaction);
       const user =
         existing ||
         (await User.create({ name, email, password: passwordHash, signup_by: "EMAIL" }, { transaction }));

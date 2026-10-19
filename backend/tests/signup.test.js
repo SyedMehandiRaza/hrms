@@ -489,6 +489,114 @@ describe("POST /api/auth/signup", () => {
         await createAccount(person, company.employer, { status: "INACTIVE" });
         await expectTaken(person.email, NEW_PASSWORD);
       });
+
+      // D19: a wrong existing password counts toward the login lockout (D10) exactly like login.
+      describe("wrong existing password counts toward the lockout (D19)", () => {
+        const LOCK_MS = 15 * 60 * 1000;
+        const endedPerson = async (overrides) => {
+          const person = await createPerson(overrides);
+          await createAccount(person, company.employer, { status: "INACTIVE" });
+          return person;
+        };
+        const reload = (person) => db.User.findByPk(person.id);
+        const signupWith = (email, password, lang) => signup(validBody({ email, password, confirmPassword: password }), lang);
+        const expectLocked = (res) => {
+          expect(res.status).toBe(423);
+          expect(res.body).toEqual(errorBody("AUTH_ACCOUNT_LOCKED"));
+          expect(setCookieOf(res)).toBeUndefined();
+        };
+
+        it("each wrong password below the limit → 409 and adds one to the count", async () => {
+          const person = await endedPerson();
+          for (let i = 1; i <= 4; i += 1) {
+            await expectTaken(person.email, NEW_PASSWORD);
+            expect((await reload(person)).failed_login_attempts).toBe(i);
+          }
+          expect((await reload(person)).locked_until).toBeNull();
+        });
+
+        it("the fifth consecutive wrong password → 423 AUTH_ACCOUNT_LOCKED for 15 minutes, nothing written", async () => {
+          const person = await endedPerson({ failed_login_attempts: 4 });
+          const before = Date.now();
+
+          const res = await signupWith(person.email, NEW_PASSWORD);
+
+          expectLocked(res);
+          expect(res.body.message).toBe(MESSAGES.AUTH_ACCOUNT_LOCKED.en);
+          const reloaded = await reload(person);
+          expect(reloaded.failed_login_attempts).toBe(5);
+          const until = new Date(reloaded.locked_until).getTime();
+          expect(until).toBeGreaterThanOrEqual(before + LOCK_MS - 1000);
+          expect(until).toBeLessThanOrEqual(Date.now() + LOCK_MS + 1000);
+          expect((await rowsFor(person.email)).employers).toBe(0);
+        });
+
+        it("counts together with wrong logins", async () => {
+          jest.spyOn(console, "warn").mockImplementation(() => {});
+          const person = await endedPerson();
+          for (let i = 0; i < 4; i += 1) {
+            await request(app).post("/api/auth/login").send({ email: person.email, password: NEW_PASSWORD });
+          }
+          expect((await reload(person)).failed_login_attempts).toBe(4);
+          expectLocked(await signupWith(person.email, NEW_PASSWORD));
+        });
+
+        it("while locked → 423 even with the right password, and nothing is written", async () => {
+          const person = await endedPerson({ failed_login_attempts: 5, locked_until: new Date(Date.now() + LOCK_MS) });
+
+          expectLocked(await signupWith(person.email, PASSWORD));
+          expectLocked(await signupWith(person.email, NEW_PASSWORD));
+
+          const rows = await rowsFor(person.email);
+          expect(rows.employers).toBe(0);
+          expect(rows.accounts).toBe(1);
+          expect((await reload(person)).failed_login_attempts).toBe(5);
+        });
+
+        it("answers the 423 in Arabic when asked", async () => {
+          const person = await endedPerson({ failed_login_attempts: 5, locked_until: new Date(Date.now() + LOCK_MS) });
+          const res = await signupWith(person.email, PASSWORD, "ar");
+          expect(res.status).toBe(423);
+          expect(res.body).toEqual({ success: false, code: "AUTH_ACCOUNT_LOCKED", message: MESSAGES.AUTH_ACCOUNT_LOCKED.ar });
+        });
+
+        it("the right password clears earlier failures and signs up", async () => {
+          const person = await endedPerson({ failed_login_attempts: 3 });
+          const res = await signupWith(person.email, PASSWORD);
+          expect(res.status).toBe(201);
+          const reloaded = await reload(person);
+          expect(reloaded.failed_login_attempts).toBe(0);
+          expect(reloaded.locked_until).toBeNull();
+        });
+
+        it("after the lock has passed the right password signs up and clears the lock", async () => {
+          const person = await endedPerson({ failed_login_attempts: 5, locked_until: new Date(Date.now() - 1000) });
+          const res = await signupWith(person.email, PASSWORD);
+          expect(res.status).toBe(201);
+          const reloaded = await reload(person);
+          expect(reloaded.failed_login_attempts).toBe(0);
+          expect(reloaded.locked_until).toBeNull();
+        });
+
+        it("a person with no accounts at all is counted the same way", async () => {
+          const person = await createPerson({ failed_login_attempts: 4 });
+          expectLocked(await signupWith(person.email, NEW_PASSWORD));
+        });
+
+        it("an email with a current account → 409 and nothing is counted", async () => {
+          const person = await createPerson();
+          await createAccount(person, company.employer);
+          await expectTaken(person.email, NEW_PASSWORD);
+          expect((await reload(person)).failed_login_attempts).toBe(0);
+        });
+
+        it("a company owner's email → 409 and nothing is counted", async () => {
+          const other = await createCompany();
+          await other.ownerAccount.update({ status: "INACTIVE" });
+          await expectTaken(other.owner.email, NEW_PASSWORD);
+          expect((await reload(other.owner)).failed_login_attempts).toBe(0);
+        });
+      });
     });
 
     describe("a person with no accounts at all (treated like ended accounts)", () => {

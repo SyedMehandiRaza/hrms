@@ -45,7 +45,12 @@ Rules shared by all modules: `docs/standards.md`. Terms: `docs/CONTEXT.md`. Reas
 18. Reset by OTP (ADR 1): neutral response, 6 digits, 10 min, 5 attempts, resend after 60 s, max 5/h,
     15-min reset token, revoke all sessions + clear lock on success.
 19. Sign up is open. One transaction creates user, company, time settings, first FY and the ADMIN account,
-    then logs in. No email verification yet. Email with only ended accounts must enter the existing password.
+    then logs in. No email verification yet. Email with only ended accounts must enter the existing password;
+    a wrong existing password counts toward the login lockout exactly like login (D10: the 5th consecutive wrong
+    → 423 `AUTH_ACCOUNT_LOCKED`; while locked → 423 even with the right password; the right password clears the
+    count; wrong but not locked → 409 `AUTH_EMAIL_TAKEN`). Emails with a current account → 409, not counted
+    (decided 2026-10-19). The optional sign-up phone is stored as the company phone
+    (`employers.company_phone_number`).
 20. One current company per email (ADR 2).
 21. Admin-created logins: temporary password + setup link, 72 h, forced change, no "keep" (ADR 3).
 22. Drop `hrms_staffing_companies.login_enabled` and `must_change_password` (duplicates).
@@ -65,8 +70,9 @@ Rules shared by all modules: `docs/standards.md`. Terms: `docs/CONTEXT.md`. Reas
 29. Logo: JPG/PNG ≤ 2 MB checked by magic bytes; `PUT` / `DELETE /company/logo`; stored at
     `UPLOAD_DIR/logos/<uuid>.<ext>` behind a storage service, served at `/uploads/...`; old file deleted.
 30. `PATCH /company/time-settings` accepts only `timezone` (valid IANA, applies going forward) and
-    `fy_start_month` (1–12; locked once any year is CLOSED and locked; otherwise re-dates every PLANNED/OPEN
-    year in one transaction). Permission: ADMIN or `financial_year:update`.
+    `fy_start_month` (1–12; locked once any year is CLOSING or CLOSED, locked or not — decided 2026-10-19;
+    `fy_start_month_locked` in GET uses the same rule; otherwise re-dates every PLANNED/OPEN year in one
+    transaction). Permission: ADMIN or `financial_year:update`.
 31. Departments: name 2–150, no emoji, unique per company case-insensitive; **code required**, max 50, no emoji,
     uppercased, unique per company; description max 2000, no emoji; `live_key` lets deleted names/codes be reused;
     head optional, must be an active employee of the company, set NULL when they exit; inactive = not

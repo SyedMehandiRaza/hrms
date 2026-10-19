@@ -33,9 +33,10 @@ const findSettings = async (employerId, options = {}) => {
   return settings;
 };
 
-// The start month locks once any year is CLOSED and locked.
+// The start month locks once any year is CLOSING or CLOSED, locked or not (D30).
+const START_MONTH_LOCKING_STATUSES = ["CLOSING", "CLOSED"];
 const isStartMonthLocked = async (employerId, transaction) =>
-  (await FinancialYear.count({ where: { employer_id: employerId, status: "CLOSED", is_locked: true }, transaction })) > 0;
+  (await FinancialYear.count({ where: { employer_id: employerId, status: START_MONTH_LOCKING_STATUSES }, transaction })) > 0;
 
 // GET /company/time-settings (ADMIN or financial_year:read).
 const getTimeSettings = async ({ employerId }) => {
