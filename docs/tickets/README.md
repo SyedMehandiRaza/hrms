@@ -39,7 +39,7 @@ Frontier = every ready-for-agent ticket whose blockers are all done.
 | 21 | [Profile → Change password + session picker](auth-company/21-ui-change-password-picker.md) | done | 14, 09 |
 | 22 | [Active sessions list](auth-company/22-ui-active-sessions.md) | done | 21 |
 | 23 | [Header logout + Access ended](auth-company/23-ui-logout-access-ended.md) | done | 14 |
-| 24 | [Company Profile screen](auth-company/24-ui-company-profile.md) | in-progress | 14, 10 |
-| 25 | [Financial Year tab: timezone + start month](auth-company/25-ui-financial-year-tab.md) | in-progress | 14, 11 |
-| 26 | [Departments list screen](auth-company/26-ui-departments-list.md) | in-progress | 14, 12 |
-| 27 | [Department detail + designations screen](auth-company/27-ui-department-detail.md) | in-progress | 26, 13 |
+| 24 | [Company Profile screen](auth-company/24-ui-company-profile.md) | done | 14, 10 |
+| 25 | [Financial Year tab: timezone + start month](auth-company/25-ui-financial-year-tab.md) | done | 14, 11 |
+| 26 | [Departments list screen](auth-company/26-ui-departments-list.md) | done | 14, 12 |
+| 27 | [Department detail + designations screen](auth-company/27-ui-department-detail.md) | done | 26, 13 |
