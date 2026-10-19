@@ -6,7 +6,6 @@ const Joi = require("joi");
 process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "test-access-secret";
 
 const requireAuth = require("../src/middlewares/requireAuth");
-const requireRole = require("../src/middlewares/requireRole");
 const validate = require("../src/middlewares/validate");
 const language = require("../src/middlewares/language");
 const errorHandler = require("../src/middlewares/errorHandler");
@@ -30,8 +29,7 @@ const buildApp = () => {
   const app = express();
   app.use(language);
   app.use(express.json());
-  app.get("/protected", requireAuth, (req, res) => res.json({ success: true, data: req.user }));
-  app.get("/admin-only", requireAuth, requireRole("ADMIN"), (req, res) => res.json({ success: true, data: {} }));
+  app.get("/protected", requireAuth, (req, res) => res.json({ success: true, data: req.auth }));
   app.post("/validated", validate(Joi.object({ name: Joi.string().min(2).required() })), (req, res) =>
     res.json({ success: true, data: req.body })
   );
@@ -97,31 +95,14 @@ describe("requireAuth", () => {
     expect(res.body).toEqual({ success: false, code: "AUTH_REQUIRED", message: MESSAGES.AUTH_REQUIRED.ar });
   });
 
-  it("accepts a valid token and exposes the payload on req.user", async () => {
+  // A session-backed token, req.auth and the access-level / permission guards
+  // (which replaced requireRole) are covered against the database in tests/auth.test.js.
+  it("rejects a validly signed token without session claims with 401 AUTH_REQUIRED", async () => {
     const res = await request(app)
       .get("/protected")
       .set("Authorization", `Bearer ${tokenFor({ sub: "u1", accessLevel: "EMPLOYEE" })}`);
-    expect(res.status).toBe(200);
-    expect(res.body.data).toMatchObject({ sub: "u1", accessLevel: "EMPLOYEE" });
-  });
-});
-
-describe("requireRole", () => {
-  const app = buildApp();
-
-  it("returns 403 FORBIDDEN when the access level is not allowed", async () => {
-    const res = await request(app)
-      .get("/admin-only")
-      .set("Authorization", `Bearer ${tokenFor({ sub: "u1", accessLevel: "EMPLOYEE" })}`);
-    expect(res.status).toBe(403);
-    expect(res.body).toEqual({ success: false, code: "FORBIDDEN", message: "You don't have permission to do this." });
-  });
-
-  it("allows an allowed access level", async () => {
-    const res = await request(app)
-      .get("/admin-only")
-      .set("Authorization", `Bearer ${tokenFor({ sub: "u1", accessLevel: "ADMIN" })}`);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({ success: false, code: "AUTH_REQUIRED", message: "Please log in to continue." });
   });
 });
 

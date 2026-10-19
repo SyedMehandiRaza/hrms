@@ -13,4 +13,13 @@ const PANELS = Object.freeze({
   STAFFING_COMPANY: [ACCESS_LEVELS.STAFFING_COMPANY],
 });
 
-module.exports = { ACCESS_LEVELS, PANELS };
+// Panel name returned by GET /auth/me (D23); the UI routes to /<panel>/dashboard.
+const PANEL_BY_ACCESS_LEVEL = Object.freeze({
+  ADMIN: "admin",
+  SUB_ADMIN: "admin",
+  EMPLOYEE: "employee",
+  GENERAL_EMPLOYEE: "employee",
+  STAFFING_COMPANY: "staffing-company",
+});
+
+module.exports = { ACCESS_LEVELS, PANELS, PANEL_BY_ACCESS_LEVEL };

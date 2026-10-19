@@ -16,7 +16,7 @@ backend/
 │   ├── controllers/        # thin: read req, call service, send response
 │   ├── services/           # business logic
 │   ├── models/             # Sequelize models
-│   ├── middlewares/        # requireAuth, requireRole, validate, errorHandler
+│   ├── middlewares/        # requireAuth, requirePermission, requireAccessLevel, validate, errorHandler
 │   ├── migrations/         # sequelize-cli migrations (paths set in .sequelizerc)
 │   ├── seeders/            # sequelize-cli seeders (dev data)
 │   └── utils/ErrorHandler.js
@@ -32,7 +32,8 @@ backend/
 - Response shape: success `{ success: true, data }`, error `{ success: false, code, message, errors? }`.
   `message` is localized by `Accept-Language` (en/ar); codes and texts live in `src/constants/messages.js`.
   Validation failures are 400 with an `errors` field map. Details: `docs/standards.md` §2.
-- Every protected route: `requireAuth` + `requireRole(...roles)`.
+- Every protected route: `requireAuth` (sets `req.auth`) + `requirePermission(moduleKey, action)` (ADMIN bypasses),
+  or `requireAccessLevel(...levels)` for access-level-only routes (e.g. owner-only).
   Users must never read or change another user's/department's data unless their role allows it.
 - List endpoints: `?page=1&limit=20&search=` → `{ items, total, page, limit }`.
 - DB changes only through migrations. Never `sync({ force: true })`.

@@ -1,0 +1,261 @@
+const crypto = require("crypto");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const { Op } = require("sequelize");
+const { sequelize, User, HrmsAccount, HrmsSession, Employer, CompanyTimeSetting } = require("../models");
+const ErrorHandler = require("../utils/ErrorHandler");
+const { getAuthConfig } = require("../config/auth");
+const { PANEL_BY_ACCESS_LEVEL } = require("../constants/accessLevels");
+const { loadPermissions } = require("./permission.service");
+
+const ACTIVE = "ACTIVE";
+const REVOKED = "REVOKED";
+const EXPIRED = "EXPIRED";
+
+const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
+
+// Compared against when the email is unknown, so both paths cost one bcrypt check (D8).
+let dummyHashPromise;
+const dummyHash = () => {
+  dummyHashPromise = dummyHashPromise || bcrypt.hash(crypto.randomBytes(16).toString("hex"), 12);
+  return dummyHashPromise;
+};
+
+// Server log for failed logins (D26). Never includes the password.
+const logFailedLogin = ({ email, ip, reason }) => {
+  console.warn("[auth] login failed", { email, ip, reason });
+};
+
+// Soft-deleted (paranoid) row loaded with paranoid: false.
+const isDeleted = (row) => row.isSoftDeleted();
+
+// Account/person/company checks shared by login, refresh and requireAuth (D9, D34).
+// An account is usable only while ACTIVE and not deleted; SUSPENDED and ended
+// accounts are AUTH_ACCOUNT_INACTIVE. The company must be ACTIVE (not INACTIVE/BANNED).
+const assertAccountUsable = ({ account, user, employer }) => {
+  if (!user || isDeleted(user) || user.user_status !== ACTIVE) throw new ErrorHandler("AUTH_ACCOUNT_INACTIVE");
+  if (!account || isDeleted(account) || account.status !== ACTIVE) throw new ErrorHandler("AUTH_ACCOUNT_INACTIVE");
+  if (!employer || isDeleted(employer) || employer.employer_status !== ACTIVE) {
+    throw new ErrorHandler("AUTH_COMPANY_INACTIVE");
+  }
+};
+
+// Creates a session row and the tokens that go with it.
+//   access token  JWT { sub: user id, acc: account id, emp: employer id, sid: session id, jti }
+//   refresh token 256-bit random, stored only as its SHA-256 (refresh_token_hash)
+//   access_token_hash = SHA-256 of the access token's jti (the token itself is never stored)
+const issueSession = async ({ account, ip, userAgent }, transaction) => {
+  const { accessSecret, accessTtl, refreshTtlMs } = getAuthConfig();
+  const sessionId = crypto.randomUUID();
+  const jti = crypto.randomUUID();
+  const refreshToken = crypto.randomBytes(32).toString("base64url");
+  const now = new Date();
+
+  await HrmsSession.create(
+    {
+      id: sessionId,
+      hrms_account_id: account.id,
+      access_token_hash: sha256(jti),
+      refresh_token_hash: sha256(refreshToken),
+      status: ACTIVE,
+      user_agent: userAgent || null,
+      ip_address: ip ? String(ip).slice(0, 80) : null,
+      expires_at: new Date(now.getTime() + refreshTtlMs),
+      last_used_at: now,
+    },
+    { transaction }
+  );
+
+  const accessToken = jwt.sign({ acc: account.id, emp: account.employer_id, sid: sessionId }, accessSecret, {
+    subject: account.user_id,
+    expiresIn: accessTtl,
+    jwtid: jti,
+  });
+
+  return { accessToken, refreshToken, refreshTtlMs };
+};
+
+// Ends sessions that are not being rotated (logout, reuse detection, and later
+// deactivation / password reset). The refresh hash is replaced with a random one so a
+// late cookie is simply unknown (401) instead of looking like a rotated token being
+// reused, which would revoke every session of the account. Only rotation keeps the hash.
+const revokeSessions = async (where, transaction) => {
+  const sessions = await HrmsSession.findAll({ where: { ...where, status: ACTIVE }, attributes: ["id"], transaction });
+  const now = new Date();
+  for (const session of sessions) {
+    await HrmsSession.update(
+      { status: REVOKED, revoked_at: now, refresh_token_hash: sha256(crypto.randomBytes(32)) },
+      { where: { id: session.id, status: ACTIVE }, transaction }
+    );
+  }
+  return sessions.length;
+};
+
+// POST /auth/login. Order (D9): credentials → lock → person status → current account
+// → company status → temporary-password expiry → success.
+const login = async ({ email, password, ip, userAgent }) => {
+  const user = await User.scope("withPassword").findOne({ where: { email } });
+  const matches = await bcrypt.compare(password, user?.password || (await dummyHash()));
+
+  if (!user || !user.password || !matches) {
+    // Ticket 05: count the failure on users.failed_login_attempts and lock after 5 here.
+    logFailedLogin({ email, ip, reason: user ? "WRONG_PASSWORD" : "UNKNOWN_EMAIL" });
+    throw new ErrorHandler("AUTH_INVALID_CREDENTIALS");
+  }
+
+  // Ticket 05: refuse while users.locked_until is in the future (AUTH_ACCOUNT_LOCKED) and
+  // reset failed_login_attempts / locked_until on success.
+
+  // One current account per person (ADR 0002): ACTIVE or SUSPENDED, not deleted.
+  const account = await HrmsAccount.findOne({
+    where: { user_id: user.id, status: { [Op.in]: ["ACTIVE", "SUSPENDED"] } },
+    include: [{ model: Employer, as: "employer", required: false }],
+  });
+
+  try {
+    assertAccountUsable({ account, user, employer: account?.employer });
+  } catch (err) {
+    logFailedLogin({ email, ip, reason: err.code });
+    throw err;
+  }
+
+  // Ticket 08: an expired temporary password (password_setup_token_expires_at) → AUTH_SETUP_EXPIRED.
+
+  const tokens = await sequelize.transaction(async (transaction) => {
+    const issued = await issueSession({ account, ip, userAgent }, transaction);
+    await account.update({ last_login_at: new Date() }, { transaction });
+    return issued;
+  });
+
+  return { ...tokens, mustChangePassword: account.password_setup_required };
+};
+
+// Loads a session with its account, person and company in one query.
+const findSessionWithAccount = (where, transaction) =>
+  HrmsSession.findOne({
+    where,
+    transaction,
+    include: [
+      {
+        model: HrmsAccount,
+        as: "hrmsAccount",
+        paranoid: false,
+        required: true,
+        include: [
+          { model: User, as: "user", paranoid: false, required: true },
+          { model: Employer, as: "employer", paranoid: false, required: true },
+        ],
+      },
+    ],
+  });
+
+// POST /auth/refresh. Rotates the refresh token: the presented session is revoked and a
+// new one (fresh 7 days) is created. A rotated token presented again ends every session
+// of the account (D13).
+const refresh = async ({ refreshToken, ip, userAgent }) => {
+  if (!refreshToken) throw new ErrorHandler("AUTH_REFRESH_INVALID");
+
+  const session = await findSessionWithAccount({ refresh_token_hash: sha256(refreshToken) });
+  if (!session) throw new ErrorHandler("AUTH_REFRESH_INVALID");
+
+  if (session.status === REVOKED) {
+    await revokeSessions({ hrms_account_id: session.hrms_account_id });
+    throw new ErrorHandler("AUTH_REFRESH_INVALID");
+  }
+  if (session.status !== ACTIVE) throw new ErrorHandler("AUTH_REFRESH_INVALID");
+  if (new Date(session.expires_at) <= new Date()) {
+    await session.update({ status: EXPIRED });
+    throw new ErrorHandler("AUTH_REFRESH_INVALID");
+  }
+
+  const account = session.hrmsAccount;
+  assertAccountUsable({ account, user: account.user, employer: account.employer });
+
+  const outcome = await sequelize.transaction(async (transaction) => {
+    // Conditional update: two concurrent refreshes with one token can't both rotate.
+    const [rotated] = await HrmsSession.update(
+      { status: REVOKED, revoked_at: new Date() },
+      { where: { id: session.id, status: ACTIVE }, transaction }
+    );
+    if (rotated === 0) return null;
+    return issueSession({ account, ip, userAgent }, transaction);
+  });
+
+  if (!outcome) {
+    await revokeSessions({ hrms_account_id: account.id });
+    throw new ErrorHandler("AUTH_REFRESH_INVALID");
+  }
+  return outcome;
+};
+
+// POST /auth/logout. Ends the cookie's session if it is still active; never fails.
+const logout = async ({ refreshToken }) => {
+  if (!refreshToken) return;
+  await revokeSessions({ refresh_token_hash: sha256(refreshToken) });
+};
+
+// Used by requireAuth on every request: re-checks session, account, person and company
+// (D12) and loads the role's permissions fresh (D34).
+const resolveAccessToken = async (claims) => {
+  const { sub, acc, emp, sid } = claims || {};
+  if (![sub, acc, emp, sid].every((v) => typeof v === "string" && v)) throw new ErrorHandler("AUTH_REQUIRED");
+
+  const session = await findSessionWithAccount({ id: sid });
+  if (!session || session.status !== ACTIVE) throw new ErrorHandler("AUTH_REQUIRED");
+
+  const account = session.hrmsAccount;
+  if (account.id !== acc || account.user_id !== sub || account.employer_id !== emp) {
+    throw new ErrorHandler("AUTH_REQUIRED");
+  }
+  assertAccountUsable({ account, user: account.user, employer: account.employer });
+
+  const permissions = await loadPermissions({
+    accessLevel: account.access_level,
+    roleId: account.role_id,
+    employerId: account.employer_id,
+  });
+
+  return {
+    userId: account.user_id,
+    accountId: account.id,
+    employerId: account.employer_id,
+    sessionId: session.id,
+    accessLevel: account.access_level,
+    roleId: account.role_id,
+    permissions,
+  };
+};
+
+// GET /auth/me (D23).
+const getMe = async (auth) => {
+  const account = await HrmsAccount.findOne({
+    where: { id: auth.accountId, employer_id: auth.employerId },
+    include: [
+      { model: User, as: "user", attributes: ["id", "name", "email", "lang_key"] },
+      {
+        model: Employer,
+        as: "employer",
+        attributes: ["id", "company_name", "company_logo"],
+        include: [{ model: CompanyTimeSetting, as: "companyTimeSetting", attributes: ["timezone"] }],
+      },
+    ],
+  });
+  if (!account) throw new ErrorHandler("AUTH_REQUIRED");
+
+  const { user, employer } = account;
+  return {
+    user: { id: user.id, name: user.name, email: user.email, lang_key: user.lang_key },
+    account: { id: account.id, access_level: account.access_level, panel: PANEL_BY_ACCESS_LEVEL[account.access_level] },
+    company: {
+      id: employer.id,
+      name: employer.company_name,
+      logo: employer.company_logo,
+      timezone: employer.companyTimeSetting ? employer.companyTimeSetting.timezone : null,
+      currency: "SAR",
+    },
+    mustChangePassword: account.password_setup_required,
+    permissions: auth.permissions,
+  };
+};
+
+module.exports = { login, refresh, logout, resolveAccessToken, getMe, revokeSessions, sha256 };
