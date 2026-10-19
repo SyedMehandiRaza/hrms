@@ -864,6 +864,8 @@
         "totalDesignations": "Total Designations"
       },
       "filters": {
+        "search": "Search",
+        "searchPlaceholder": "Search by name or code",
         "status": "Status",
         "allStatuses": "All Statuses",
         "clear": "Clear Filters"

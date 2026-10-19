@@ -2,11 +2,21 @@ import { useEffect, useState, useRef } from "react";
 import { FiX, FiSearch, FiChevronDown } from "react-icons/fi";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
-import { ASSIGNABLE_EMPLOYEES } from "../data/groupC";
 import { useTranslation } from "react-i18next";
+import { createDepartment, updateDepartment } from "../api/departments";
+import { applyFieldErrors } from "../utils/applyFieldErrors";
+import { apiErrorCode, apiErrorMessage, toastApiError } from "../utils/apiError";
+
+// 409 duplicates belong under the input they are about.
+const CONFLICT_FIELDS = { DEPARTMENT_NAME_TAKEN: "name", DEPARTMENT_CODE_TAKEN: "code" };
+
+// Active employees for the Head dropdown. No employees endpoint exists yet (plan Q21),
+// so the dropdown shows its "No employees found" state.
+const HEAD_OPTIONS = [];
+
 function DepartmentModal({ isOpen, onClose, onSaved, initialData, mode = "create" }) {
   const { t } = useTranslation("employees");
-  const list = ASSIGNABLE_EMPLOYEES;
+  const list = HEAD_OPTIONS;
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -19,6 +29,7 @@ function DepartmentModal({ isOpen, onClose, onSaved, initialData, mode = "create
     reset,
     watch,
     setValue,
+    setError,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -79,20 +90,33 @@ function DepartmentModal({ isOpen, onClose, onSaved, initialData, mode = "create
       code: data.code,
       description: data.description,
       status: data.isActive ? "ACTIVE" : "INACTIVE",
-      dept_head: data.dept_head ? Number(data.dept_head) : null,
     };
+    // The head goes out only when picked here: on edit an untouched head stays as stored.
+    const headId = data.dept_head || "";
+    if (mode === "edit" ? headId !== (initialData?.dept_head || "") : headId) payload.deptHeadId = headId;
 
     setIsSubmitting(true);
-    // Static build: the caller merges the saved row into its local list.
-    if (mode === "edit") {
-      toast.success(t("departments.modal.toast.updated"));
-      if (onSaved) onSaved({ ...initialData, ...payload, id: Number(initialData.id) });
-    } else {
-      toast.success(t("departments.modal.toast.created"));
-      if (onSaved) onSaved(payload);
+    try {
+      const saved =
+        mode === "edit" ? await updateDepartment(initialData.id, payload) : await createDepartment(payload);
+      toast.success(t(mode === "edit" ? "departments.modal.toast.updated" : "departments.modal.toast.created"));
+      if (onSaved) onSaved(saved);
+      onClose();
+    } catch (err) {
+      const conflictField = CONFLICT_FIELDS[apiErrorCode(err)];
+      if (conflictField) {
+        setError(conflictField, { type: "server", message: apiErrorMessage(err) }, { shouldFocus: true });
+      } else {
+        const { mapped, unmapped } = applyFieldErrors(err, setError, {
+          fieldMap: { deptHeadId: "dept_head" },
+          knownFields: ["name", "code", "description", "dept_head"],
+        });
+        if (!mapped.length) toastApiError(err);
+        unmapped.forEach((message) => toast.error(message));
+      }
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
-    onClose();
   };
 
   const isEdit = mode === "edit";
@@ -155,6 +179,7 @@ function DepartmentModal({ isOpen, onClose, onSaved, initialData, mode = "create
         <div className="p-6 overflow-y-auto">
           <form
             id="department-form"
+            noValidate
             onSubmit={handleSubmit(onSubmit)}
             className="space-y-5"
           >
@@ -232,7 +257,7 @@ function DepartmentModal({ isOpen, onClose, onSaved, initialData, mode = "create
                 >
                   {selectedEmployee
                     ? selectedEmployee.full_name
-                    : t("departments.modal.selectEmployee")}
+                    : (selectedHeadId && initialData?.head_name) || t("departments.modal.selectEmployee")}
                 </span>
                 <FiChevronDown
                   className={`text-gray-400 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}

@@ -6,7 +6,7 @@ currently do nothing, open the modal (D31).
 
 **Blocked by:** 14 UI foundation, 12 Departments API
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 Verified by the ui-tester agent:
 

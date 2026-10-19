@@ -864,6 +864,8 @@
         "totalDesignations": "إجمالي المسميات الوظيفية"
       },
       "filters": {
+        "search": "بحث",
+        "searchPlaceholder": "ابحث بالاسم أو الرمز",
         "status": "الحالة",
         "allStatuses": "جميع الحالات",
         "clear": "مسح عوامل التصفية"

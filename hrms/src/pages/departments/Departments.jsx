@@ -1,18 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   MdOutlineVisibility,
   MdOutlineEdit,
   MdOutlineDelete,
   MdOutlineAdd,
   MdOutlineClear,
+  MdOutlineSearch,
 } from "react-icons/md";
 import { BiBuilding, BiCheckCircle, BiXCircle, BiIdCard } from "react-icons/bi";
 import DepartmentModal from "../../components/DepartmentModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import { TableLoader } from "../../components/Loader";
+import { ScreenError } from "../../components/ScreenState";
 import { useNavigate } from "react-router-dom";
-import { DEPARTMENT_ROWS, ASSIGNABLE_EMPLOYEES } from "../../data/groupC";
-import { nextId, paginate } from "../../data/common";
+import { listDepartments, removeDepartment } from "../../api/departments";
+import useApiQuery from "../../hooks/useApiQuery";
+import { toastApiError } from "../../utils/apiError";
 import { toast } from "react-toastify";
 import CustomDropdown from "../../components/CustomDropdown";
 import Pagination from "../../components/Pagination";
@@ -20,7 +23,9 @@ import { useCan } from "../../hooks/usePermission";
 import { MODULES, ACTIONS } from "../../constants/permissions";
 import { useTranslation } from "react-i18next";
 
+const PAGE_SIZE = 10;
 
+const twoDigits = (n) => (n < 10 && n > 0 ? `0${n}` : n);
 
 const truncate = (str, length = 20) => {
   if (!str || typeof str !== 'string') return str;
@@ -39,51 +44,42 @@ function Departments() {
   const [modalMode, setModalMode] = useState("create");
   const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [statusFilter, setStatusFilter] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 10;
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [departmentToDelete, setDepartmentToDelete] = useState(null);
-  // Static build: departments live in local state; paging/filtering is client-side.
-  const [departments, setDepartments] = useState(DEPARTMENT_ROWS);
-  const loading = false;
-  const pageData = paginate(
-    departments.filter((d) => !statusFilter || d.status === statusFilter),
-    page,
-    PAGE_SIZE,
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Search is sent once typing pauses; a new term starts again at page 1.
+  useEffect(() => {
+    const term = searchInput.trim();
+    if (term === search) return undefined;
+    const timer = setTimeout(() => {
+      setSearch(term);
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchInput, search]);
+
+  const { data, loading, error, reload } = useApiQuery(
+    () => listDepartments({ page, limit: PAGE_SIZE, search, status: statusFilter }),
+    [page, search, statusFilter],
   );
 
-  const allDepts = pageData.rows;
+  const allDepts = data?.items || [];
 
-  // Company-wide stats (independent of the page).
-  const totalDepartments = departments.length;
-  const activeDepartments = departments.filter((d) => d.status === "ACTIVE").length;
-  const inactiveDepartments = departments.filter((d) => d.status !== "ACTIVE").length;
-  const totalDesignations = departments.reduce((s, d) => s + (d.designation_count || 0), 0);
+  // Company-wide stats (independent of the filters and the page).
+  const stats = data?.stats || { total: 0, active: 0, inactive: 0, designations: 0 };
 
-  const total = pageData.total;
-  const totalPages = pageData.totalPages;
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  // Merge a created/edited department into the local list.
-  const reloadDepartments = (saved) => {
-    if (!saved) return;
-    const head = ASSIGNABLE_EMPLOYEES.find((e) => e.id === saved.dept_head);
-    const deptHead = head ? { id: head.id, full_name: head.full_name, profile_url: null } : null;
-    setDepartments((prev) =>
-      saved.id && prev.some((d) => d.id === saved.id)
-        ? prev.map((d) => (d.id === saved.id ? { ...d, ...saved, deptHead } : d))
-        : [
-            {
-              ...saved,
-              id: nextId(prev),
-              deptHead,
-              designation_count: 0,
-              employee_count: 0,
-              created_at: new Date().toISOString(),
-            },
-            ...prev,
-          ],
-    );
+  // After a create (newest first → page 1) or an edit: fetch the list and stats again.
+  const reloadDepartments = () => {
+    if (modalMode === "create" && page !== 1) setPage(1);
+    else reload();
   };
 
   const openDeleteModal = (dept) => {
@@ -97,14 +93,22 @@ function Departments() {
   };
 
   const handleDelete = async () => {
-    // console.log("handleDelete called! departmentToDelete is:", departmentToDelete);
-    const targetId = departmentToDelete?.id || departmentToDelete?._id;
-
-    if (targetId) {
-      setDepartments((prev) => prev.filter((d) => d.id !== targetId));
+    if (!departmentToDelete?.id) return;
+    setIsDeleting(true);
+    try {
+      await removeDepartment(departmentToDelete.id);
       toast.success(t("departments.list.toast.deleted"));
+      // Deleting the last row of a page → step back a page.
+      if (allDepts.length === 1 && page > 1) setPage((p) => p - 1);
+      else reload();
+    } catch (err) {
+      // e.g. 409 "This department has employees and can't be deleted."
+      toastApiError(err);
+      reload();
+    } finally {
+      setIsDeleting(false);
+      closeDeleteModal();
     }
-    closeDeleteModal();
   };
 
   const openCreateModal = () => {
@@ -116,11 +120,12 @@ function Departments() {
   const openEditModal = (dept) => {
     setModalMode("edit");
     setSelectedDepartment({
-      id: dept.id || dept._id,
+      id: dept.id,
       name: dept.name,
       code: dept.code,
-      dept_head: dept.deptHead?.id || dept.deptHead || dept.head || "",
-      description: dept.description,
+      dept_head: dept.dept_head_id || "",
+      head_name: dept.head_name || "",
+      description: dept.description || "",
       isActive: dept.status === "ACTIVE",
     });
     setIsModalOpen(true);
@@ -141,15 +146,15 @@ function Departments() {
             {t("departments.list.subtitle")}
           </p>
         </div>
-        <button
-          onClick={openCreateModal}
-          disabled={!canCreateDept}
-          title={canCreateDept ? "" : t("departments.list.noCreatePermission")}
-          className="flex items-center gap-2 bg-[#17A2B8] hover:bg-[#138496] text-white px-4 py-2 rounded-md font-medium transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#17A2B8]"
-        >
-          <MdOutlineAdd className="text-lg" />
-          {t("departments.list.createDepartment")}
-        </button>
+        {canCreateDept && (
+          <button
+            onClick={openCreateModal}
+            className="flex items-center gap-2 bg-[#17A2B8] hover:bg-[#138496] text-white px-4 py-2 rounded-md font-medium transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#17A2B8]"
+          >
+            <MdOutlineAdd className="text-lg" />
+            {t("departments.list.createDepartment")}
+          </button>
+        )}
       </div>
 
       {/* Stat Cards */}
@@ -161,7 +166,7 @@ function Departments() {
               {t("departments.list.stats.totalDepartments")}
             </p>
             <h3 className="text-3xl font-bold text-gray-800">
-              {totalDepartments < 10 && totalDepartments > 0 ? `0${totalDepartments}` : totalDepartments}
+              {twoDigits(stats.total)}
             </h3>
           </div>
           <div className="w-10 h-10 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center text-xl">
@@ -175,7 +180,7 @@ function Departments() {
               {t("departments.list.stats.activeDepartments")}
             </p>
             <h3 className="text-3xl font-bold text-gray-800">
-              {activeDepartments < 10 && activeDepartments > 0 ? `0${activeDepartments}` : activeDepartments}
+              {twoDigits(stats.active)}
             </h3>
           </div>
           <div className="w-10 h-10 rounded-md bg-green-50 text-green-500 flex items-center justify-center text-xl">
@@ -189,7 +194,7 @@ function Departments() {
               {t("departments.list.stats.inactiveDepartments")}
             </p>
             <h3 className="text-3xl font-bold text-gray-800">
-              {inactiveDepartments < 10 && inactiveDepartments > 0 ? `0${inactiveDepartments}` : inactiveDepartments}
+              {twoDigits(stats.inactive)}
             </h3>
           </div>
           <div className="w-10 h-10 rounded-md bg-red-50 text-red-500 flex items-center justify-center text-xl">
@@ -203,7 +208,7 @@ function Departments() {
               {t("departments.list.stats.totalDesignations")}
             </p>
             <h3 className="text-3xl font-bold text-gray-800">
-              {totalDesignations < 10 && totalDesignations > 0 ? `0${totalDesignations}` : totalDesignations}
+              {twoDigits(stats.designations)}
             </h3>
           </div>
           <div className="w-10 h-10 rounded-md bg-gray-100 text-gray-500 flex items-center justify-center text-xl">
@@ -214,6 +219,22 @@ function Departments() {
 
       {/* Filters */}
       <div className="bg-white p-4 rounded-lg border border-gray-200  mb-6 flex flex-col md:flex-row gap-4 items-end">
+        <div className="flex-1 w-full md:w-auto">
+          <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wide">
+            {t("departments.list.filters.search")}
+          </label>
+          <div className="relative">
+            <MdOutlineSearch className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg" />
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              maxLength={150}
+              placeholder={t("departments.list.filters.searchPlaceholder")}
+              className="w-full h-[42px] bg-[#F8F9FA] border border-gray-200 text-gray-900 text-sm rounded-lg ps-10 pe-4 focus:ring-2 focus:ring-[#17A2B8] focus:border-[#17A2B8] outline-none transition-all"
+            />
+          </div>
+        </div>
         <div className="flex-1 w-full md:w-auto">
           <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wide">
             {t("departments.list.filters.status")}
@@ -238,6 +259,8 @@ function Departments() {
           <button
             onClick={() => {
               setStatusFilter("");
+              setSearchInput("");
+              setSearch("");
               setPage(1);
             }}
             className="w-full sm:w-auto flex justify-center items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white px-5 py-2 rounded-lg font-medium text-sm transition-colors h-[42px]"
@@ -277,6 +300,12 @@ function Departments() {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <TableLoader colSpan={6} />
+              ) : error ? (
+                <tr>
+                  <td colSpan={6}>
+                    <ScreenError error={error} onRetry={reload} />
+                  </td>
+                </tr>
               ) : allDepts.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-gray-500">
@@ -286,8 +315,9 @@ function Departments() {
               ) : (
                 allDepts.map((dept, index) => (
                   <tr
-                    key={dept.id || index}
-                    className="hover:bg-gray-50/50 transition-colors"
+                    key={dept.id}
+                    onClick={canUpdateDept ? () => openEditModal(dept) : undefined}
+                    className={`hover:bg-gray-50/50 transition-colors ${canUpdateDept ? "cursor-pointer" : ""}`}
                   >
                     <td className="py-4 px-6 text-sm text-gray-500">{(page - 1) * PAGE_SIZE + index + 1}</td>
                     <td className="py-4 px-6 text-sm font-semibold text-gray-800" title={dept.name}>
@@ -296,13 +326,13 @@ function Departments() {
                     <td className="py-4 px-6 text-sm text-gray-700">
                       <div className="flex items-center gap-3">
                         <img
-                          src={dept?.deptHead?.profile_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(dept?.deptHead?.full_name || dept.deptHead || 'NA')}&background=F3F4F6&color=6B7280`}
+                          src={`https://ui-avatars.com/api/?name=${encodeURIComponent(dept.head_name || 'NA')}&background=F3F4F6&color=6B7280`}
                           alt={t("departments.list.headAlt")}
                           className="w-8 h-8 rounded-full object-cover bg-gray-200"
                           onError={(e) => { e.target.src = "https://i.pravatar.cc/150?u=static"; }}
                         />
-                        <span title={dept?.deptHead?.full_name || dept.deptHead || t("departments.list.notAssigned")}>
-                          {truncate(dept?.deptHead?.full_name || dept.deptHead || t("departments.list.notAssigned"), 20)}
+                        <span title={dept.head_name || t("departments.list.notAssigned")}>
+                          {truncate(dept.head_name || t("departments.list.notAssigned"), 20)}
                         </span>
                       </div>
                     </td>
@@ -320,7 +350,11 @@ function Departments() {
                       </span>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="flex items-center justify-center gap-4 text-gray-400">
+                      {/* Action clicks don't also trigger the row's edit. */}
+                      <div
+                        className="flex items-center justify-center gap-4 text-gray-400"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {canViewDesignation && (
                           <button
                             className="hover:text-blue-500 transition-colors"
@@ -332,22 +366,24 @@ function Departments() {
                             <MdOutlineVisibility className="text-lg" />
                           </button>
                         )}
-                        <button
-                          onClick={() => openEditModal(dept)}
-                          disabled={!canUpdateDept}
-                          title={canUpdateDept ? t("departments.actions.edit") : t("departments.actions.noEditPermission")}
-                          className="hover:text-blue-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-gray-400"
-                        >
-                          <MdOutlineEdit className="text-lg" />
-                        </button>
-                        <button
-                          onClick={() => openDeleteModal(dept)}
-                          disabled={!canDeleteDept}
-                          title={canDeleteDept ? t("departments.actions.delete") : t("departments.actions.noDeletePermission")}
-                          className="hover:text-red-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-gray-400"
-                        >
-                          <MdOutlineDelete className="text-lg" />
-                        </button>
+                        {canUpdateDept && (
+                          <button
+                            onClick={() => openEditModal(dept)}
+                            title={t("departments.actions.edit")}
+                            className="hover:text-blue-500 transition-colors"
+                          >
+                            <MdOutlineEdit className="text-lg" />
+                          </button>
+                        )}
+                        {canDeleteDept && (
+                          <button
+                            onClick={() => openDeleteModal(dept)}
+                            title={t("departments.actions.delete")}
+                            className="hover:text-red-500 transition-colors"
+                          >
+                            <MdOutlineDelete className="text-lg" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -382,6 +418,7 @@ function Departments() {
         isOpen={isDeleteModalOpen}
         onClose={closeDeleteModal}
         onConfirm={handleDelete}
+        isLoading={isDeleting}
         title={t("departments.list.deleteModal.title")}
         message={t("departments.list.deleteModal.message", { name: departmentToDelete?.name })}
         type="delete"
