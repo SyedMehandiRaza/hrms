@@ -1,0 +1,262 @@
+{
+  "title": "Approvals",
+  "subtitle": "Manage and track approval group allocations.",
+  "createGroup": "Create Approval Group",
+  "tabs": {
+    "groups": "Groups",
+    "settings": "Settings"
+  },
+  "search": "Search",
+  "searchGroupsPlaceholder": "Search by group name or module...",
+  "sortBy": "Sort By",
+  "sort": {
+    "latest": "Latest",
+    "name": "Name (A–Z)",
+    "levels": "Levels"
+  },
+  "loadingGroups": "Loading approval groups...",
+  "table": {
+    "sn": "S.N",
+    "id": "#ID",
+    "groupName": "Group Name",
+    "module": "Module",
+    "levels": "Levels",
+    "actions": "Actions"
+  },
+  "noGroupsFound": "No approval groups found.",
+  "level": "Level",
+  "levelsPlural": "Levels",
+  "showingGroups": "Showing {{from}} to {{to}} of {{total}} groups",
+  "view": {
+    "loading": "Loading approval group...",
+    "notFound": "Approval group not found.",
+    "backToApprovals": "Back to Approvals",
+    "inactive": "Inactive",
+    "levelSingular": "level",
+    "levelsPlural": "levels",
+    "approvers": "{{count}} approver(s)",
+    "editMembers": "Edit Members",
+    "addMembers": "Add Members",
+    "searchMembersPlaceholder": "Search by member name or employee id...",
+    "table": {
+      "sn": "S.N",
+      "employee": "Employee",
+      "level": "Level",
+      "mandatory": "Mandatory",
+      "canSkip": "Can Skip"
+    },
+    "loadingMembers": "Loading...",
+    "noMembers": "No members yet. Click \"Add Members\" to add approvers.",
+    "noMembersShort": "No members yet.",
+    "employeeFallback": "Employee #{{id}}",
+    "idLabel": "ID:",
+    "levelTag": "Level {{level}}",
+    "yes": "Yes",
+    "no": "No",
+    "mandatoryLabel": "Mandatory:",
+    "canSkipLabel": "Can skip:"
+  },
+  "inbox": {
+    "title": "My Approvals",
+    "subtitle": "Leave requests waiting for your approval.",
+    "table": {
+      "sn": "S.N",
+      "employee": "Employee",
+      "leaveType": "Leave Type",
+      "from": "From",
+      "to": "To",
+      "days": "Days",
+      "level": "Level",
+      "action": "Action",
+      "requestType": "Request Type",
+      "dateFrom": "Date / From",
+      "toTime": "To / Time",
+      "duration": "Duration"
+    },
+    "loading": "Loading approvals...",
+    "noPending": "No pending approvals.",
+    "levelTooltip": "Level {{level}}: {{approved}}/{{total}} approved",
+    "approve": "Approve",
+    "reject": "Reject",
+    "waitingForLevel": "Waiting for level {{level}}",
+    "periodClosedRejectOnly": "Period closed — it can only be rejected until the period is reopened",
+    "showing": "Showing",
+    "of": "of",
+    "approveRequest": "Approve Request",
+    "rejectRequest": "Reject Request",
+    "reasonRequired": "Reason (required)",
+    "commentOptional": "Comment (optional)",
+    "rejectPlaceholder": "Why are you rejecting this request?",
+    "commentPlaceholder": "Add an optional comment...",
+    "cancel": "Cancel",
+    "toast": {
+      "reasonRequiredToReject": "A reason is required to reject",
+      "done": "Done",
+      "actionFailed": "Action failed"
+    },
+    "types": {
+      "leave": "Leave",
+      "overtime": "Overtime",
+      "attendanceCorrection": "Attendance Correction",
+      "leaveEncashment": "Leave encashment · {{type}}"
+    },
+    "durationDays": "{{days}} Days",
+    "durationHours": "{{hours}} Hrs",
+    "payoutMonth": "Paid in {{month}}"
+  },
+  "createModal": {
+    "title": "Create Approval Group",
+    "subtitle": "Configure the approval workflow and its approvers.",
+    "groupName": "Group Name",
+    "groupNamePlaceholder": "Leave Approval Group",
+    "groupCode": "Group Code",
+    "groupCodePlaceholder": "e.g. LEAVE_APPR_1",
+    "module": "Module",
+    "loadingModules": "Loading modules...",
+    "selectModule": "Select module",
+    "description": "Description",
+    "descriptionPlaceholder": "Optional description",
+    "approvers": "Approvers",
+    "addApprover": "Add Approver",
+    "employee": "Employee",
+    "loadingEmployees": "Loading...",
+    "selectEmployee": "Select employee",
+    "level": "Level",
+    "mandatory": "Mandatory",
+    "canSkip": "Can skip",
+    "levelsHint": "Total levels are derived automatically from the highest level you assign.",
+    "cancel": "Cancel",
+    "creating": "Creating...",
+    "createGroup": "Create Group",
+    "scope": "Approval Scope",
+    "scopeGlobal": "Global",
+    "scopeProject": "Project-level",
+    "project": "Project",
+    "selectProject": "Select a project",
+    "projectMemberHint": "At least one approver must be an employee assigned to this project.",
+    "inProject": "In project",
+    "toast": {
+      "loadModulesFailed": "Failed to load modules",
+      "missingCompany": "Missing company context. Please log in again.",
+      "selectProjectForScope": "Please select a project for a project-level group.",
+      "duplicateEmployee": "Employee cannot be selected multiple times. Each employee can only appear once in the approval hierarchy.",
+      "projectApproverRequired": "At least one approver must be an employee of the selected project.",
+      "created": "Approval group created successfully!",
+      "createFailed": "Failed to create approval group"
+    },
+    "validation": {
+      "groupNameRequired": "Group name is required",
+      "max100": "Must be 100 characters or less",
+      "cannotBeEmpty": "Cannot be empty",
+      "min2": "At least 2 characters",
+      "groupCodeRequired": "Group code is required",
+      "max50": "Must be 50 characters or less",
+      "moduleRequired": "Please select a module",
+      "projectRequired": "Please select a project",
+      "max1000": "Must be 1000 characters or less",
+      "required": "Required",
+      "min1": "Min 1"
+    }
+  },
+  "membersModal": {
+    "title": "Manage Approval Members",
+    "employee": "Employee",
+    "selectEmployee": "Select employee",
+    "level": "Level",
+    "mandatory": "Mandatory",
+    "canSkip": "Can skip",
+    "addAnotherMember": "Add Another Member",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "saveMembers": "Save Members",
+    "toast": {
+      "addAtLeastOne": "Add at least one approver",
+      "employeeLevelRequired": "Employee and level are required for every row",
+      "duplicateEmployee": "Employee cannot be selected multiple times. Each employee can only appear once in the approval hierarchy."
+    }
+  },
+  "settings": {
+    "title": "Approval Assignments",
+    "subtitle": "Choose which approval group governs each purpose. A request with no group assigned is auto-approved.",
+    "loading": "Loading approval settings...",
+    "noPurposes": "No approval purposes configured.",
+    "noApproval": "— No approval (auto-approve) —",
+    "inactiveWarning": "The bound group is inactive — pick another.",
+    "save": "Save",
+    "toast": {
+      "loadFailed": "Failed to load approval settings",
+      "pickGroupFirst": "Pick an approval group first",
+      "saved": "Approval setting saved",
+      "saveFailed": "Failed to save"
+    },
+    "companyDefault": "Company default",
+    "notSet": "Not set (auto-approve / manual)",
+    "projectNumber": "Project #{{id}}",
+    "assignGroup": "Assign a group",
+    "selectGroup": "Select group…",
+    "projectsGoverned": "Projects governed by this group",
+    "noProjects": "No projects found.",
+    "makeCompanyDefault": "Also make this the company-wide default"
+  },
+  "editModal": {
+    "title": "Edit Approval Group",
+    "groupName": "Group name",
+    "groupCode": "Group code",
+    "module": "Module",
+    "approvalScope": "Approval scope",
+    "scopes": {
+      "GLOBAL": "Global",
+      "PROJECT": "Project-level"
+    },
+    "project": "Project",
+    "selectProject": "Select project",
+    "required": "Required",
+    "tooShort": "Too short",
+    "selectModuleRequired": "Select a module",
+    "selectProjectToast": "Select a project",
+    "updated": "Approval group updated",
+    "updateFailed": "Failed to update group",
+    "saving": "Saving…",
+    "saveChanges": "Save changes"
+  },
+  "routing": {
+    "title": "Approval Routing",
+    "optional": "(optional)",
+    "hint": "Which group approves this employee's requests. Leave blank to use the company/project default.",
+    "modes": {
+      "ALL": "Same group for all",
+      "PER": "Per module"
+    },
+    "noGroups": "No approval groups found. Create one in Approvals first, then it will appear here.",
+    "allRequestsLabel": "Approval group (all requests)",
+    "none": "None",
+    "groupFallback": "Group #{{id}}",
+    "noModuleGroup": "No {{module}} group yet — create one in Approvals.",
+    "modules": {
+      "OVERTIME": "Overtime",
+      "LEAVE": "Leave",
+      "CORRECTION": "Correction",
+      "EXIT_VISA": "Exit Visa"
+    }
+  },
+  "rejectModal": {
+    "title": "Reject Request",
+    "subtitle": "Provide a reason for rejection.",
+    "reasonLabel": "Reason for Rejection",
+    "reasonPlaceholder": "Enter the reason...",
+    "cancel": "Cancel",
+    "submit": "Reject Request"
+  },
+  "clearFilters": "Clear Filters",
+  "deleteModal": {
+    "title": "Deactivate Approval Group",
+    "confirm": "Deactivate"
+  },
+  "toast": {
+    "groupDeactivated": "Approval group deactivated",
+    "deleteGroupFailed": "Failed to delete approval group",
+    "membersUpdated": "Approval members updated",
+    "updateMembersFailed": "Failed to update members"
+  },
+  "paginationLabel": "groups"
+}

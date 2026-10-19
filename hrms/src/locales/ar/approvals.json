@@ -1,0 +1,262 @@
+{
+  "title": "الموافقات",
+  "subtitle": "إدارة وتتبع تخصيصات مجموعات الموافقة.",
+  "createGroup": "إنشاء مجموعة موافقة",
+  "tabs": {
+    "groups": "المجموعات",
+    "settings": "الإعدادات"
+  },
+  "search": "بحث",
+  "searchGroupsPlaceholder": "ابحث باسم المجموعة أو الوحدة...",
+  "sortBy": "ترتيب حسب",
+  "sort": {
+    "latest": "الأحدث",
+    "name": "الاسم (أ–ي)",
+    "levels": "المستويات"
+  },
+  "loadingGroups": "جارٍ تحميل مجموعات الموافقة...",
+  "table": {
+    "sn": "م",
+    "id": "المعرّف#",
+    "groupName": "اسم المجموعة",
+    "module": "الوحدة",
+    "levels": "المستويات",
+    "actions": "الإجراءات"
+  },
+  "noGroupsFound": "لم يتم العثور على مجموعات موافقة.",
+  "level": "مستوى",
+  "levelsPlural": "مستويات",
+  "showingGroups": "عرض {{from}} إلى {{to}} من {{total}} مجموعة",
+  "view": {
+    "loading": "جارٍ تحميل مجموعة الموافقة...",
+    "notFound": "لم يتم العثور على مجموعة الموافقة.",
+    "backToApprovals": "العودة إلى الموافقات",
+    "inactive": "غير نشط",
+    "levelSingular": "مستوى",
+    "levelsPlural": "مستويات",
+    "approvers": "{{count}} موافِق",
+    "editMembers": "تعديل الأعضاء",
+    "addMembers": "إضافة أعضاء",
+    "searchMembersPlaceholder": "ابحث باسم العضو أو معرّف الموظف...",
+    "table": {
+      "sn": "م",
+      "employee": "الموظف",
+      "level": "المستوى",
+      "mandatory": "إلزامي",
+      "canSkip": "يمكن التخطي"
+    },
+    "loadingMembers": "جارٍ التحميل...",
+    "noMembers": "لا يوجد أعضاء بعد. انقر على \"إضافة أعضاء\" لإضافة موافقين.",
+    "noMembersShort": "لا يوجد أعضاء بعد.",
+    "employeeFallback": "الموظف رقم {{id}}",
+    "idLabel": "المعرّف:",
+    "levelTag": "المستوى {{level}}",
+    "yes": "نعم",
+    "no": "لا",
+    "mandatoryLabel": "إلزامي:",
+    "canSkipLabel": "يمكن التخطي:"
+  },
+  "inbox": {
+    "title": "موافقاتي",
+    "subtitle": "طلبات الإجازة بانتظار موافقتك.",
+    "table": {
+      "sn": "م",
+      "employee": "الموظف",
+      "leaveType": "نوع الإجازة",
+      "from": "من",
+      "to": "إلى",
+      "days": "الأيام",
+      "level": "المستوى",
+      "action": "الإجراء",
+      "requestType": "نوع الطلب",
+      "dateFrom": "التاريخ / من",
+      "toTime": "إلى / الوقت",
+      "duration": "المدة"
+    },
+    "loading": "جارٍ تحميل الموافقات...",
+    "noPending": "لا توجد موافقات معلقة.",
+    "levelTooltip": "المستوى {{level}}: تمت الموافقة على {{approved}}/{{total}}",
+    "approve": "موافقة",
+    "reject": "رفض",
+    "waitingForLevel": "بانتظار المستوى {{level}}",
+    "periodClosedRejectOnly": "الفترة مُغلقة — يمكن رفض الطلب فقط حتى يُعاد فتح الفترة",
+    "showing": "عرض",
+    "of": "من",
+    "approveRequest": "الموافقة على الطلب",
+    "rejectRequest": "رفض الطلب",
+    "reasonRequired": "السبب (مطلوب)",
+    "commentOptional": "تعليق (اختياري)",
+    "rejectPlaceholder": "لماذا ترفض هذا الطلب؟",
+    "commentPlaceholder": "أضف تعليقًا اختياريًا...",
+    "cancel": "إلغاء",
+    "toast": {
+      "reasonRequiredToReject": "يجب ذكر سبب للرفض",
+      "done": "تم",
+      "actionFailed": "تعذّر تنفيذ الإجراء"
+    },
+    "types": {
+      "leave": "إجازة",
+      "overtime": "عمل إضافي",
+      "attendanceCorrection": "تصحيح الحضور",
+      "leaveEncashment": "صرف إجازات نقدًا · {{type}}"
+    },
+    "durationDays": "{{days}} يوم",
+    "durationHours": "{{hours}} ساعة",
+    "payoutMonth": "يُصرف في {{month}}"
+  },
+  "createModal": {
+    "title": "إنشاء مجموعة موافقة",
+    "subtitle": "قم بتكوين سير عمل الموافقة والموافقين عليه.",
+    "groupName": "اسم المجموعة",
+    "groupNamePlaceholder": "مجموعة موافقة الإجازات",
+    "groupCode": "رمز المجموعة",
+    "groupCodePlaceholder": "مثال: LEAVE_APPR_1",
+    "module": "الوحدة",
+    "loadingModules": "جارٍ تحميل الوحدات...",
+    "selectModule": "اختر وحدة",
+    "description": "الوصف",
+    "descriptionPlaceholder": "وصف اختياري",
+    "approvers": "الموافقون",
+    "addApprover": "إضافة موافِق",
+    "employee": "الموظف",
+    "loadingEmployees": "جارٍ التحميل...",
+    "selectEmployee": "اختر موظفًا",
+    "level": "المستوى",
+    "mandatory": "إلزامي",
+    "canSkip": "يمكن التخطي",
+    "levelsHint": "يتم اشتقاق إجمالي المستويات تلقائيًا من أعلى مستوى تقوم بتعيينه.",
+    "cancel": "إلغاء",
+    "creating": "جارٍ الإنشاء...",
+    "createGroup": "إنشاء المجموعة",
+    "scope": "نطاق الموافقة",
+    "scopeGlobal": "عام",
+    "scopeProject": "على مستوى المشروع",
+    "project": "المشروع",
+    "selectProject": "اختر مشروعًا",
+    "projectMemberHint": "يجب أن يكون معتمد واحد على الأقل موظفًا معيّنًا في هذا المشروع.",
+    "inProject": "ضمن المشروع",
+    "toast": {
+      "loadModulesFailed": "تعذّر تحميل الوحدات",
+      "missingCompany": "بيانات الشركة غير متوفرة. يرجى تسجيل الدخول مرة أخرى.",
+      "selectProjectForScope": "يرجى اختيار مشروع للمجموعة على مستوى المشروع.",
+      "duplicateEmployee": "لا يمكن اختيار الموظف أكثر من مرة. يمكن أن يظهر كل موظف مرة واحدة فقط في تسلسل الموافقة.",
+      "projectApproverRequired": "يجب أن يكون موافِق واحد على الأقل موظفًا في المشروع المحدد.",
+      "created": "تم إنشاء مجموعة الموافقة بنجاح!",
+      "createFailed": "تعذّر إنشاء مجموعة الموافقة"
+    },
+    "validation": {
+      "groupNameRequired": "اسم المجموعة مطلوب",
+      "max100": "يجب ألا يتجاوز 100 حرف",
+      "cannotBeEmpty": "لا يمكن أن يكون فارغًا",
+      "min2": "حرفان على الأقل",
+      "groupCodeRequired": "رمز المجموعة مطلوب",
+      "max50": "يجب ألا يتجاوز 50 حرفًا",
+      "moduleRequired": "يرجى اختيار وحدة",
+      "projectRequired": "يرجى اختيار مشروع",
+      "max1000": "يجب ألا يتجاوز 1000 حرف",
+      "required": "مطلوب",
+      "min1": "الحد الأدنى 1"
+    }
+  },
+  "membersModal": {
+    "title": "إدارة أعضاء الموافقة",
+    "employee": "الموظف",
+    "selectEmployee": "اختر موظفًا",
+    "level": "المستوى",
+    "mandatory": "إلزامي",
+    "canSkip": "يمكن التخطي",
+    "addAnotherMember": "إضافة عضو آخر",
+    "cancel": "إلغاء",
+    "saving": "جارٍ الحفظ...",
+    "saveMembers": "حفظ الأعضاء",
+    "toast": {
+      "addAtLeastOne": "أضف موافِقًا واحدًا على الأقل",
+      "employeeLevelRequired": "الموظف والمستوى مطلوبان في كل صف",
+      "duplicateEmployee": "لا يمكن اختيار الموظف أكثر من مرة. يمكن أن يظهر كل موظف مرة واحدة فقط في تسلسل الموافقة."
+    }
+  },
+  "settings": {
+    "title": "تعيينات الموافقة",
+    "subtitle": "اختر مجموعة الموافقة التي تحكم كل غرض. يتم اعتماد الطلب تلقائيًا إذا لم يتم تعيين أي مجموعة له.",
+    "loading": "جارٍ تحميل إعدادات الموافقة...",
+    "noPurposes": "لم يتم تكوين أي أغراض موافقة.",
+    "noApproval": "— بدون موافقة (اعتماد تلقائي) —",
+    "inactiveWarning": "المجموعة المرتبطة غير نشطة — اختر مجموعة أخرى.",
+    "save": "حفظ",
+    "toast": {
+      "loadFailed": "تعذّر تحميل إعدادات الموافقة",
+      "pickGroupFirst": "اختر مجموعة موافقة أولاً",
+      "saved": "تم حفظ إعداد الموافقة",
+      "saveFailed": "تعذّر الحفظ"
+    },
+    "companyDefault": "الافتراضي للشركة",
+    "notSet": "غير محدد (اعتماد تلقائي / يدوي)",
+    "projectNumber": "المشروع رقم {{id}}",
+    "assignGroup": "تعيين مجموعة",
+    "selectGroup": "اختر مجموعة…",
+    "projectsGoverned": "المشاريع التي تحكمها هذه المجموعة",
+    "noProjects": "لم يتم العثور على مشاريع.",
+    "makeCompanyDefault": "اجعلها أيضًا الافتراضية على مستوى الشركة"
+  },
+  "editModal": {
+    "title": "تعديل مجموعة الموافقة",
+    "groupName": "اسم المجموعة",
+    "groupCode": "رمز المجموعة",
+    "module": "الوحدة",
+    "approvalScope": "نطاق الموافقة",
+    "scopes": {
+      "GLOBAL": "عام",
+      "PROJECT": "على مستوى المشروع"
+    },
+    "project": "المشروع",
+    "selectProject": "اختر مشروعًا",
+    "required": "مطلوب",
+    "tooShort": "قصير جدًا",
+    "selectModuleRequired": "اختر وحدة",
+    "selectProjectToast": "اختر مشروعًا",
+    "updated": "تم تحديث مجموعة الموافقة",
+    "updateFailed": "تعذّر تحديث المجموعة",
+    "saving": "جارٍ الحفظ…",
+    "saveChanges": "حفظ التغييرات"
+  },
+  "routing": {
+    "title": "توجيه الموافقات",
+    "optional": "(اختياري)",
+    "hint": "المجموعة التي توافق على طلبات هذا الموظف. اتركه فارغًا لاستخدام الإعداد الافتراضي للشركة/المشروع.",
+    "modes": {
+      "ALL": "المجموعة نفسها للجميع",
+      "PER": "لكل وحدة"
+    },
+    "noGroups": "لم يتم العثور على مجموعات موافقة. أنشئ مجموعة في الموافقات أولًا، وستظهر هنا.",
+    "allRequestsLabel": "مجموعة الموافقة (جميع الطلبات)",
+    "none": "لا شيء",
+    "groupFallback": "المجموعة رقم {{id}}",
+    "noModuleGroup": "لا توجد مجموعة لـ{{module}} بعد — أنشئ واحدة في الموافقات.",
+    "modules": {
+      "OVERTIME": "العمل الإضافي",
+      "LEAVE": "الإجازة",
+      "CORRECTION": "التصحيح",
+      "EXIT_VISA": "تأشيرة الخروج"
+    }
+  },
+  "rejectModal": {
+    "title": "رفض الطلب",
+    "subtitle": "قدّم سببًا للرفض.",
+    "reasonLabel": "سبب الرفض",
+    "reasonPlaceholder": "أدخل السبب...",
+    "cancel": "إلغاء",
+    "submit": "رفض الطلب"
+  },
+  "clearFilters": "مسح عوامل التصفية",
+  "deleteModal": {
+    "title": "تعطيل مجموعة الموافقة",
+    "confirm": "تعطيل"
+  },
+  "toast": {
+    "groupDeactivated": "تم إلغاء تفعيل مجموعة الموافقة",
+    "deleteGroupFailed": "تعذّر حذف مجموعة الموافقة",
+    "membersUpdated": "تم تحديث أعضاء الموافقة",
+    "updateMembersFailed": "تعذّر تحديث الأعضاء"
+  },
+  "paginationLabel": "مجموعات"
+}

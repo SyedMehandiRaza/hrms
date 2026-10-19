@@ -1,0 +1,272 @@
+{
+  "header": {
+    "title": "لوحة المعلومات التنفيذية",
+    "subtitle": "مرحبًا بعودتك، ماركوس. إليك ما يحدث في المؤسسة اليوم."
+  },
+  "buttons": {
+    "exportReport": "تصدير التقرير",
+    "newHire": "تعيين جديد",
+    "runPayroll": "تشغيل كشف الرواتب",
+    "viewAllTasks": "عرض الكل ({{count}})",
+    "showLess": "عرض أقل",
+    "viewSystemLogs": "عرض سجلات النظام"
+  },
+  "statCards": {
+    "totalEmployees": "إجمالي الموظفين",
+    "activeProjects": "المشاريع النشطة",
+    "pendingApprovals": "الموافقات المعلقة",
+    "payrollStatus": "حالة كشف الرواتب",
+    "expiringDocuments": "المستندات منتهية الصلاحية"
+  },
+  "badges": {
+    "active": "نشط",
+    "actionRequired": "يتطلب إجراءً",
+    "processed": "تمت المعالجة",
+    "critical": "حرج",
+    "total": "الإجمالي",
+    "completed": "مكتمل",
+    "pending": "قيد الانتظار",
+    "newThisMonth": "+{{count}} جديد",
+    "allClear": "لا يوجد تنبيهات",
+    "notStarted": "لم يبدأ",
+    "draft": "مسودة",
+    "approved": "معتمد"
+  },
+  "distribution": {
+    "title": "توزيع الموظفين",
+    "fullTime": "دوام كامل",
+    "contract": "بعقد",
+    "note": "توزيع إجمالي الموظفين حسب نوع التوظيف.",
+    "totalStaff": "إجمالي الموظفين",
+    "unspecified": "غير محدد"
+  },
+  "attendance": {
+    "title": "نظرة عامة على الحضور",
+    "present": "حاضر",
+    "absent": "غائب",
+    "onLeave": "في إجازة"
+  },
+  "actionCenter": {
+    "title": "مركز الإجراءات",
+    "requested": "طلب",
+    "emptyState": "كل شيء مكتمل! لا توجد إجراءات معلقة.",
+    "actions": {
+      "reject": "رفض",
+      "approve": "موافقة",
+      "review": "مراجعة"
+    },
+    "approved": "تمت الموافقة على الطلب",
+    "rejected": "تم رفض الطلب",
+    "types": {
+      "leave": "إجازة",
+      "overtime": "عمل إضافي",
+      "correction": "تصحيح الحضور",
+      "leaveEncashment": "صرف إجازات نقدًا"
+    },
+    "items": {
+      "annualLeave": "إجازة سنوية",
+      "annualLeaveSub": "3 أيام · تبدأ يوم الاثنين القادم",
+      "overtime": "عمل إضافي",
+      "overtimeSub": "4 ساعات · وردية نهاية الأسبوع",
+      "contractRenewal": "تجديد العقد",
+      "contractRenewalSub": "تنتهي اتفاقية التوظيف خلال 15 يومًا"
+    },
+    "names": {
+      "johnDoe": "جون دو",
+      "janeSmith": "جين سميث",
+      "globalTech": "جلوبال تك"
+    }
+  },
+  "payroll": {
+    "title": "ملخص كشف الرواتب",
+    "cycle": "دورة سبتمبر 2023",
+    "employeesProcessed": "الموظفون الذين تمت معالجتهم",
+    "netTotal": "صافي الرواتب",
+    "totalDeductions": "إجمالي الاستقطاعات",
+    "noRun": "لا توجد دورة رواتب لهذا الشهر بعد.",
+    "taxLiabilities": "الالتزامات الضريبية"
+  },
+  "compliance": {
+    "title": "تنبيهات الامتثال",
+    "criticalCount": "{{count}} مستندات حرجة",
+    "table": {
+      "employee": "الموظف",
+      "documentType": "نوع المستند",
+      "expiryDate": "تاريخ الانتهاء",
+      "status": "الحالة",
+      "action": "الإجراء"
+    },
+    "expiresLabel": "ينتهي في",
+    "status": {
+      "expiringSoon": "تنتهي قريبًا",
+      "expired": "منتهية الصلاحية",
+      "critical": "حرج"
+    },
+    "actions": {
+      "view": "عرض",
+      "notify": "إشعار",
+      "renew": "تجديد"
+    },
+    "empty": "لا توجد مستندات تنتهي خلال {{days}} يومًا.",
+    "daysRemaining": "الأيام المتبقية",
+    "docTypes": {
+      "iqama": "الإقامة",
+      "passport": "جواز السفر",
+      "healthCard": "البطاقة الصحية"
+    },
+    "names": {
+      "ahmedAli": "أحمد علي",
+      "sarahChen": "سارة تشين",
+      "michaelRoss": "مايكل روس"
+    }
+  },
+  "activity": {
+    "title": "النشاط الأخير",
+    "empty": "لا يوجد نشاط حديث.",
+    "items": {
+      "onboardedTitle": "تم تعيين موظف جديد",
+      "onboardedDesc": "انضم موظف إلى فريق مشروع",
+      "payrollTitle": "تمت معالجة الرواتب",
+      "payrollDesc": "تم صرف الرواتب الشهرية",
+      "contractTitle": "تم توقيع العقد",
+      "contractDesc": "تم توقيع عقد توظيف"
+    },
+    "time": {
+      "twoHoursAgo": "منذ ساعتين",
+      "fiveHoursAgo": "منذ 5 ساعات",
+      "yesterday": "أمس"
+    }
+  },
+  "projects": {
+    "title": "نظرة عامة على المشاريع النشطة",
+    "tbd": "يُحدد لاحقًا",
+    "staff": "{{count}} موظف",
+    "empty": "لا توجد مشاريع نشطة.",
+    "staffHeader": "الموظفون",
+    "statusLabels": {
+      "ACTIVE": "نشط",
+      "INACTIVE": "غير نشط",
+      "COMPLETED": "مكتمل"
+    }
+  },
+  "employee": {
+    "title": "لوحة المعلومات",
+    "subtitle": "راقب وأدِر طلبات إجازات الموظفين عبر المؤسسة.",
+    "cards": {
+      "thisMonth": "هذا الشهر",
+      "actionNeeded": "يتطلب إجراءً",
+      "systemFinalized": "تم الانتهاء من قبل النظام",
+      "liveStatus": "الحالة المباشرة",
+      "totalRequests": "إجمالي الطلبات",
+      "pendingApprovals": "الموافقات المعلقة",
+      "approvedRequests": "الطلبات الموافق عليها",
+      "todaysAbsence": "غياب اليوم",
+      "fromLastMonth": "8% عن الشهر الماضي",
+      "avgResponse": "متوسط الاستجابة:",
+      "avgResponseValue": "4.2 ساعة",
+      "allCompliancePassed": "اجتازت جميع فحوصات الامتثال",
+      "plannedMedical": "3 مخطط لها، 4 طبية"
+    }
+  },
+  "confirm": {
+    "deleteButton": "حذف العنصر",
+    "deleteTitle": "حذف العنصر؟",
+    "deleteMessage": "هل أنت متأكد؟ لا يمكن التراجع عن هذا الإجراء.",
+    "deleteConfirm": "حذف"
+  },
+  "employeeDashboard": {
+    "welcome": "مرحبًا بعودتك، {{name}}!",
+    "employeeFallback": "موظف",
+    "avatarAlt": "صورة المستخدم",
+    "currentTime": "الوقت الحالي",
+    "recentRequests": "الطلبات الأخيرة",
+    "quickActions": "إجراءات سريعة",
+    "announcements": "الإعلانات",
+    "roles": {
+      "employee": "موظف",
+      "admin": "مسؤول",
+      "sub_admin": "مسؤول فرعي",
+      "general_employee": "موظف عام",
+      "employer": "صاحب عمل"
+    },
+    "cards": {
+      "attendance": "الحضور",
+      "onTrack": "على المسار الصحيح",
+      "daysPresent": "أيام الحضور",
+      "leaves": "الإجازات",
+      "availableBalance": "الرصيد المتاح",
+      "availableLeaves": "الإجازات المتاحة",
+      "overtime": "العمل الإضافي",
+      "thisMonth": "هذا الشهر",
+      "overtimeHours": "ساعات العمل الإضافي",
+      "hoursValue": "{{hours}} س",
+      "holidays": "العطلات",
+      "nextHoliday": "العطلة القادمة",
+      "noHoliday": "لا يوجد",
+      "noUpcomingHolidays": "لا توجد عطلات قادمة"
+    },
+    "table": {
+      "sNo": "م",
+      "type": "النوع",
+      "date": "التاريخ",
+      "status": "الحالة",
+      "loading": "جارٍ تحميل الطلبات...",
+      "empty": "لم يتم العثور على طلبات حديثة."
+    },
+    "requestTypes": {
+      "leave": "إجازة",
+      "overtime": "طلب عمل إضافي",
+      "correction": "تصحيح الحضور"
+    },
+    "dateWithHours": "{{date}} ({{hours}} ساعات)",
+    "status": {
+      "PENDING": "قيد الانتظار",
+      "APPROVED": "موافق عليه",
+      "REJECTED": "مرفوض",
+      "CANCELLED": "ملغى",
+      "WITHDRAWN": "مسحوب"
+    },
+    "actions": {
+      "applyLeave": "تقديم طلب إجازة",
+      "overtime": "العمل الإضافي",
+      "correction": "التصحيح",
+      "documents": "المستندات"
+    },
+    "announcementItems": {
+      "townhallTitle": "الاجتماع العام",
+      "townhallDesc": "الجمعة، 18 أغسطس الساعة 3:00 مساءً في قاعة الاجتماعات الرئيسية.",
+      "leavePolicyTitle": "تحديث سياسة الإجازات",
+      "leavePolicyDesc": "يرجى مراجعة الحدود الجديدة لترحيل رصيد الإجازات السنوية."
+    },
+    "leaveBalances": {
+      "title": "أرصدة الإجازات",
+      "empty": "لا توجد سياسات إجازة مُسندة.",
+      "usedOf": "المستخدم {{used}} من {{allocated}}"
+    }
+  },
+  "loading": "جارٍ تحميل لوحة التحكم...",
+  "staffingDashboard": {
+    "title": "لوحة تحكم شركة التوظيف",
+    "stats": {
+      "totalEmployees": "إجمالي الموظفين",
+      "activeProjects": "المشاريع النشطة",
+      "completedProjects": "المشاريع المكتملة",
+      "actionRequired": "إجراء مطلوب"
+    }
+  },
+  "errors": {
+    "noAccess": "ليس لديك صلاحية لعرض هذه البيانات.",
+    "loadFailed": "تعذّر تحميل هذا الآن.",
+    "actionFailed": "فشل تنفيذ الإجراء. حاول مرة أخرى."
+  },
+  "export": {
+    "sheets": {
+      "summary": "الملخص",
+      "compliance": "مستندات تنتهي قريبًا",
+      "projects": "المشاريع النشطة"
+    },
+    "columns": {
+      "project": "المشروع"
+    }
+  }
+}

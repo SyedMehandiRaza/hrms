@@ -1,0 +1,395 @@
+{
+  "role": {
+    "OWNER": "المالك",
+    "CONSULTANT": "استشاري",
+    "EPC": "مقاول رئيسي EPC",
+    "SUBCONTRACTOR": "مقاول من الباطن"
+  },
+  "status": {
+    "PENDING": "قيد الانتظار",
+    "ACCEPTED": "مقبولة",
+    "DECLINED": "مرفوضة",
+    "CANCELLED": "ملغاة",
+    "EXPIRED": "منتهية الصلاحية",
+    "APPROVED": "معتمدة",
+    "REJECTED": "مرفوضة",
+    "NOT_REQUIRED": "غير مطلوبة"
+  },
+  "invitations": {
+    "title": "الدعوات",
+    "subtitle": "ادعُ الشركات للتعاون في مشاريعك.",
+    "inviteCompany": "دعوة شركة",
+    "tabs": {
+      "received": "الواردة",
+      "sent": "المرسلة",
+      "approvals": "الموافقات",
+      "collaborations": "تعاوناتي",
+      "hierarchy": "الهيكل الهرمي",
+      "roles": "الأدوار"
+    },
+    "empty": {
+      "received": {
+        "title": "لا توجد دعوات لك",
+        "subtitle": "عندما تدعوك شركة أخرى للتعاون في مشروع، ستظهر الدعوة هنا لقبولها أو رفضها."
+      },
+      "sent": {
+        "title": "لم تدعُ أي شركة بعد",
+        "subtitle": "ادعُ شركة بصفة استشاري أو مقاول رئيسي EPC أو مقاول من الباطن للتعاون في مشاريعك."
+      },
+      "approvals": {
+        "title": "لا يوجد ما ينتظر موافقتك",
+        "subtitle": "عندما تقبل شركة تعيينًا تحت إشرافك، ستعتمده أو ترفضه من هنا."
+      },
+      "collaborations": {
+        "title": "لا توجد تعاونات بعد",
+        "subtitle": "ستظهر هنا المشاريع التي تشاركها مع شركات أخرى، ومن هم فوقك ودونك في الهيكل."
+      }
+    },
+    "table": {
+      "sno": "م",
+      "from": "من",
+      "to": "إلى",
+      "role": "الدور",
+      "project": "المشروع",
+      "under": "تحت",
+      "status": "الحالة",
+      "actions": "الإجراءات",
+      "company": "الشركة",
+      "yourRole": "دورك",
+      "invitedBy": "بدعوة من",
+      "aboveYou": "فوقك",
+      "underYou": "دونك"
+    },
+    "actions": {
+      "accept": "قبول",
+      "decline": "رفض",
+      "approve": "اعتماد",
+      "reject": "رفض",
+      "cancel": "إلغاء",
+      "link": "الرابط"
+    },
+    "toast": {
+      "actionFailed": "تعذّر تنفيذ الإجراء",
+      "linkCopied": "تم نسخ رابط الدعوة",
+      "accepted": "تم قبول الدعوة",
+      "declined": "تم رفض الدعوة",
+      "cancelled": "تم إلغاء الدعوة",
+      "placementApproved": "تم اعتماد التعيين",
+      "placementRejected": "تم رفض التعيين"
+    },
+    "copyLinkPrompt": "انسخ رابط الدعوة هذا:",
+    "copyLinkTitle": "نسخ رابط الدعوة",
+    "aCompany": "شركة",
+    "awaitingParent": "بانتظار الجهة الأعلى",
+    "parentStatus": "الجهة الأعلى: {{status}}",
+    "projectFallback": "المشروع #{{id}}",
+    "projectOwnerDash": "— (مالك المشروع)",
+    "paginationLabel": "دعوات"
+  },
+  "roles": {
+    "actions": {
+      "read": "قراءة",
+      "create": "إنشاء",
+      "update": "تحديث",
+      "delete": "حذف"
+    },
+    "abbr": {
+      "read": "ق",
+      "create": "إ",
+      "update": "ت",
+      "delete": "ح"
+    },
+    "toast": {
+      "loadFailed": "تعذّر تحميل الأدوار",
+      "nameRequired": "اسم الدور مطلوب",
+      "updated": "تم تحديث الدور",
+      "created": "تم إنشاء الدور",
+      "saveFailed": "تعذّر حفظ الدور",
+      "deleted": "تم حذف الدور",
+      "deleteFailed": "تعذّر حذف الدور"
+    },
+    "confirmDelete": "حذف الدور \"{{name}}\"؟ ستفقد الشركات التي تحمله صلاحيات الوصول الخاصة به.",
+    "moduleCount_zero": "{{count}} وحدة",
+    "moduleCount_one": "وحدة واحدة",
+    "moduleCount_two": "وحدتان",
+    "moduleCount_few": "{{count}} وحدات",
+    "moduleCount_many": "{{count}} وحدة",
+    "moduleCount_other": "{{count}} وحدة",
+    "noAccess": "بلا صلاحيات",
+    "project": "المشروع",
+    "noOwnedProjects": "لا تملك أي مشاريع بعد.",
+    "newRole": "دور جديد",
+    "loading": "جارٍ تحميل الأدوار…",
+    "empty": {
+      "title": "لا توجد أدوار بعد",
+      "subtitle": "أنشئ دورًا بالصلاحيات التي تريد منحها، ثم أسنده إلى شركة عند دعوتها إلى هذا المشروع."
+    },
+    "inactive": "غير نشط",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "editRole": "تعديل الدور",
+    "form": {
+      "name": "اسم الدور",
+      "namePlaceholder": "مثال: استشاري – عرض فقط",
+      "description": "الوصف",
+      "optional": "(اختياري)",
+      "descriptionPlaceholder": "ما الذي يمكن لهذا الدور فعله",
+      "permissions": "الصلاحيات",
+      "module": "الوحدة",
+      "tip": "تلميح: انقر على اسم الوحدة لتبديل الصف بأكمله."
+    },
+    "cancel": "إلغاء",
+    "saveChanges": "حفظ التغييرات",
+    "createRole": "إنشاء الدور"
+  },
+  "tree": {
+    "collapse": "طي",
+    "expand": "توسيع",
+    "companiesBelow": "{{count}} شركة في المستويات الأدنى",
+    "loadingProjects": "جارٍ تحميل المشاريع…",
+    "selectProject": "اختر مشروعًا",
+    "searchCompany": "ابحث عن شركة…",
+    "expandAll": "توسيع الكل",
+    "empty": {
+      "title": "لا توجد تعاونات بعد",
+      "subtitle": "ادعُ شركات إلى مشروع لبناء الهيكل الهرمي."
+    },
+    "selectToView": "اختر مشروعًا لعرض هيكله الهرمي.",
+    "projectHierarchy": "{{name}} · الهيكل الهرمي"
+  },
+  "employmentType": {
+    "FULL_TIME": "دوام كامل",
+    "CONTRACT": "عقد",
+    "PART_TIME": "دوام جزئي"
+  },
+  "userStatus": {
+    "ACTIVE": "نشط",
+    "INACTIVE": "غير نشط",
+    "SUSPENDED": "موقوف",
+    "TERMINATED": "منتهي الخدمة"
+  },
+  "partner": {
+    "toast": {
+      "loadProjectsFailed": "تعذّر تحميل المشاريع",
+      "loadEmployeesFailed": "تعذّر تحميل الموظفين"
+    },
+    "backToHierarchy": "العودة إلى الهيكل الهرمي",
+    "sharedProjects": "المشاريع المشتركة",
+    "project": "المشروع",
+    "loading": "جارٍ التحميل…",
+    "selectProject": "اختر مشروعًا",
+    "deployedHere": "المنشورون هنا",
+    "scope": "النطاق",
+    "scopeText": "تُعرض فقط المشاريع التي أسندتها إلى هذه الشركة.",
+    "employeesOnProject": "موظفو <name>{{name}}</name> في هذا المشروع",
+    "searchEmployee": "ابحث عن موظف…",
+    "table": {
+      "sno": "م",
+      "employee": "الموظف",
+      "role": "الدور",
+      "type": "النوع",
+      "status": "الحالة"
+    },
+    "emptyEmployees": "لم يُنشر أي موظف في هذا المشروع بعد.",
+    "paginationLabel": "موظفين"
+  },
+  "months": {
+    "january": "يناير",
+    "february": "فبراير",
+    "march": "مارس",
+    "april": "أبريل",
+    "may": "مايو",
+    "june": "يونيو",
+    "july": "يوليو",
+    "august": "أغسطس",
+    "september": "سبتمبر",
+    "october": "أكتوبر",
+    "november": "نوفمبر",
+    "december": "ديسمبر"
+  },
+  "employeeDetail": {
+    "toast": {
+      "loadEmployeeFailed": "تعذّر تحميل بيانات الموظف",
+      "loadAttendanceFailed": "تعذّر تحميل الحضور"
+    },
+    "tabs": {
+      "overview": "نظرة عامة",
+      "attendance": "الحضور"
+    },
+    "backToEmployees": "العودة إلى الموظفين",
+    "fields": {
+      "fullName": "الاسم الكامل",
+      "employeeCode": "رمز الموظف",
+      "role": "الدور",
+      "employmentType": "نوع التوظيف",
+      "email": "البريد الإلكتروني",
+      "phone": "الهاتف",
+      "company": "الشركة",
+      "mainProject": "المشروع الرئيسي",
+      "status": "الحالة"
+    },
+    "loadingAttendance": "جارٍ تحميل الحضور…",
+    "stats": {
+      "workingDays": "أيام العمل",
+      "present": "حاضر",
+      "absent": "غائب",
+      "paidLeave": "إجازة مدفوعة",
+      "workedHrs": "ساعات العمل"
+    },
+    "attendanceNote": "الحضور كما أفادت به {{company}} — للقراءة فقط.",
+    "prevMonth": "الشهر السابق",
+    "nextMonth": "الشهر التالي"
+  },
+  "wizard": {
+    "toast": {
+      "sent": "تم إرسال الدعوة بنجاح",
+      "sendFailed": "تعذّر إرسال الدعوة"
+    },
+    "title": "دعوة شركة",
+    "company": "الشركة",
+    "companyPlaceholder": "ابحث في الشركات المسجلة، أو اكتب بريدًا إلكترونيًا",
+    "unnamed": "(بدون اسم)",
+    "hint": {
+      "selected": "تم اختيار شركة مسجلة.",
+      "searching": "جارٍ البحث…",
+      "emailInvite": "غير مسجلة؟ سيصلها رابط الدعوة عبر البريد الإلكتروني.",
+      "pick": "اختر شركة مسجلة أو اكتب عنوان بريد إلكتروني."
+    },
+    "projects": "المشروع (المشاريع)",
+    "loadingProjects": "جارٍ تحميل المشاريع…",
+    "noProjects": "لست مشاركًا في أي مشروع يمكنك الدعوة إليه.",
+    "inviteAs": "الدعوة بصفة",
+    "selectProjectFirst": "اختر مشروعًا أولًا.",
+    "cannotInvite": "لا يمكنك دعوة أي جهة في المشروع (المشاريع) المحدد.",
+    "underParent": "تحت {{role}}",
+    "loading": "جارٍ التحميل…",
+    "noEligibleParent": "لا توجد جهة أعلى مؤهلة في المشروع (المشاريع) المحدد",
+    "selectParent": "اختر الجهة الأعلى",
+    "companyFallback": "الشركة #{{id}}",
+    "parentHint": "سيتم إلحاقها تحت هذه الشركة (ويجب أن توافق عليها).",
+    "collabRole": "دور التعاون",
+    "optional": "(اختياري)",
+    "noRole": "بدون دور (يُسند لاحقًا)",
+    "noRolesHint": "لا توجد أدوار لهذا المشروع بعد — أنشئ دورًا من تبويب الأدوار.",
+    "roleHint": "يمنح هذه الشركة صلاحيات الدور على المشروع.",
+    "cancel": "إلغاء",
+    "send": "إرسال الدعوة"
+  },
+  "landing": {
+    "invalidLink": "رابط الدعوة هذا غير صالح أو منتهي الصلاحية.",
+    "toast": {
+      "registered": "تم التسجيل بنجاح. يرجى تسجيل الدخول.",
+      "registerFailed": "فشل التسجيل. يرجى المحاولة مرة أخرى."
+    },
+    "loading": "جارٍ تحميل الدعوة…",
+    "unavailable": "الدعوة غير متاحة",
+    "goToLogin": "الانتقال إلى تسجيل الدخول",
+    "title": "لقد تمت دعوتك",
+    "aCompany": "شركة",
+    "invitedText": "دعتك <b>{{company}}</b> للانضمام بصفة <b>{{role}}</b>{{under}}{{on}}",
+    "underParent": " تحت {{name}}",
+    "onProjects_zero": " في {{count}} مشروع.",
+    "onProjects_one": " في مشروع واحد.",
+    "onProjects_two": " في مشروعين.",
+    "onProjects_few": " في {{count}} مشاريع.",
+    "onProjects_many": " في {{count}} مشروعًا.",
+    "onProjects_other": " في {{count}} مشروع.",
+    "fullStop": ".",
+    "registeringAs": "التسجيل باسم <b>{{email}}</b>",
+    "form": {
+      "companyName": "اسم الشركة",
+      "yourName": "اسمك",
+      "phone": "رقم الهاتف (اختياري)",
+      "password": "كلمة المرور",
+      "confirmPassword": "تأكيد كلمة المرور"
+    },
+    "validation": {
+      "companyNameRequired": "اسم الشركة مطلوب",
+      "tooShort": "قصير جدًا",
+      "nameRequired": "اسمك مطلوب",
+      "invalidPhone": "رقم هاتف غير صالح",
+      "passwordRequired": "كلمة المرور مطلوبة",
+      "minPassword": "8 أحرف على الأقل",
+      "confirmRequired": "يرجى تأكيد كلمة المرور",
+      "mismatch": "كلمتا المرور غير متطابقتين"
+    },
+    "submit": "التسجيل والانضمام",
+    "haveAccount": "لديك حساب بالفعل؟",
+    "login": "تسجيل الدخول"
+  },
+  "projectStatus": {
+    "ACTIVE": "نشط",
+    "COMPLETED": "مكتمل",
+    "INACTIVE": "غير نشط"
+  },
+  "workspace": {
+    "toast": {
+      "loadFailed": "تعذّر تحميل الموظفين المنشورين",
+      "deployed_zero": "لم يُنشر أي موظف",
+      "deployed_one": "تم نشر موظف واحد",
+      "deployed_two": "تم نشر موظفَين",
+      "deployed_few": "تم نشر {{count}} موظفين",
+      "deployed_many": "تم نشر {{count}} موظفًا",
+      "deployed_other": "تم نشر {{count}} موظف",
+      "deployFailed": "تعذّر النشر",
+      "removed": "تمت الإزالة من المشروع",
+      "removeFailed": "تعذّرت الإزالة"
+    },
+    "back": "العودة إلى المشاريع المسندة",
+    "you": "أنت: {{role}}",
+    "status": "الحالة",
+    "start": "البداية",
+    "location": "الموقع",
+    "myEmployees": "موظفيّ في هذا المشروع",
+    "deployEmployees": "نشر الموظفين",
+    "empty": "لم يُنشر أي موظف بعد — استخدم «نشر الموظفين» لإضافة فريقك.",
+    "remove": "إزالة",
+    "removeTitle": "إزالة الموظف",
+    "removeMessage": "إزالة {{name}} من {{project}}؟"
+  },
+  "deploy": {
+    "toast": {
+      "loadFailed": "تعذّر تحميل موظفيك"
+    },
+    "title": "نشر موظفيّ",
+    "subtitle": "اختر موظفين من شركتك لنشرهم في هذا المشروع.",
+    "searchPlaceholder": "ابحث في موظفيّ…",
+    "loading": "جارٍ تحميل موظفيك…",
+    "empty": "لم يتم العثور على موظفين.",
+    "deployedBadge": "منشور",
+    "selected": "{{count}} محدد",
+    "cancel": "إلغاء",
+    "deploying": "جارٍ النشر…",
+    "deploy": "نشر",
+    "deployCount": "نشر ({{count}})"
+  },
+  "assigned": {
+    "toast": {
+      "loadFailed": "تعذّر تحميل المشاريع المسندة"
+    },
+    "title": "المشاريع المسندة إليّ",
+    "subtitle": "مشاريع دعتك إليها شركات أخرى — افتح أحدها لنشر موظفيك.",
+    "searchPlaceholder": "ابحث عن مشروع…",
+    "table": {
+      "sno": "م",
+      "project": "المشروع",
+      "ownerCompany": "الشركة المالكة",
+      "myRole": "دوري",
+      "status": "الحالة"
+    },
+    "empty": {
+      "title": "لا توجد مشاريع مسندة إليك بعد",
+      "subtitle": "عندما تدعوك شركة إلى مشروع، سيظهر هنا."
+    },
+    "paginationLabel": "مشاريع"
+  },
+  "workforce": {
+    "onMyProjects": "في مشاريعي",
+    "deployedToPartners": "منشورون لدى الشركاء",
+    "onBench": "في الاحتياط",
+    "title": "توزيع القوى العاملة",
+    "totalEmployees": "إجمالي الموظفين:",
+    "assigned": "{{count}} مُسند",
+    "onBenchCount": "{{count}} في الاحتياط"
+  }
+}

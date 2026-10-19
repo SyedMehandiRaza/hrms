@@ -1,0 +1,139 @@
+{
+  "title": "العطلات",
+  "subtitle": "اطّلع على عطلات الشركة القادمة وخطّط جدولك.",
+  "viewCalendar": "عرض التقويم",
+  "createHoliday": "إنشاء عطلة",
+  "filters": {
+    "searchLabel": "البحث عن عطلة",
+    "searchPlaceholder": "البحث بالاسم...",
+    "searchPlaceholderEmployee": "البحث بالاسم أو النوع...",
+    "filterByType": "تصفية حسب النوع",
+    "holidayType": "نوع العطلة",
+    "allTypes": "جميع الأنواع",
+    "clearFilters": "مسح عوامل التصفية",
+    "financialYear": "السنة المالية"
+  },
+  "table": {
+    "sn": "م",
+    "holidayName": "اسم العطلة",
+    "date": "التاريخ",
+    "day": "اليوم",
+    "type": "النوع",
+    "action": "إجراء"
+  },
+  "loading": "جارٍ تحميل العطلات...",
+  "empty": "لا توجد عطلات.",
+  "emptySearch": "لا توجد عطلات مطابقة لبحثك.",
+  "defaultType": "عطلة رسمية",
+  "card": {
+    "dateLabel": "التاريخ:",
+    "dayLabel": "اليوم:"
+  },
+  "edit": "تعديل",
+  "delete": "حذف",
+  "pagination": {
+    "showing": "عرض",
+    "of": "من",
+    "holidays": "عطلة"
+  },
+  "deleteConfirm": {
+    "title": "حذف العطلة",
+    "message": "هل أنت متأكد أنك تريد حذف {{name}}؟ لا يمكن التراجع عن هذا الإجراء.",
+    "confirm": "حذف"
+  },
+  "types": {
+    "public": "رسمية",
+    "festival": "مهرجان",
+    "national": "وطنية",
+    "company": "خاصة بالشركة",
+    "optional": "اختيارية",
+    "weeklyOff": "إجازة أسبوعية"
+  },
+  "modal": {
+    "editTitle": "تعديل العطلة",
+    "createTitle": "إنشاء عطلة جديدة",
+    "editSubtitle": "حدّث تفاصيل العطلة المحددة.",
+    "createSubtitle": "أضف عطلة جديدة إلى تقويم الشركة.",
+    "detailsSection": "تفاصيل العطلة",
+    "configSection": "إعدادات العطلة",
+    "holidayName": "اسم العطلة",
+    "holidayNamePlaceholder": "مثال: ديوالي",
+    "date": "التاريخ",
+    "holidayType": "نوع العطلة",
+    "description": "الوصف",
+    "descriptionPlaceholder": "مثال: مهرجان الأضواء...",
+    "globalTitle": "عطلة عامة",
+    "globalSubtitle": "تُطبّق على جميع مواقع المكاتب تلقائيًا",
+    "optionalTitle": "عطلة اختيارية",
+    "optionalSubtitle": "يمكن للموظفين اختيار أخذ هذا اليوم إجازة من عدمه",
+    "halfDayTitle": "نصف يوم",
+    "halfDaySubtitle": "هذه العطلة لنصف يوم عمل فقط",
+    "activeTitle": "نشطة",
+    "activeSubtitle": "هل هذه العطلة نشطة حاليًا؟",
+    "cancel": "إلغاء",
+    "update": "تحديث العطلة",
+    "create": "إنشاء العطلة",
+    "fromTime": "وقت البداية",
+    "toTime": "وقت النهاية"
+  },
+  "toast": {
+    "loadFailed": "تعذّر تحميل العطلات",
+    "loadOneFailed": "تعذّر تحميل العطلة",
+    "deleted": "تم حذف العطلة",
+    "deleteFailed": "تعذّر حذف العطلة",
+    "updated": "تم تحديث العطلة",
+    "created": "تم إنشاء العطلة",
+    "saveFailed": "تعذّر حفظ العطلة"
+  },
+  "validation": {
+    "nameRequired": "اسم العطلة مطلوب",
+    "dateRequired": "التاريخ مطلوب",
+    "timeRequired": "وقت البداية والنهاية مطلوبان لعطلة نصف يوم",
+    "timeOrder": "يجب أن يكون وقت البداية قبل وقت النهاية",
+    "dateInFy": "يجب أن يكون التاريخ ضمن {{label}}",
+    "copyName": "يجب أن يتكون اسم العطلة من 2 إلى 200 حرف",
+    "copyDate": "أدخل تاريخًا صالحًا (YYYY-MM-DD)",
+    "copyDateInFy": "يجب أن يكون التاريخ ضمن {{label}}",
+    "copyConflict": "توجد عطلة نشطة في هذا التاريخ بالفعل",
+    "copyDuplicate": "توجد عطلتان في هذه القائمة في التاريخ نفسه",
+    "copyAlready": "تم نسخ هذه العطلة إلى تلك السنة مسبقًا"
+  },
+  "paginationLabel": "عطلات",
+  "copy": {
+    "button": "النسخ إلى السنة التالية",
+    "buttonHint": "نسخ عطلات {{from}} إلى {{to}}",
+    "noNextYear": "لم يتم إعداد السنة المالية التالية بعد",
+    "targetLocked": "{{label}} مغلقة — أعد فتحها لإجراء التغييرات",
+    "title": "نسخ العطلات إلى {{to}}",
+    "subtitle": "من {{from}} — تحقّق من كل تاريخ جديد قبل النسخ",
+    "loading": "جارٍ تحميل العطلات...",
+    "loadFailed": "تعذّر تحميل العطلات المراد نسخها",
+    "emptyTitle": "لا يوجد ما يُنسخ",
+    "empty": "لا توجد عطلات نشطة في {{from}}.",
+    "selectAll": "تحديد الكل",
+    "table": {
+      "holiday": "العطلة",
+      "sourceDate": "التاريخ الحالي",
+      "newDate": "التاريخ الجديد",
+      "flags": "تحقق"
+    },
+    "flags": {
+      "CHECK_DATE": "تحقق من التاريخ",
+      "CONFLICT": "تعارض",
+      "ALREADY_COPIED": "منسوخة مسبقًا",
+      "OK": "جاهزة"
+    },
+    "flagHints": {
+      "CHECK_DATE": "يتغير التاريخ كل سنة — أكّده",
+      "CONFLICT": "توجد عطلة أخرى في التاريخ المقترح",
+      "ALREADY_COPIED": "نُسخت إلى تلك السنة من قبل"
+    },
+    "noneSelected": "حدّد عطلة واحدة على الأقل",
+    "fixRows": "صحّح الصفوف المميّزة ({{count}})",
+    "selectedCount": "تم تحديد {{selected}} من {{total}}",
+    "copying": "جارٍ النسخ...",
+    "submit": "نسخ {{count}} عطلة",
+    "success": "تم نسخ {{count}} عطلة إلى {{label}}",
+    "failed": "تعذّر نسخ العطلات"
+  }
+}

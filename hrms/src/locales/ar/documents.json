@@ -1,0 +1,319 @@
+{
+  "dashboard": {
+    "title": "لوحة المستندات",
+    "subtitle": "إدارة وتتبع وثائق القوى العاملة والامتثال على مستوى الشركة.",
+    "filter": "تصفية",
+    "uploadDocument": "رفع مستند",
+    "stats": {
+      "totalDocuments": "إجمالي المستندات",
+      "validDocuments": "المستندات السارية",
+      "expiringSoon": "تنتهي قريبًا",
+      "expiredDocuments": "المستندات المنتهية",
+      "actionNeeded": "يتطلب إجراءً",
+      "critical": "حرج"
+    },
+    "expiryAlerts": {
+      "title": "تنبيهات انتهاء الصلاحية",
+      "viewAll": "عرض جميع الإشعارات",
+      "expiryLabel": "انتهاء الصلاحية:",
+      "table": {
+        "sn": "م",
+        "employeeName": "اسم الموظف",
+        "documentType": "نوع المستند",
+        "expiryDate": "تاريخ الانتهاء",
+        "status": "الحالة",
+        "action": "إجراء"
+      }
+    },
+    "status": {
+      "expired": "منتهٍ",
+      "expiringSoon": "ينتهي قريبًا"
+    },
+    "distribution": {
+      "title": "التوزيع",
+      "legalCompliance": "الامتثال القانوني",
+      "professionalCerts": "الشهادات المهنية",
+      "generalDocuments": "المستندات العامة",
+      "total": "الإجمالي"
+    },
+    "recentActivity": {
+      "title": "النشاط الأخير"
+    },
+    "archiving": {
+      "title": "أرشفة المستندات",
+      "description": "يتم تشفير جميع المستندات ونسخها احتياطيًا يوميًا في بنيتنا السحابية الآمنة."
+    },
+    "compliance": {
+      "title": "درجة الامتثال",
+      "description": "امتثال مستندات مؤسستك ممتاز. واصل العمل الجيد",
+      "downloadAudit": "تنزيل تقرير التدقيق"
+    },
+    "uploadModal": {
+      "title": "رفع مستند",
+      "subtitle": "أضف مستندًا جديدًا إلى المستودع.",
+      "dropzonePrefix": "اسحب الملفات وأفلتها هنا، أو ",
+      "browse": "تصفّح",
+      "fileHint": "PDF أو DOCX أو JPG بحد أقصى 20 ميجابايت",
+      "cancel": "إلغاء",
+      "upload": "رفع"
+    }
+  },
+  "add": {
+    "breadcrumb": {
+      "documents": "المستندات",
+      "uploadDocument": "رفع مستند"
+    },
+    "title": "إضافة مستند جديد",
+    "subtitle": "رفع وتصنيف وثائق الموظفين لأغراض الامتثال وحفظ السجلات.",
+    "savedTitle": "تم حفظ المستند",
+    "savedMessage": "تم رفع المستند وتصنيفه بنجاح.",
+    "sections": {
+      "generalInformation": "المعلومات العامة",
+      "uploadDocument": "رفع المستند",
+      "documentMetadata": "بيانات المستند الوصفية"
+    },
+    "selectEmployee": "اختر الموظف",
+    "selectEmployeePlaceholder": "ابحث عن اسم الموظف...",
+    "documentType": "نوع المستند",
+    "documentTypePlaceholder": "اختر النوع",
+    "dropzone": {
+      "title": "اسحب الملفات وأفلتها",
+      "hint": "يدعم PDF وJPG وPNG (بحد أقصى 10 ميجابايت)",
+      "browseFiles": "تصفّح الملفات"
+    },
+    "issueDate": "تاريخ الإصدار",
+    "expiryDate": "تاريخ الانتهاء",
+    "issuingAuthority": "الجهة المُصدِرة",
+    "issuingAuthorityPlaceholder": "مثال: وزارة الداخلية، سفارة...",
+    "referenceNumber": "الرقم المرجعي",
+    "referenceNumberPlaceholder": "رقم تعريف المستند",
+    "cancel": "إلغاء",
+    "saveDocument": "حفظ المستند",
+    "sidebar": {
+      "complianceTipTitle": "نصيحة للامتثال",
+      "complianceTipBody": "تأكد من دقة تاريخ الانتهاء. سيقوم النظام تلقائيًا بإرسال إشعار قبل 30 و60 و90 يومًا من هذا التاريخ لفريق الموارد البشرية والموظف.",
+      "employeeStats": "إحصاءات الموظف",
+      "complianceScore": "درجة الامتثال",
+      "items": {
+        "nationalIdVerified": "تم التحقق من الهوية الوطنية",
+        "contractSigned": "تم توقيع العقد",
+        "passportMissing": "جواز السفر مفقود"
+      },
+      "needAssistance": "هل تحتاج إلى مساعدة؟",
+      "needAssistanceBody": "راجع إرشادات التوثيق الخاصة بنا لتعيين الموظفين الدوليين.",
+      "viewGuide": "عرض الدليل",
+      "demoRole": "مهندس برمجيات"
+    },
+    "searchPlaceholder": "بحث...",
+    "noResults": "لا توجد نتائج",
+    "toasts": {
+      "fileRequired": "يرجى رفع ملف المستند",
+      "uploaded": "تم الرفع بنجاح",
+      "uploadFailed": "تعذّر رفع المستند"
+    },
+    "validation": {
+      "employeeRequired": "الموظف مطلوب",
+      "docTypeRequired": "نوع المستند مطلوب",
+      "issueDateRequired": "تاريخ الإصدار مطلوب",
+      "issueBeforeExpiry": "يجب أن يكون تاريخ الإصدار قبل تاريخ الانتهاء",
+      "expiryDateRequired": "تاريخ الانتهاء مطلوب",
+      "expiryAfterIssue": "يجب أن يكون تاريخ الانتهاء بعد تاريخ الإصدار",
+      "issuingAuthorityRequired": "الجهة المُصدِرة مطلوبة",
+      "max150": "يجب ألا يتجاوز 150 حرفًا",
+      "referenceRequired": "الرقم المرجعي مطلوب",
+      "min4": "4 أحرف على الأقل"
+    }
+  },
+  "statusLabels": {
+    "VALID": "ساري",
+    "APPROVED": "معتمد",
+    "PENDING": "قيد الانتظار",
+    "REJECTED": "مرفوض",
+    "EXPIRED": "منتهٍ",
+    "EXPIRING SOON": "ينتهي قريبًا",
+    "EXPIRING": "ينتهي قريبًا",
+    "ACTIVE": "نشط",
+    "INACTIVE": "غير نشط",
+    "COMPLETE": "مكتمل"
+  },
+  "categories": {
+    "GENERAL": "عام",
+    "LEGAL": "قانوني",
+    "IDENTITY": "هوية",
+    "PROFESSIONAL": "مهني",
+    "SITE": "موقع العمل",
+    "CONTRACT": "عقد"
+  },
+  "list": {
+    "badges": {
+      "total": "الإجمالي"
+    },
+    "search": "بحث",
+    "searchPlaceholder": "ابحث عن موظف",
+    "type": "النوع",
+    "status": "الحالة",
+    "all": "الكل",
+    "allStatuses": "جميع الحالات",
+    "statusFilter": {
+      "valid": "ساري",
+      "expiring": "ينتهي قريبًا",
+      "expired": "منتهٍ"
+    },
+    "clearFilters": "مسح عوامل التصفية",
+    "table": {
+      "sno": "م",
+      "employeeName": "اسم الموظف",
+      "totalDocument": "إجمالي المستندات",
+      "pending": "قيد الانتظار",
+      "expiring": "قاربت على الانتهاء",
+      "actions": "الإجراءات",
+      "docType": "نوع المستند",
+      "issueDate": "تاريخ الإصدار",
+      "expiryDate": "تاريخ الانتهاء",
+      "status": "الحالة"
+    },
+    "loading": "جارٍ تحميل المستندات...",
+    "empty": "لم يتم العثور على مستندات.",
+    "unknown": "غير معروف",
+    "noRole": "بدون مسمى وظيفي",
+    "docCount": "{{count}} مستند",
+    "loadingShort": "جارٍ التحميل...",
+    "noDetails": "لا تتوفر تفاصيل للمستند.",
+    "documentFallback": "مستند",
+    "view": "عرض",
+    "paginationLabel": "مستند"
+  },
+  "slideOver": {
+    "toasts": {
+      "approved": "تم اعتماد المستند بنجاح",
+      "approveFailed": "تعذّر اعتماد المستند",
+      "rejected": "تم رفض المستند بنجاح",
+      "rejectFailed": "تعذّر رفض المستند",
+      "downloadUnavailable": "رابط التنزيل غير متوفر",
+      "downloadFailed": "تعذّر تنزيل المستند",
+      "selectFile": "يرجى اختيار ملف لرفعه.",
+      "expiryAfterIssue": "يجب أن يكون تاريخ الانتهاء بعد تاريخ الإصدار",
+      "replaced": "تم استبدال المستند بنجاح",
+      "replaceFailed": "تعذّر استبدال المستند"
+    },
+    "detailsTitle": "تفاصيل المستند",
+    "detailsSubtitle": "عرض معلومات المستند المرفوع والتحقق منها.",
+    "idBadge": "المعرّف: {{id}}",
+    "fullTime": "دوام كامل",
+    "defaultAuthority": "وزارة الداخلية",
+    "documentPreview": "معاينة المستند",
+    "download": "تنزيل",
+    "reject": "رفض",
+    "approving": "جارٍ الاعتماد...",
+    "approveDocument": "اعتماد المستند",
+    "replaceDocument": "استبدال المستند",
+    "renewTitle": "تجديد المستند",
+    "renewSubtitle": "تحديث السجل الخاص بـ {{name}}",
+    "referenceDocument": "المستند المرجعي ({{status}})",
+    "currentFile": "الملف الحالي",
+    "originalIssue": "الإصدار الأصلي",
+    "expiredOn": "انتهى في",
+    "newDocumentDetail": "تفاصيل المستند الجديد",
+    "dropPrefix": "اسحب المستند وأفلته أو ",
+    "browse": "تصفّح",
+    "fileHint": "الصيغ المدعومة: PDF وJPG وPNG (بحد أقصى 10 ميجابايت)",
+    "newIssueDate": "تاريخ الإصدار الجديد",
+    "newExpiryDate": "تاريخ الانتهاء الجديد",
+    "uploading": "جارٍ الرفع...",
+    "rejectTitle": "رفض المستند",
+    "rejectSubtitle": "يرجى ذكر سبب رفض هذا المستند."
+  },
+  "types": {
+    "toasts": {
+      "deleted": "تم حذف نوع المستند بنجاح",
+      "deleteFailed": "تعذّر حذف نوع المستند"
+    },
+    "title": "أنواع المستندات",
+    "subtitle": "إدارة فئات المستندات المستخدمة في وحدة إدارة المستندات بنظام الموارد البشرية.",
+    "searchPlaceholder": "ابحث عن نوع مستند",
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "table": {
+      "description": "الوصف",
+      "category": "الفئة",
+      "reqExpiry": "يتطلب تاريخ انتهاء",
+      "reqIssuer": "يتطلب جهة إصدار"
+    },
+    "loading": "جارٍ تحميل أنواع المستندات...",
+    "empty": "لا توجد أنواع مستندات مطابقة لعوامل التصفية.",
+    "yes": "نعم",
+    "no": "لا",
+    "paginationLabel": "نوع مستند",
+    "deleteTitle": "حذف نوع المستند",
+    "deleteMessage": "هل أنت متأكد من حذف نوع المستند هذا؟ لا يمكن التراجع عن هذا الإجراء.",
+    "createdTitle": "تم إنشاء نوع المستند",
+    "createdMessage": "تم إنشاء نوع المستند الجديد بنجاح وإضافته إلى القائمة."
+  },
+  "typeModal": {
+    "toasts": {
+      "updated": "تم تحديث نوع المستند بنجاح",
+      "error": "حدث خطأ ما"
+    },
+    "viewTitle": "عرض نوع المستند",
+    "editTitle": "تعديل نوع المستند",
+    "createTitle": "إنشاء نوع مستند",
+    "viewSubtitle": "تفاصيل نوع المستند هذا",
+    "editSubtitle": "تحديث تفاصيل نوع المستند",
+    "createSubtitle": "إضافة فئة مستندات جديدة لإدارة مستندات الموظفين",
+    "saveChanges": "حفظ التغييرات",
+    "validation": {
+      "noEmoji": "لا يُسمح باستخدام الرموز التعبيرية",
+      "nameRequired": "اسم نوع المستند مطلوب",
+      "codeRequired": "الرمز مطلوب"
+    },
+    "nameLabel": "اسم نوع المستند",
+    "namePlaceholder": "مثال: مكافأة الأداء",
+    "codeLabel": "الرمز",
+    "codePlaceholder": "مثال: test-document",
+    "descriptionPlaceholder": "اشرح الغرض من هذا النوع...",
+    "requiresExpiry": "يتطلب تاريخ انتهاء",
+    "requiresIssuer": "يتطلب جهة إصدار",
+    "close": "إغلاق"
+  },
+  "my": {
+    "toasts": {
+      "loadFailed": "تعذّر تحميل المستندات",
+      "deleted": "تم حذف المستند بنجاح",
+      "deleteFailed": "تعذّر حذف المستند"
+    },
+    "title": "مستنداتي",
+    "subtitle": "تتبّع مستنداتك المقدّمة وإدارتها.",
+    "empty": "لم يتم العثور على مستندات",
+    "unknownEmployee": "موظف غير معروف",
+    "employeeRole": "موظف",
+    "delete": "حذف",
+    "paginationLabel": "مستند",
+    "deleteTitle": "حذف المستند",
+    "deleteMessage": "هل أنت متأكد من حذف هذا المستند؟ لا يمكن التراجع عن هذا الإجراء."
+  },
+  "uploadModal": {
+    "toasts": {
+      "userMissing": "بيانات المستخدم غير متوفرة",
+      "duplicate": "يوجد مستند من هذا النوع بالفعل. يرجى حذفه أولًا إذا كنت تريد استبداله.",
+      "uploaded": "تم رفع المستند بنجاح",
+      "replaced": "تم استبدال المستند بنجاح"
+    },
+    "subtitle": "قدّم مستندًا جديدًا إلى سجلاتك.",
+    "selectDocType": "اختر نوع المستند",
+    "documentFile": "ملف المستند",
+    "dropTitle": "اسحب ملفك وأفلته هنا",
+    "fileHint": "الصيغ المدعومة: PDF وJPG وPNG (بحد أقصى 5 ميجابايت)",
+    "issuingAuthorityPlaceholder": "مثال: الجهة الحكومية في الدولة",
+    "referencePlaceholder": "مثال: DOC-12345",
+    "validation": {
+      "docTypeRequired": "نوع المستند مطلوب",
+      "issueDateRequired": "تاريخ الإصدار مطلوب",
+      "expiryDateRequired": "تاريخ الانتهاء مطلوب",
+      "issuingAuthorityRequired": "الجهة المُصدِرة مطلوبة",
+      "referenceRequired": "الرقم المرجعي مطلوب",
+      "max50": "يجب ألا يتجاوز 50 حرفًا"
+    },
+    "replaceTitle": "استبدال المستند",
+    "replaceSubtitle": "ارفع ملفًا جديدًا لهذا المستند. سيتم استبدال الملف الحالي."
+  }
+}

@@ -1,0 +1,395 @@
+{
+  "dashboard": {
+    "title": "لوحة معلومات المشاريع",
+    "subtitle": "أدِر مشاريع مؤسستك وتتبّع التقدّم وخصّص الموارد في مكان واحد."
+  },
+  "buttons": {
+    "addProject": "إضافة مشروع",
+    "assignEmployees": "تعيين الموظفين",
+    "assignSelected": "تعيين المحدّدين",
+    "assignSelectedEmployees": "تعيين الموظفين المحدّدين",
+    "uploadPhoto": "رفع صورة",
+    "remove": "إزالة",
+    "cancel": "إلغاء",
+    "saveProject": "حفظ المشروع",
+    "saving": "جارٍ الحفظ...",
+    "saveChanges": "حفظ التغييرات",
+    "createAnother": "إنشاء مشروع آخر",
+    "backToProjects": "العودة إلى المشاريع",
+    "clearFilters": "مسح عوامل التصفية",
+    "filter": "تصفية",
+    "change": "تغيير",
+    "view": "عرض",
+    "viewPolicyGuidelines": "عرض إرشادات السياسة",
+    "previous": "السابق",
+    "next": "التالي",
+    "assigning": "جارٍ التعيين...",
+    "viewAll": "عرض الكل"
+  },
+  "stats": {
+    "totalProject": "إجمالي المشاريع",
+    "activeProjects": "المشاريع النشطة",
+    "completeProject": "المشاريع المكتملة",
+    "totalEmployees": "إجمالي الموظفين"
+  },
+  "status": {
+    "active": "نشط",
+    "completed": "مكتمل",
+    "onHold": "قيد الانتظار",
+    "inProgress": "قيد التنفيذ",
+    "planning": "التخطيط",
+    "pending": "معلّق",
+    "inactive": "غير نشط",
+    "past": "سابق"
+  },
+  "distribution": {
+    "title": "توزيع الموظفين",
+    "totalStaff": "إجمالي الطاقم",
+    "fullTime": "دوام كامل",
+    "contract": "عقد",
+    "summary": "{{fullTime}} بدوام كامل · {{contract}} بعقد ضمن القوى العاملة لديك."
+  },
+  "attendanceOverview": {
+    "title": "نظرة عامة على الحضور",
+    "present": "حاضر",
+    "absent": "غائب",
+    "onLeave": "في إجازة",
+    "today": "اليوم",
+    "noData": "لا يوجد أحد مجدول للعمل اليوم.",
+    "expected_zero": "بناءً على {{count}} موظف متوقع حضوره اليوم",
+    "expected_one": "بناءً على موظف واحد متوقع حضوره اليوم",
+    "expected_two": "بناءً على موظفَين متوقع حضورهما اليوم",
+    "expected_few": "بناءً على {{count}} موظفين متوقع حضورهم اليوم",
+    "expected_many": "بناءً على {{count}} موظفًا متوقع حضورهم اليوم",
+    "expected_other": "بناءً على {{count}} موظف متوقع حضورهم اليوم"
+  },
+  "latest": {
+    "title": "أحدث تفاصيل المشروع",
+    "empty": "لا توجد مشاريع بعد."
+  },
+  "table": {
+    "projectName": "اسم المشروع",
+    "location": "الموقع",
+    "totalEmployees": "إجمالي الموظفين",
+    "contractEmployees": "موظفو العقود",
+    "status": "الحالة",
+    "actions": "الإجراءات",
+    "idPrefix": "المعرّف:",
+    "members": "{{count}} أعضاء",
+    "contractors": "{{count}} متعاقدين"
+  },
+  "card": {
+    "location": "الموقع",
+    "employees": "الموظفون"
+  },
+  "tooltips": {
+    "viewProject": "عرض المشروع",
+    "removeFromProject": "إزالة من المشروع",
+    "clearLocation": "مسح الموقع"
+  },
+  "breadcrumb": {
+    "projectManagement": "إدارة المشاريع",
+    "project": "مشروع",
+    "createProject": "إنشاء مشروع",
+    "assignEmployee": "تعيين موظف"
+  },
+  "detail": {
+    "loading": "جارٍ التحميل...",
+    "targetCompletion": "تاريخ الإنجاز المستهدف:",
+    "attendanceSummary": "ملخّص الحضور",
+    "totalPresent": "إجمالي الحاضرين",
+    "totalAbsent": "إجمالي الغائبين",
+    "attendanceTrend": "الحضور أعلى بنسبة 4٪ مقارنة بالأسبوع الماضي",
+    "monthlyPayrollCost": "تكلفة الرواتب الشهرية",
+    "currentMonth": "الشهر الحالي",
+    "q3Projection": "توقّعات الربع الثالث",
+    "totalCostMtd": "إجمالي التكلفة (حتى تاريخه)",
+    "costVsPrevMonth": "+2.4٪ مقارنة بالشهر السابق",
+    "fullTimeSalaries": "رواتب الدوام الكامل",
+    "employeesCount": "{{count}} موظفين",
+    "contractorFees": "أتعاب المتعاقدين",
+    "contractorsCount": "{{count}} متعاقدين",
+    "fixedCost": "تكلفة ثابتة",
+    "variableCost": "تكلفة متغيّرة",
+    "assignedWorkforce": "القوى العاملة المعيَّنة",
+    "loadingPersonnel": "جارٍ تحميل الأفراد...",
+    "personnelAssigned": "{{count}} من الأفراد معيَّنون في هذا المشروع",
+    "emptyTable": "لم يتم تعيين موظفين بعد. انقر على \"تعيين الموظفين\" للإضافة.",
+    "loadingEmployees": "جارٍ تحميل الموظفين...",
+    "emptyMobile": "لم يتم تعيين موظفين بعد.",
+    "showing": "عرض {{from}} إلى {{to}} من أصل {{total}} موظف",
+    "toast": {
+      "loadEmployeesFailed": "تعذّر تحميل موظفي المشروع",
+      "employeeRemoved": "تمت إزالة الموظف من المشروع",
+      "removeFailed": "تعذّرت إزالة الموظف"
+    },
+    "breadcrumbProjects": "المشاريع",
+    "editProject": "تعديل المشروع",
+    "imageAlt": "المشروع",
+    "description": "الوصف",
+    "noDescription": "لا يوجد وصف.",
+    "targetCompletionLabel": "الإنجاز المستهدف",
+    "radius": "النطاق",
+    "totalPersonnel": "إجمالي {{count}} من الأفراد النشطين حاليًا في موقع المشروع",
+    "searchPlaceholder": "ابحث عن موظفين...",
+    "allStatus": "جميع الحالات",
+    "statusPlaceholder": "الحالة",
+    "unknown": "غير معروف",
+    "removeTitle": "إزالة الموظف",
+    "removeMessage": "هل أنت متأكد من إزالة {{name}} من هذا المشروع؟",
+    "noEndDate": "لا يوجد تاريخ انتهاء"
+  },
+  "detailTable": {
+    "sn": "م",
+    "employeeName": "اسم الموظف",
+    "role": "الدور",
+    "type": "النوع",
+    "staffingCompany": "شركة التوظيف",
+    "availability": "التوفّر",
+    "action": "الإجراء",
+    "status": "الحالة"
+  },
+  "type": {
+    "fullTime": "دوام كامل",
+    "contract": "عقد",
+    "contractor": "متعاقد"
+  },
+  "create": {
+    "title": "إنشاء مشروع",
+    "subtitle": "أدِر وتتبّع توزيع القوى العاملة في المؤسسة عبر المناطق العالمية.",
+    "successTitle": "تم إنشاء المشروع بنجاح",
+    "successMessage": "تم حفظ مشروعك بنجاح.",
+    "photoTitle": "صورة المشروع",
+    "photoHelper": "ارفع صورة واضحة للمشروع.",
+    "fields": {
+      "projectName": "اسم المشروع",
+      "projectNamePlaceholder": "مثال: توسعة البنية التحتية للربع الرابع",
+      "officeName": "اسم المكتب",
+      "officeSearchPlaceholder": "ابحث عن مكتب...",
+      "noOffices": "لا توجد مكاتب متاحة",
+      "selectOfficeError": "يرجى اختيار مكتب من القائمة",
+      "projectLocation": "موقع المشروع",
+      "selectLocation": "انقر لتحديد الموقع على الخريطة",
+      "selectLocationError": "يرجى تحديد موقع على الخريطة",
+      "status": "الحالة",
+      "startDate": "تاريخ البدء",
+      "endDate": "تاريخ الانتهاء",
+      "radius": "نطاق المسافة (بالأمتار)",
+      "radiusPlaceholder": "مثال: 500",
+      "city": "المدينة",
+      "citySearchPlaceholder": "ابحث عن مدينة...",
+      "projectDescription": "وصف المشروع",
+      "descriptionPlaceholder": "حدّد الأهداف الرئيسية والمخرجات ومتطلبات الموارد..."
+    },
+    "toast": {
+      "uploadFailed": "تعذّر رفع الصورة",
+      "created": "تم إنشاء المشروع بنجاح",
+      "createFailed": "تعذّر إنشاء المشروع"
+    },
+    "validation": {
+      "nameRequired": "اسم المشروع مطلوب",
+      "nameMax": "لا يمكن أن يتجاوز اسم المشروع 255 حرفًا",
+      "nameEmpty": "لا يمكن أن يكون اسم المشروع فارغًا",
+      "multipleSpaces": "لا يُسمح بالمسافات المتعددة",
+      "nameInvalidChars": "استخدم الحروف (بأي لغة) والأرقام والمسافات و - & , ( ) ' . / : #",
+      "min3": "3 أحرف على الأقل",
+      "max100": "100 حرف كحد أقصى",
+      "startRequired": "تاريخ البدء مطلوب",
+      "endRequired": "تاريخ الانتهاء مطلوب",
+      "endAfterStart": "يجب أن يكون تاريخ الانتهاء بعد تاريخ البدء",
+      "radiusRequired": "النطاق مطلوب",
+      "radiusMin": "يجب ألا يقل نصف القطر عن 50 مترًا",
+      "descriptionRequired": "الوصف مطلوب",
+      "descriptionMax": "لا يمكن أن يتجاوز الوصف 1000 حرف",
+      "descriptionEmpty": "لا يمكن أن يكون الوصف فارغًا",
+      "min10": "10 أحرف على الأقل",
+      "max500": "500 حرف كحد أقصى",
+      "invalidChars": "تم استخدام أحرف غير صالحة",
+      "min2": "مطلوب حرفان على الأقل",
+      "radiusMax": "لا يمكن أن يتجاوز نصف القطر 100,000 متر"
+    }
+  },
+  "edit": {
+    "title": "تعديل المشروع",
+    "subtitle": "عدّل التفاصيل الأساسية للمشروع.",
+    "photoTitle": "صورة المشروع",
+    "photoHelper": "ارفع صورة واضحة للمشروع.",
+    "fields": {
+      "projectName": "اسم المشروع",
+      "projectNamePlaceholder": "أدخل اسم المشروع",
+      "status": "الحالة",
+      "selectStatus": "اختر",
+      "startDate": "تاريخ البدء",
+      "endDate": "تاريخ الانتهاء",
+      "location": "الموقع",
+      "locationPlaceholder": "أدخل",
+      "projectDescription": "وصف المشروع",
+      "descriptionPlaceholder": "أدخل"
+    },
+    "toast": {
+      "missingId": "معرّف المشروع غير متوفر",
+      "uploadPhotoFailed": "تعذّر رفع الصورة",
+      "updated": "تم تحديث المشروع بنجاح",
+      "updateFailed": "تعذّر تحديث المشروع"
+    },
+    "validation": {
+      "nameRequired": "اسم المشروع مطلوب",
+      "nameMax": "لا يمكن أن يتجاوز اسم المشروع 255 حرفًا",
+      "nameEmpty": "لا يمكن أن يكون اسم المشروع فارغًا",
+      "multipleSpaces": "لا يُسمح بالمسافات المتعددة",
+      "nameChars": "استخدم الحروف (بأي لغة) والأرقام والمسافات و - & , ( ) ' . / : #",
+      "min3": "3 أحرف على الأقل مطلوبة",
+      "max100": "100 حرف كحد أقصى",
+      "startDateRequired": "تاريخ البداية مطلوب",
+      "endDateRequired": "تاريخ النهاية مطلوب",
+      "endAfterStart": "يجب أن يكون تاريخ النهاية بعد تاريخ البداية",
+      "radiusRequired": "النطاق مطلوب",
+      "radiusMin": "يجب ألا يقل نصف القطر عن 50 مترًا",
+      "descriptionRequired": "الوصف مطلوب",
+      "descriptionMax": "لا يمكن أن يتجاوز الوصف 1000 حرف",
+      "descriptionEmpty": "لا يمكن أن يكون الوصف فارغًا",
+      "min10": "10 أحرف على الأقل مطلوبة",
+      "max500": "500 حرف كحد أقصى",
+      "invalidChars": "تم استخدام أحرف غير صالحة",
+      "min2": "مطلوب حرفان على الأقل",
+      "radiusMax": "لا يمكن أن يتجاوز نصف القطر 100,000 متر"
+    }
+  },
+  "assign": {
+    "title": "تعيين الموظفين",
+    "subtitle": "اختر وعيِّن أعضاء القوى العاملة لمجموعة موارد المشروع.",
+    "employeeType": "نوع الموظف",
+    "allTypes": "جميع الأنواع",
+    "fullTime": "دوام كامل",
+    "contractor": "متعاقد",
+    "role": "الدور",
+    "allRoles": "جميع الأدوار",
+    "roleDeveloper": "مطوّر",
+    "roleEngineer": "مهندس",
+    "roleDesigner": "مصمّم",
+    "roleManager": "مدير",
+    "selectedCount": "عدد المحدّدين",
+    "employeesLabel": "موظفون",
+    "emptyFilters": "لا يوجد موظفون مطابقون لعوامل التصفية.",
+    "department": "القسم",
+    "selectAllOnPage": "تحديد الكل في الصفحة",
+    "showing": "عرض",
+    "ofEmployees": "من أصل {{total}} موظف",
+    "assignmentRules": "قواعد التعيين",
+    "assignmentRulesText": "يمكن تعيين الموظفين إلى 3 مشاريع متزامنة كحد أقصى. يتطلّب موظفو الدوام الكامل موافقة قائد المشروع للتخصيصات التي تتجاوز 50٪.",
+    "projectTimeline": "الجدول الزمني للمشروع",
+    "timeline": {
+      "initiation": "البدء",
+      "development": "التطوير",
+      "testing": "الاختبار",
+      "launch": "الإطلاق"
+    },
+    "toast": {
+      "loadEmployeesFailed": "تعذّر تحميل الموظفين",
+      "selectAtLeastOne": "اختر موظفًا واحدًا على الأقل لتعيينه",
+      "assigned": "تم تعيين الموظفين في المشروع",
+      "assignFailed": "تعذّر تعيين الموظفين",
+      "moved": "تم نقلهم من مشروعهم السابق (يمكنهم العمل في مشروع واحد فقط): {{names}}"
+    }
+  },
+  "modal": {
+    "title": "تعيين الموظفين",
+    "subtitle": "اختر الموظفين لتعيينهم في هذا المشروع.",
+    "searchPlaceholder": "ابحث بالاسم أو البريد الإلكتروني...",
+    "loadingEmployees": "جارٍ تحميل الموظفين...",
+    "noEmployees": "لم يتم العثور على موظفين.",
+    "assignedBadge": "معيَّن",
+    "selectedCount": "{{count}} محدّد"
+  },
+  "employeeProjects": {
+    "currentProject": "المشروع الحالي",
+    "noActiveProject": "لا يوجد تعيين مشروع نشط.",
+    "since": "منذ",
+    "pastProjects": "المشاريع السابقة",
+    "pastProjectsHelper": "المشاريع التي عمل عليها هذا الموظف سابقًا.",
+    "empty": "لا توجد مشاريع سابقة.",
+    "showing": "عرض",
+    "of": "من أصل",
+    "table": {
+      "sn": "م",
+      "project": "المشروع",
+      "code": "الرمز",
+      "from": "من",
+      "to": "إلى",
+      "action": "الإجراء"
+    },
+    "assignmentDetail": "تفاصيل التعيين",
+    "projectCode": "رمز المشروع",
+    "location": "الموقع",
+    "status": "الحالة",
+    "fromLabel": "من",
+    "toLabel": "إلى",
+    "present": "حتى الآن",
+    "toast": {
+      "loadCurrentFailed": "تعذّر تحميل المشروع الحالي",
+      "loadPastFailed": "تعذّر تحميل المشاريع السابقة",
+      "loadAssignmentFailed": "تعذّر تحميل التعيين"
+    },
+    "paginationProjects": "مشاريع",
+    "paginationEvents": "أحداث",
+    "history": {
+      "title": "سجل المشاريع",
+      "subtitle": "التعيينات والتنقلات وعمليات النشر — الأحدث أولاً.",
+      "empty": "لا يوجد سجل مشاريع بعد.",
+      "fromProject": "من {{name}}",
+      "byUser": "بواسطة {{name}}",
+      "actions": {
+        "assigned": "تم التعيين",
+        "removed": "تمت الإزالة",
+        "movedIn": "نُقل إليه",
+        "movedOut": "نُقل منه"
+      }
+    }
+  },
+  "empStatus": {
+    "ACTIVE": "نشط",
+    "INACTIVE": "غير نشط",
+    "BLOCKED": "محظور",
+    "SUSPENDED": "موقوف"
+  },
+  "list": {
+    "allProjects": "جميع المشاريع",
+    "breadcrumbAll": "جميع المشاريع",
+    "title": "محفظة المشاريع",
+    "subtitle": "إدارة وتتبع توزيع القوى العاملة للمؤسسة عبر المناطق العالمية.",
+    "searchLabel": "البحث في المشاريع",
+    "searchPlaceholder": "تصفية حسب اسم المشروع أو المعرّف أو المدير...",
+    "empty": "لم يتم العثور على مشاريع.",
+    "employeesLabel": "الموظفون",
+    "paginationLabel": "مشاريع"
+  },
+  "tabs": {
+    "mine": "مشاريعي",
+    "assigned": "المسندة إليّ"
+  },
+  "staffingProjects": {
+    "assignedProjects": "المشاريع المعيّنة",
+    "searchPlaceholder": "البحث في المشاريع...",
+    "filters": {
+      "allStatus": "جميع الحالات",
+      "active": "نشط",
+      "completed": "مكتمل",
+      "inactive": "غير نشط",
+      "status": "الحالة",
+      "clearFilters": "مسح عوامل التصفية"
+    },
+    "loading": "جارٍ التحميل...",
+    "empty": "لم يتم العثور على مشاريع.",
+    "paginationLabel": "نتائج"
+  },
+  "offlineAttendance": {
+    "label": "السماح بالحضور دون اتصال",
+    "hint": "يمكن للموظفين الذين يكون هذا مشروعهم الرئيسي تسجيل الحضور والانصراف دون إنترنت في تطبيق الجوال، ويتم المزامنة عند عودة الاتصال.",
+    "allowed": "مسموح",
+    "notAllowed": "غير مسموح",
+    "statusLabel": "الحضور دون اتصال",
+    "saved": "تم حفظ إعداد الحضور دون اتصال",
+    "saveFailed": "تعذّر حفظ إعداد الحضور دون اتصال",
+    "toggleAria": "السماح بالحضور دون اتصال لهذا المشروع"
+  }
+}

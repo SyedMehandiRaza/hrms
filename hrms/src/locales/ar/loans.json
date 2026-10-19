@@ -1,0 +1,207 @@
+{
+  "page": {
+    "title": "قروضي",
+    "subtitle": "قدّم طلب قرض من الشركة وتابع أقساطك الشهرية."
+  },
+  "approvals": {
+    "title": "اعتماد القروض",
+    "subtitle": "راجع طلبات قروض الموظفين واعتمدها وأدِرها.",
+    "newLoanForEmployee": "قرض جديد (لموظف)",
+    "tabs": {
+      "all": "جميع القروض",
+      "skips": "طلبات تأجيل الأقساط"
+    },
+    "filters": {
+      "all": "الكل",
+      "pending": "قيد الانتظار",
+      "needsChanges": "بحاجة إلى تعديل",
+      "approved": "معتمد",
+      "completed": "مكتمل",
+      "rejected": "مرفوض"
+    },
+    "searchPlaceholder": "ابحث عن قرض أو موظف...",
+    "emptyLoans": "لا توجد قروض في هذا العرض.",
+    "skipRequestsHeading": "طلبات تأجيل الأقساط",
+    "levelChip": "م{{done}}/{{total}}"
+  },
+  "common": {
+    "loading": "جارٍ التحميل…",
+    "loanFallback": "قرض رقم {{id}}",
+    "employeeFallback": "موظف رقم {{id}}",
+    "loan": "قرض",
+    "cancel": "إلغاء",
+    "clearFilters": "مسح عوامل التصفية",
+    "back": "رجوع",
+    "loanDetails": "تفاصيل القرض",
+    "notFound": "لم يتم العثور على القرض.",
+    "purpose": "الغرض: {{purpose}}",
+    "rejected": "مرفوض: {{reason}}",
+    "optional": "اختياري"
+  },
+  "filters": {
+    "searchLabel": "البحث في القروض",
+    "searchPlaceholder": "ابحث برقم القرض أو الغرض...",
+    "status": "الحالة",
+    "allStatuses": "جميع الحالات"
+  },
+  "table": {
+    "sno": "م",
+    "loan": "القرض",
+    "employee": "الموظف",
+    "amount": "المبلغ",
+    "emi": "القسط الشهري",
+    "installments": "عدد الأقساط",
+    "outstanding": "الرصيد المتبقي",
+    "status": "الحالة",
+    "action": "الإجراء",
+    "emiNo": "رقم القسط",
+    "due": "تاريخ الاستحقاق",
+    "reason": "السبب",
+    "number": "#",
+    "balance": "الرصيد"
+  },
+  "empty": {
+    "title": "لا توجد قروض بعد",
+    "description": "قدّم طلب قرض من الشركة، وسيُسدَّد تلقائياً من راتبك كل شهر."
+  },
+  "pagination": {
+    "loans": "قروض",
+    "skipRequests": "طلبات تأجيل"
+  },
+  "actions": {
+    "applyForLoan": "طلب قرض",
+    "updateReapply": "تعديل وإعادة التقديم",
+    "view": "عرض",
+    "approve": "اعتماد",
+    "requestChanges": "طلب تعديلات",
+    "reject": "رفض",
+    "skip": "تأجيل",
+    "requestSkip": "طلب تأجيل القسط",
+    "approveSkip": "اعتماد التأجيل",
+    "rejectSkip": "رفض التأجيل",
+    "submitting": "جارٍ الإرسال...",
+    "skipRequested": "تم طلب التأجيل"
+  },
+  "detail": {
+    "emiSchedule": "جدول الأقساط",
+    "paymentHistory": "سجل المدفوعات"
+  },
+  "apply": {
+    "titleResubmit": "تعديل وإعادة التقديم",
+    "titleOnBehalf": "قرض جديد (لموظف)",
+    "title": "طلب قرض",
+    "changesRequested": "طلب المعتمِد إجراء تعديلات",
+    "suggestedInstallments": "عدد الأقساط المقترح: <strong>{{n}}</strong>",
+    "employee": "الموظف",
+    "searchEmployee": "ابحث عن موظف…",
+    "noEmployees": "لم يتم العثور على موظفين.",
+    "loanAmount": "مبلغ القرض",
+    "installments": "عدد الأقساط",
+    "purposeOptional": "الغرض (اختياري)",
+    "purposePlaceholder": "سبب طلب القرض…",
+    "insufficientSalary": "إذا لم يغطِّ الراتب القسط الشهري",
+    "policy": {
+      "SKIP": "تأجيل القسط",
+      "PARTIAL": "خصم جزئي",
+      "FORCE": "خصم إلزامي"
+    },
+    "monthlyEmi": "القسط الشهري",
+    "installmentsCount": "{{n}} أقساط",
+    "last": "الأخير: {{amount}}",
+    "submitting": "جارٍ الإرسال…",
+    "resubmit": "إعادة التقديم",
+    "createLoan": "إنشاء القرض",
+    "submitRequest": "إرسال الطلب"
+  },
+  "approve": {
+    "title": "اعتماد {{loan}}",
+    "levelOf": "مستوى الاعتماد {{level}} من {{total}}",
+    "note": "يعني الاعتماد قبول الطلب كما قُدِّم. لتغيير المبلغ أو عدد الأقساط، استخدم <hl>طلب تعديلات</hl> لإعادته إلى الموظف.",
+    "amount": "المبلغ",
+    "installments": "عدد الأقساط",
+    "monthlyEmi": "القسط الشهري",
+    "emisCount": "{{n}} أقساط",
+    "last": "الأخير: {{amount}}",
+    "approving": "جارٍ الاعتماد…",
+    "approveLevel": "اعتماد المستوى {{level}}",
+    "approveGenerate": "اعتماد وإنشاء الأقساط"
+  },
+  "reject": {
+    "title": "رفض {{loan}}",
+    "reasonOptional": "السبب (اختياري)",
+    "reasonPlaceholder": "أدخل سبب الرفض...",
+    "rejecting": "جارٍ الرفض…",
+    "confirm": "تأكيد الرفض"
+  },
+  "modify": {
+    "title": "طلب تعديلات · {{loan}}",
+    "description": "أعد هذا الطلب إلى الموظف لتصحيحه، وسيقوم بتعديل الشروط وإعادة التقديم على القرض نفسه.",
+    "reason": "السبب",
+    "reasonPlaceholder": "مثال: يُرجى تقليل عدد الأقساط إلى 6 ليتناسب القسط مع راتبك.",
+    "suggestedInstallments": "عدد الأقساط المقترح",
+    "suggestedAmount": "المبلغ المقترح",
+    "sending": "جارٍ الإرسال…",
+    "sendBack": "إعادة لإجراء التعديلات"
+  },
+  "toast": {
+    "errorLoadingEmployees": "خطأ في تحميل الموظفين: {{error}}",
+    "selectEmployee": "اختر موظفاً.",
+    "invalidAmount": "أدخل مبلغاً صحيحاً.",
+    "invalidInstallments": "أدخل عدد الأقساط.",
+    "resubmitted": "تمت إعادة تقديم القرض للاعتماد",
+    "createdForEmployee": "تم إنشاء القرض للموظف",
+    "submitted": "تم إرسال طلب القرض",
+    "submitFailed": "تعذّر إرسال طلب القرض",
+    "notInApprovalGroup": "أنت لست ضمن مجموعة اعتماد الرواتب.",
+    "skipApproved": "تم اعتماد التأجيل",
+    "skipRejected": "تم رفض التأجيل",
+    "actionFailed": "تعذّر تنفيذ الإجراء",
+    "levelApproved": "تم اعتماد المستوى {{level}}",
+    "loanApproved": "تم اعتماد القرض وإنشاء جدول الأقساط",
+    "approveFailed": "تعذّر الاعتماد",
+    "loanRejected": "تم رفض القرض",
+    "rejectFailed": "تعذّر الرفض",
+    "reasonRequired": "أضف سبباً ليعرف الموظف ما يجب تصحيحه.",
+    "sentBack": "تمت إعادة الطلب إلى الموظف لإجراء التعديلات",
+    "sendBackFailed": "تعذّرت إعادة الطلب",
+    "skipSubmitted": "تم إرسال طلب التأجيل",
+    "skipFailed": "تعذّر طلب التأجيل"
+  },
+  "status": {
+    "PENDING": "قيد الانتظار",
+    "APPROVED": "معتمد",
+    "DISBURSED": "مصروف",
+    "ACTIVE": "نشط",
+    "COMPLETED": "مكتمل",
+    "CLOSED": "مغلق",
+    "FORECLOSED": "مسدَّد مبكراً",
+    "REJECTED": "مرفوض",
+    "MODIFICATION_REQUESTED": "بحاجة إلى تعديل",
+    "CANCELLED": "ملغى"
+  },
+  "installmentStatus": {
+    "PENDING": "قيد الانتظار",
+    "PAID": "مدفوع",
+    "PARTIALLY_PAID": "مدفوع جزئياً",
+    "SKIPPED": "مؤجَّل",
+    "OVERDUE": "متأخر"
+  },
+  "skipStatus": {
+    "PENDING": "قيد الانتظار",
+    "APPROVED": "معتمد",
+    "REJECTED": "مرفوض"
+  },
+  "paymentMethod": {
+    "SALARY_DEDUCTION": "خصم من الراتب",
+    "ONLINE": "دفع إلكتروني",
+    "ADJUSTMENT": "تسوية",
+    "FNF_RECOVERY": "استرداد من التسوية النهائية"
+  },
+  "paymentStatus": {
+    "INITIATED": "قيد التنفيذ",
+    "SUCCESS": "ناجح",
+    "PARTIAL": "جزئي",
+    "FAILED": "فاشل",
+    "REVERSED": "معكوس"
+  }
+}
