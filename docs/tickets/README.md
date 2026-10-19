@@ -30,11 +30,11 @@ Frontier = every ready-for-agent ticket whose blockers are all done.
 | # | Ticket | Status | Blocked by |
 |---|---|---|---|
 | 14 | [UI foundation: API client, session, guards, permissions](auth-company/14-ui-foundation.md) | done | 04 |
-| 15 | [Login screen](auth-company/15-ui-login.md) | in-progress | 14, 05 |
-| 16 | [Sign up screen](auth-company/16-ui-signup.md) | in-progress | 14, 06 |
-| 17 | [Forgot password screen](auth-company/17-ui-forgot-password.md) | in-progress | 14, 07 |
-| 18 | [Verify OTP screen](auth-company/18-ui-verify-otp.md) | in-progress | 17 |
-| 19 | [Reset / Set password screen](auth-company/19-ui-reset-set-password.md) | in-progress | 18, 08 |
+| 15 | [Login screen](auth-company/15-ui-login.md) | done | 14, 05 |
+| 16 | [Sign up screen](auth-company/16-ui-signup.md) | done | 14, 06 |
+| 17 | [Forgot password screen](auth-company/17-ui-forgot-password.md) | done | 14, 07 |
+| 18 | [Verify OTP screen](auth-company/18-ui-verify-otp.md) | done | 17 |
+| 19 | [Reset / Set password screen](auth-company/19-ui-reset-set-password.md) | done | 18, 08 |
 | 20 | [Forced change-password modal](auth-company/20-ui-forced-change-modal.md) | ready-for-agent | 15, 08, 21 |
 | 21 | [Profile → Change password + session picker](auth-company/21-ui-change-password-picker.md) | ready-for-agent | 14, 09 |
 | 22 | [Active sessions list](auth-company/22-ui-active-sessions.md) | ready-for-agent | 21 |
