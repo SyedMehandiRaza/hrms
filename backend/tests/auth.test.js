@@ -1049,6 +1049,30 @@ describe("login lockout", () => {
     expect(logged).not.toContain(PASSWORD);
   });
 
+  it("a successful login is one transaction: if the session can't be created, the counter, last login and sessions stay as they were", async () => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    const person = await newPerson();
+    await failTimes(person.email, 3);
+    const account = await db.HrmsAccount.findOne({ where: { user_id: person.id } });
+    const lastLoginBefore = account.last_login_at;
+
+    jest.spyOn(db.HrmsSession, "create").mockRejectedValueOnce(new Error("boom"));
+    const res = await login(person.email);
+    expect(res.status).toBe(500);
+    expect(setCookieOf(res)).toBeUndefined();
+
+    await person.reload();
+    expect(person.failed_login_attempts).toBe(3);
+    await account.reload();
+    expect(account.last_login_at).toEqual(lastLoginBefore);
+    expect(await sessionCountOf(person.id)).toBe(0);
+
+    // The next try works and clears the counter.
+    expect((await login(person.email)).status).toBe(200);
+    await person.reload();
+    expect(person.failed_login_attempts).toBe(0);
+  });
+
   describe("reusable helpers (password reset and change password use them)", () => {
     it("registerFailedPassword counts a failure and reports the lock on the fifth", async () => {
       const person = await newPerson();

@@ -30,7 +30,7 @@ const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex"
 // Compared against when the email is unknown, so both paths cost one bcrypt check (D8).
 let dummyHashPromise;
 const dummyHash = () => {
-  dummyHashPromise = dummyHashPromise || bcrypt.hash(crypto.randomBytes(16).toString("hex"), 12);
+  dummyHashPromise = dummyHashPromise || bcrypt.hash(crypto.randomBytes(16).toString("hex"), BCRYPT_COST);
   return dummyHashPromise;
 };
 
@@ -156,7 +156,13 @@ const login = async ({ email, password, ip, userAgent }) => {
     throw new ErrorHandler("AUTH_INVALID_CREDENTIALS");
   }
 
-  await clearLockout(user);
+  // The password was right, so the failure count is cleared even when a later check
+  // refuses the login; on success that happens inside the session transaction below.
+  const refuse = async (err) => {
+    await clearLockout(user);
+    logFailedLogin({ email, ip, reason: err.code });
+    throw err;
+  };
 
   // One current account per person (ADR 0002): ACTIVE or SUSPENDED, not deleted.
   const account = await HrmsAccount.findOne({
@@ -167,8 +173,7 @@ const login = async ({ email, password, ip, userAgent }) => {
   try {
     assertAccountUsable({ account, user, employer: account?.employer });
   } catch (err) {
-    logFailedLogin({ email, ip, reason: err.code });
-    throw err;
+    await refuse(err);
   }
 
   // A temporary password is valid 72 hours (ADR 0003); its expiry is the setup token's.
@@ -177,11 +182,12 @@ const login = async ({ email, password, ip, userAgent }) => {
     account.password_setup_token_expires_at &&
     new Date(account.password_setup_token_expires_at) <= new Date()
   ) {
-    logFailedLogin({ email, ip, reason: "AUTH_SETUP_EXPIRED" });
-    throw new ErrorHandler("AUTH_SETUP_EXPIRED");
+    await refuse(new ErrorHandler("AUTH_SETUP_EXPIRED"));
   }
 
+  // Lockout cleared, session created and last login stamped together, or not at all.
   const tokens = await sequelize.transaction(async (transaction) => {
+    await clearLockout(user, transaction);
     const issued = await issueSession({ account, ip, userAgent }, transaction);
     await account.update({ last_login_at: new Date() }, { transaction });
     return issued;

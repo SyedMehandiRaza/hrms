@@ -19,7 +19,8 @@ const ACTIVE = "ACTIVE";
 // ---------- POST /auth/change-password ----------
 
 // Ends the session making the request (the person is locked out, D10).
-const endCurrentSession = (auth) => revokeSessions({ id: auth.sessionId, hrms_account_id: auth.accountId });
+const endCurrentSession = (auth, transaction) =>
+  revokeSessions({ id: auth.sessionId, hrms_account_id: auth.accountId }, transaction);
 
 // Order: lock → current password → same as current → save. A wrong current password
 // counts toward the same lockout as login; the failure that reaches the limit (or any
@@ -38,11 +39,13 @@ const changePassword = async (auth, { currentPassword, newPassword }) => {
 
   const matches = !!user.password && (await bcrypt.compare(currentPassword, user.password));
   if (!matches) {
-    const { locked } = await registerFailedPassword(user);
-    if (locked) {
-      await endCurrentSession(auth);
-      throw new ErrorHandler("AUTH_ACCOUNT_LOCKED");
-    }
+    // The failure that locks and the end of the current session are saved together.
+    const locked = await sequelize.transaction(async (transaction) => {
+      const result = await registerFailedPassword(user, transaction);
+      if (result.locked) await endCurrentSession(auth, transaction);
+      return result.locked;
+    });
+    if (locked) throw new ErrorHandler("AUTH_ACCOUNT_LOCKED");
     throw new ErrorHandler("AUTH_CURRENT_PASSWORD_WRONG", {
       errors: { currentPassword: "AUTH_CURRENT_PASSWORD_WRONG" },
     });

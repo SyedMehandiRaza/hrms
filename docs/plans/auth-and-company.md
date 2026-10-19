@@ -23,7 +23,9 @@ Rules shared by all modules: `docs/standards.md`. Terms: `docs/CONTEXT.md`. Reas
 ### Auth
 8. Email + password. Wrong email and wrong password give the identical response.
 9. Login check order: credentials → lock → `users.user_status` → a current, non-suspended account exists
-   → company status → temporary-password expiry → success (+ `mustChangePassword`).
+   → company status → temporary-password expiry → success (+ `mustChangePassword`). "credentials → lock"
+   means: a locked account answers `AUTH_ACCOUNT_LOCKED` before the password result (the password is still
+   compared for timing).
 10. Lockout: 5 consecutive failures → 15 min. New columns `users.failed_login_attempts INT =0`,
     `users.locked_until DATETIME`. Cleared by a successful login or password reset. Unknown emails are never
     locked. Wrong current password on change-password counts.
@@ -32,14 +34,16 @@ Rules shared by all modules: `docs/standards.md`. Terms: `docs/CONTEXT.md`. Reas
 12. Access token: JWT 15 min, claims `sub`, `acc`, `emp`, `sid`; Bearer header; UI keeps it in memory only.
     `requireAuth` re-checks session, account and company on every request.
 13. Refresh token: 256-bit random, SHA-256 hashed in `hrms_sessions`; httpOnly cookie, `Secure` in prod,
-    `SameSite=Strict`, `Path=/auth`; 7 days sliding; rotated on every refresh; reuse of a rotated token
+    `SameSite=Strict`, `Path=/api/auth` (the API is mounted under `/api`); 7 days sliding; rotated on every refresh; reuse of a rotated token
     revokes all the account's sessions.
-14. Multiple devices allowed. New column `hrms_sessions.last_used_at`. All sessions are revoked
+14. Multiple devices allowed. New column `hrms_sessions.last_used_at`, set when a session is issued or
+    refreshed (so "last used" = last refresh, up to the access-token TTL stale). All sessions are revoked
     automatically on: OTP password reset, refresh-token reuse, deactivation, suspension, exit.
     A role change does not revoke sessions.
 15. Session picker: after a password change, a modal lists other sessions with **Select all (checked by
     default)**, per-row checkboxes and "Keep all"; the current session stays. The same list lives
-    permanently in Settings → Security & SSO (Admin) and Profile (Employee, Staffing).
+    permanently in Settings → Security & SSO (Admin) and Profile (Employee, Staffing). Its "last used" is
+    `last_used_at` (D14): the last refresh, up to the access-token TTL stale.
 16. Logout revokes the current session and clears the cookie; always 200.
 17. Password rule: `docs/standards.md` §1 (same on UI and server).
 18. Reset by OTP (ADR 1): neutral response, 6 digits, 10 min, 5 attempts, resend after 60 s, max 5/h,

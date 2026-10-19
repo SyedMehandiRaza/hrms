@@ -260,6 +260,24 @@ describe("POST /api/auth/change-password", () => {
       expect(await bcrypt.compare(PASSWORD, stored.password)).toBe(true);
     });
 
+    it("the locking attempt is one transaction: if the session can't be ended, the lock isn't saved either", async () => {
+      jest.spyOn(console, "error").mockImplementation(() => {});
+      const { user } = await createLogin();
+      const s = await loginAs(user.email);
+      for (let i = 0; i < 4; i += 1) {
+        expect((await changePassword(s.token, changeBody({ currentPassword: "Wrong#12345" }))).status).toBe(400);
+      }
+
+      jest.spyOn(db.HrmsSession, "update").mockRejectedValueOnce(new Error("boom"));
+      const res = await changePassword(s.token, changeBody({ currentPassword: "Wrong#12345" }));
+      expect(res.status).toBe(500);
+
+      const after = await db.User.findByPk(user.id);
+      expect(after.failed_login_attempts).toBe(4);
+      expect(after.locked_until).toBeNull();
+      expect(await statusOf(s.sessionId)).toBe("ACTIVE");
+    });
+
     it("counts login failures and change-password failures together", async () => {
       const { user } = await createLogin();
       const s = await loginAs(user.email);
