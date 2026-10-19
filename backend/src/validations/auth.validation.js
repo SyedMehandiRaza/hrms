@@ -116,8 +116,36 @@ const setupPasswordSchema = Joi.object({
   confirmPassword: confirmNewPassword(),
 });
 
+// POST /auth/change-password (standards §7.2 "Reset / Set / Change password"). The current
+// password is only checked for presence here; the service compares it.
+const changePasswordSchema = Joi.object({
+  currentPassword: loginSchema.extract("password"),
+  newPassword: resetPasswordSchema.extract("newPassword"),
+  confirmPassword: confirmNewPassword(),
+});
+
+// POST /auth/sessions/revoke: { sessionIds: [uuid, ...] } or { all: true }, exactly one.
+// These are not form fields (the UI builds the body from the list), so §7.2 has no field
+// texts for them: a malformed body gets the generic VALIDATION_FAILED text per field.
+const INVALID = "VALIDATION_FAILED";
+const revokeSessionsSchema = Joi.object({
+  all: Joi.boolean().strict().valid(true).messages({ "any.only": INVALID, "boolean.base": INVALID }),
+  sessionIds: Joi.array()
+    .items(Joi.string().guid().messages({ "string.guid": INVALID, "string.base": INVALID, "string.empty": INVALID }))
+    .min(1)
+    .when("all", { is: Joi.exist(), then: Joi.forbidden(), otherwise: Joi.required() })
+    .messages({
+      "any.required": INVALID,
+      "any.unknown": INVALID,
+      "array.base": INVALID,
+      "array.min": INVALID,
+    }),
+});
+
 module.exports = {
   loginSchema,
+  changePasswordSchema,
+  revokeSessionsSchema,
   setupPasswordSchema,
   signupSchema,
   forgotPasswordSchema,

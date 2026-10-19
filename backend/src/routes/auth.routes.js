@@ -10,6 +10,8 @@ const {
   verifyOtpSchema,
   resetPasswordSchema,
   setupPasswordSchema,
+  changePasswordSchema,
+  revokeSessionsSchema,
 } = require("../validations/auth.validation");
 const authController = require("../controllers/auth.controller");
 
@@ -31,6 +33,9 @@ const createAuthRouter = (limits = getRateLimitConfig()) => {
 
   // Any login.
   router.get("/me", requireAuth, authController.me);
+  router.post("/change-password", requireAuth, validate(changePasswordSchema), authController.changePassword);
+  router.get("/sessions", requireAuth, authController.listSessions);
+  router.post("/sessions/revoke", requireAuth, validate(revokeSessionsSchema), authController.revokeSessions);
 
   return router;
 };

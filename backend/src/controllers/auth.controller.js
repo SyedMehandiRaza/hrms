@@ -1,6 +1,7 @@
 const authService = require("../services/auth.service");
 const passwordResetService = require("../services/passwordReset.service");
 const credentialsService = require("../services/credentials.service");
+const securityService = require("../services/security.service");
 const { translate } = require("../utils/i18n");
 const { REFRESH_COOKIE, refreshCookieOptions } = require("../config/auth");
 
@@ -75,4 +76,33 @@ const setupPassword = async (req, res) => {
   res.json({ success: true, data: { accessToken, mustChangePassword } });
 };
 
-module.exports = { login, signup, refresh, logout, me, forgotPassword, verifyOtp, resetPassword, setupPassword };
+// 200 { success: true }. Sessions are not ended (the UI offers the session picker).
+const changePassword = async (req, res) => {
+  await securityService.changePassword(req.auth, req.body);
+  res.json({ success: true });
+};
+
+// 200 { success: true, data: [{ id, device, ip, created_at, last_used_at, current }] }.
+const listSessions = async (req, res) => {
+  res.json({ success: true, data: await securityService.listSessions(req.auth) });
+};
+
+// 200 { success: true, data: { revoked } }.
+const revokeSessions = async (req, res) => {
+  res.json({ success: true, data: await securityService.revokeOwnSessions(req.auth, req.body) });
+};
+
+module.exports = {
+  login,
+  signup,
+  refresh,
+  logout,
+  me,
+  forgotPassword,
+  verifyOtp,
+  resetPassword,
+  setupPassword,
+  changePassword,
+  listSessions,
+  revokeSessions,
+};
