@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { MdOutlineBusiness, MdOutlineError } from "react-icons/md";
 import { toast } from "react-toastify";
@@ -8,16 +8,42 @@ import { useFormat } from "../hooks/useFormat";
 import CustomDropdown from "./CustomDropdown";
 import Loader from "./Loader";
 import ConfirmationModal from "./ConfirmationModal";
-import { COMPANY_PROFILE, INDUSTRIES } from "../data/groupA";
+import { ScreenError } from "./ScreenState";
+import { assetUrl } from "../api/client";
+import * as companyApi from "../api/company";
+import useApiQuery from "../hooks/useApiQuery";
+import { reloadMe, useCurrentUser } from "../hooks/useSession";
+import { applyFieldErrors } from "../utils/applyFieldErrors";
+import { toastApiError } from "../utils/apiError";
 
-const p = COMPANY_PROFILE;
-const INITIAL_VALUES = {
-  companyName: p.company_name || p.full_name || "",
-  phone: p.phone_number || "",
-  email: p.email || "",
-  address: p.address || "",
-  industry: p.industry_type_id ? String(p.industry_type_id) : "",
+// Limits shared with the server (backend/src/validations/company.validation.js, D28/D29).
+const NAME_MIN = 2;
+const NAME_MAX = 100;
+const ADDRESS_MAX = 500;
+const LOGO_MAX_BYTES = 2 * 1024 * 1024;
+const LOGO_TYPES = ["image/png", "image/jpeg"];
+
+// API field → form field, for server field errors.
+const FIELD_MAP = {
+  companyName: "companyName",
+  industryTypeId: "industry",
+  email: "email",
+  phone: "phone",
+  address: "address",
 };
+
+// GET /company → the form's values.
+const toFormValues = (c) => ({
+  companyName: c.company_name || "",
+  phone: c.company_phone_number || "",
+  email: c.company_email || "",
+  address: c.address || "",
+  industry: c.industry_type_id ? String(c.industry_type_id) : "",
+});
+
+// After a profile/logo change the header (name, logo) re-reads /auth/me (D35).
+// A failure there must not undo the change the user just saw succeed.
+const refreshHeader = () => reloadMe().catch(() => {});
 // ── Shared input styles ───────────────────────────────────────────────────────
 const inputBase =
   "w-full px-4 py-3 border rounded-lg text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition bg-white";
@@ -33,56 +59,127 @@ const FieldErr = ({ error }) =>
     </p>
   ) : null;
 
+// Settings → Company Profile (D27–D29, D35). Loads the company and the industry
+// list, then shows the form. Only the owner (ADMIN) edits; everyone else reads.
 function CompanyProfile() {
+  const { t } = useTranslation("settings");
+  const { data, loading, error, reload } = useApiQuery(
+    () => Promise.all([companyApi.getCompany(), companyApi.getIndustryTypes()]),
+    [],
+  );
+
+  if (loading) {
+    return <Loader label={t("common:companyProfile.loading")} />;
+  }
+  if (error || !data) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-xl">
+        <ScreenError message={t("company.toast.loadFailed")} onRetry={reload} />
+      </div>
+    );
+  }
+  const [company, industries] = data;
+  return <CompanyProfileForm company={company} industries={industries} />;
+}
+
+function CompanyProfileForm({ company, industries }) {
   const { t } = useTranslation("settings");
   const { fmtDate } = useFormat();
   const logoRef = useRef();
-  
-  const loading = false;
+  const user = useCurrentUser();
+  // PUT /company and the logo endpoints are owner-only (D28).
+  const canEdit = user?.accessLevel === "ADMIN";
+
   const [saving, setSaving] = useState(false);
-  const [logoPreview, setLogoPreview] = useState(p.profile_url || null);
-  const [hasLogo, setHasLogo] = useState(!!p.profile_url);
+  const [logoPreview, setLogoPreview] = useState(assetUrl(company.company_logo));
+  const hasLogo = !!logoPreview;
   const [logoBusy, setLogoBusy] = useState(false);
-  const [metadata] = useState({ id: p.id, createdAt: p.created_at });
+  const [metadata, setMetadata] = useState({ id: company.id, createdAt: company.created_at });
   const [confirm, setConfirm] = useState(null);
-  // Industry list from the platform's industry types (stored as
-  // employers.industry_type_id) and the last saved values, for Discard.
-  const [industries] = useState(INDUSTRIES);
-  const [savedValues, setSavedValues] = useState(INITIAL_VALUES);
+  // The last saved values, for Discard.
+  const [savedValues, setSavedValues] = useState(() => toFormValues(company));
 
   const {
     register,
     handleSubmit,
     reset,
-    watch,
+    control,
+    setError,
     formState: { errors },
   } = useForm({
-    defaultValues: INITIAL_VALUES,
+    defaultValues: savedValues,
   });
 
-  const formValues = watch();
+  const formValues = useWatch({ control });
 
-  const onProfileSave = (data) => {
-    setSaving(false);
-    setSavedValues(data);
-    toast.success(t("company.saved") || "Profile updated successfully");
+  // The company returned by a save / logo call → preview, metadata and (after a
+  // profile save) the form and its "last saved" values.
+  const applyCompany = (c, { resetForm = false } = {}) => {
+    setLogoPreview(assetUrl(c.company_logo));
+    setMetadata({ id: c.id, createdAt: c.created_at });
+    if (resetForm) {
+      const values = toFormValues(c);
+      setSavedValues(values);
+      reset(values);
+    }
   };
 
-  const onLogoSelected = (e) => {
+  const onProfileSave = async (data) => {
+    setSaving(true);
+    try {
+      const updated = await companyApi.updateCompany({
+        companyName: data.companyName.trim(),
+        industryTypeId: data.industry,
+        email: data.email.trim(),
+        phone: data.phone.trim(),
+        address: data.address.trim(),
+      });
+      applyCompany(updated, { resetForm: true });
+      toast.success(t("company.saved"));
+      refreshHeader();
+    } catch (err) {
+      const { mapped } = applyFieldErrors(err, setError, {
+        fieldMap: FIELD_MAP,
+        knownFields: Object.values(FIELD_MAP),
+      });
+      if (!mapped.length) toastApiError(err, t("company.toast.updateFailed"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onLogoSelected = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    setLogoBusy(false);
-    setLogoPreview(URL.createObjectURL(file));
-    setHasLogo(true);
-    toast.success(t("common:companyProfile.logoUpdated"));
+    // Same rule as the server (D29); nothing is uploaded when it fails.
+    if (!LOGO_TYPES.includes(file.type) || file.size > LOGO_MAX_BYTES) {
+      toast.error(t("company.validation.logoInvalid"));
+      return;
+    }
+    setLogoBusy(true);
+    try {
+      applyCompany(await companyApi.uploadLogo(file));
+      toast.success(t("common:companyProfile.logoUpdated"));
+      refreshHeader();
+    } catch (err) {
+      toastApiError(err, t("company.toast.logoUpdateFailed"));
+    } finally {
+      setLogoBusy(false);
+    }
   };
 
-  const onLogoDelete = () => {
-    setLogoBusy(false);
-    setHasLogo(false);
-    setLogoPreview(null);
-    toast.success(t("common:companyProfile.logoRemoved"));
+  const onLogoDelete = async () => {
+    setLogoBusy(true);
+    try {
+      applyCompany(await companyApi.removeLogo());
+      toast.success(t("common:companyProfile.logoRemoved"));
+      refreshHeader();
+    } catch (err) {
+      toastApiError(err, t("company.toast.logoRemoveFailed"));
+    } finally {
+      setLogoBusy(false);
+    }
   };
 
   const calculateStrength = () => {
@@ -101,10 +198,6 @@ function CompanyProfile() {
     if (savedValues) reset(savedValues);
   };
 
-  if (loading) {
-    return <Loader label={t("common:companyProfile.loading")} />;
-  }
-
   const profileStrength = calculateStrength();
 
   return (
@@ -120,9 +213,15 @@ function CompanyProfile() {
           <label className={labelCls}>{t("company.companyName")}</label>
           <input
             {...register("companyName", {
-              required: t("company.validation.nameRequired"),
-              minLength: { value: 2, message: t("company.validation.tooShort") },
+              validate: (v) => {
+                const name = (v || "").trim();
+                if (!name) return t("company.validation.nameRequired");
+                if (name.length < NAME_MIN) return t("company.validation.nameMin");
+                if (name.length > NAME_MAX) return t("company.validation.nameMax");
+                return true;
+              },
             })}
+            disabled={!canEdit}
             className={inputCls(errors.companyName)}
           />
           <FieldErr error={errors.companyName} />
@@ -137,6 +236,7 @@ function CompanyProfile() {
                 required: t("company.validation.industryRequired"),
               })}
               error={!!errors.industry}
+              disabled={!canEdit}
               placeholder={t("company.selectIndustry")}
               options={industries.map((i) => ({
                 label: i.name,
@@ -156,6 +256,7 @@ function CompanyProfile() {
                 },
               })}
               type="tel"
+              disabled={!canEdit}
               className={inputCls(errors.phone)}
               onInput={(e) => {
                 let val = e.target.value.replace(/\D/g, "");
@@ -171,13 +272,14 @@ function CompanyProfile() {
           <label className={labelCls}>{t("company.email")}</label>
           <input
             {...register("email", {
-              required: t("company.validation.emailRequired"),
+              validate: (v) => !!(v || "").trim() || t("company.validation.emailRequired"),
               pattern: {
                 value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
                 message: t("company.validation.emailValid"),
               },
             })}
             type="email"
+            disabled={!canEdit}
             className={inputCls(errors.email)}
           />
           <FieldErr error={errors.email} />
@@ -187,14 +289,23 @@ function CompanyProfile() {
         <div>
           <label className={labelCls}>{t("company.address")}</label>
           <textarea
-            {...register("address", { required: t("company.validation.addressRequired") })}
+            {...register("address", {
+              validate: (v) => {
+                const address = (v || "").trim();
+                if (!address) return t("company.validation.addressRequired");
+                if (address.length > ADDRESS_MAX) return t("company.validation.addressMax");
+                return true;
+              },
+            })}
+            disabled={!canEdit}
             rows={4}
             className={inputCls(errors.address) + " resize-none"}
           />
           <FieldErr error={errors.address} />
         </div>
 
-        {/* Actions */}
+        {/* Actions (owner only) */}
+        {canEdit && (
         <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-2 border-t border-gray-100">
           <button
             type="button"
@@ -218,6 +329,7 @@ function CompanyProfile() {
             {saving ? t("company.saving") : t("company.save")}
           </button>
         </div>
+        )}
       </div>
 
       {/* Right: Branding + Strength + Metadata */}
@@ -228,8 +340,8 @@ function CompanyProfile() {
             {t("company.branding")}
           </p>
           <div
-            onClick={() => logoRef.current.click()}
-            className="w-28 h-28 mx-auto border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 flex items-center justify-center cursor-pointer hover:border-cyan-400 transition-colors overflow-hidden mb-3"
+            onClick={() => canEdit && !logoBusy && logoRef.current.click()}
+            className={`w-28 h-28 mx-auto border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden mb-3 ${canEdit ? "cursor-pointer hover:border-cyan-400 transition-colors" : ""}`}
           >
             {logoPreview ? (
               <img
@@ -246,6 +358,7 @@ function CompanyProfile() {
             <br />
             {t("company.recommendedSize")}
           </p>
+          {canEdit && (
           <div className="flex items-center justify-center gap-4">
             <button
               type="button"
@@ -272,13 +385,16 @@ function CompanyProfile() {
               </button>
             )}
           </div>
-          <input
-            ref={logoRef}
-            type="file"
-            accept="image/png,image/svg+xml,image/jpeg"
-            className="hidden"
-            onChange={onLogoSelected}
-          />
+          )}
+          {canEdit && (
+            <input
+              ref={logoRef}
+              type="file"
+              accept="image/png,image/jpeg"
+              className="hidden"
+              onChange={onLogoSelected}
+            />
+          )}
         </div>
 
         {/* Profile Strength */}
@@ -303,7 +419,7 @@ function CompanyProfile() {
           <p className="text-sm font-semibold text-gray-700 mb-4">{t("company.metadata")}</p>
           <div className="space-y-3">
             {[
-              { label: t("company.metaCompanyId"), value: <Ltr>{metadata ? `CMP-${metadata.id}` : t("company.na")}</Ltr> },
+              { label: t("company.metaCompanyId"), value: <Ltr className="break-all">{metadata?.id ? `CMP-${metadata.id}` : t("company.na")}</Ltr> },
               { label: t("company.metaAccountCreated"), value: metadata?.createdAt ? fmtDate(metadata.createdAt) : t("company.na") },
               { label: t("company.metaDataResidency"), value: "US-West (Oregon)" }, // Static as there is no region setup
             ].map(({ label, value }) => (

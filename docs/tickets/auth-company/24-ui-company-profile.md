@@ -5,7 +5,7 @@ the header updates after saving (D27–D29, D35, D39 copy changes).
 
 **Blocked by:** 14 UI foundation, 10 Company profile and logo API
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 Verified by the ui-tester agent:
 

@@ -27,7 +27,7 @@
     "save": "Save Changes",
     "saved": "✓ Saved",
     "branding": "Company Branding",
-    "uploadHint": "Upload a high-resolution PNG or SVG (max 5MB).",
+    "uploadHint": "Upload a JPG or PNG (max 2MB).",
     "recommendedSize": "Recommended size: 512×512px.",
     "changeLogo": "Change Logo",
     "profileStrength": "Profile Strength",
@@ -56,12 +56,16 @@
     "validation": {
       "nameRequired": "Company name is required",
       "tooShort": "Too short",
+      "nameMin": "Company name must be at least 2 characters",
+      "nameMax": "Company name cannot exceed 100 characters",
       "industryRequired": "Please select an industry",
       "phoneRequired": "Phone is required",
       "phoneValid": "Enter a valid phone number (6–15 digits)",
       "emailRequired": "Email is required",
       "emailValid": "Enter a valid email",
-      "addressRequired": "Address is required"
+      "addressRequired": "Address is required",
+      "addressMax": "Address cannot exceed 500 characters",
+      "logoInvalid": "Logo must be a JPG or PNG image up to 2 MB."
     },
     "confirmSave": {
       "title": "Save Company Profile",
