@@ -142,7 +142,7 @@ describe("GET /api/departments", () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       success: true,
-      data: { items: [], total: 0, page: 1, limit: 20, stats: { total: 0, active: 0, inactive: 0 } },
+      data: { items: [], total: 0, page: 1, limit: 20, stats: { total: 0, active: 0, inactive: 0, designations: 0 } },
     });
   });
 
@@ -273,7 +273,25 @@ describe("GET /api/departments", () => {
     const res = await listDepts(token, { status: "INACTIVE", search: "Three", page: 1, limit: 1 });
 
     expect(res.body.data.total).toBe(1);
-    expect(res.body.data.stats).toEqual({ total: 3, active: 2, inactive: 1 });
+    expect(res.body.data.stats).toEqual({ total: 3, active: 2, inactive: 1, designations: 0 });
+  });
+
+  it("counts the company's live designations in stats (the UI's total-designations card)", async () => {
+    const { employer, token } = await ownerCompany();
+    const { employer: other } = await createCompany();
+    const active = await createDept(employer, { status: "ACTIVE" });
+    const inactive = await createDept(employer, { status: "INACTIVE" });
+    await createDesignation(employer, active);
+    await createDesignation(employer, active, { status: "INACTIVE" });
+    await createDesignation(employer, inactive);
+    const gone = await createDesignation(employer, active);
+    await gone.destroy();
+    await createDesignation(other, await createDept(other));
+
+    const res = await listDepts(token, { status: "ACTIVE", page: 1, limit: 1 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.stats).toEqual({ total: 2, active: 1, inactive: 1, designations: 3 });
   });
 
   it("lists only the caller's company and no deleted departments", async () => {

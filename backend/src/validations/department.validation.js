@@ -74,4 +74,4 @@ const listDepartmentsSchema = Joi.object({
     .messages({ "string.base": INVALID, "any.only": INVALID }),
 });
 
-module.exports = { departmentSchema, listDepartmentsSchema };
+module.exports = { departmentSchema, listDepartmentsSchema, noEmoji, required, INVALID, STATUSES };

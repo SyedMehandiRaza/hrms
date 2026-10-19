@@ -23,7 +23,7 @@ Frontier = every ready-for-agent ticket whose blockers are all done.
 | 10 | [Company profile and logo API](auth-company/10-company-profile-api.md) | done | 04 (Auth) |
 | 11 | [Time settings API](auth-company/11-time-settings-api.md) | done | 04 (Auth) |
 | 12 | [Departments API](auth-company/12-departments-api.md) | done | 02, 04 (Auth) |
-| 13 | [Designations API](auth-company/13-designations-api.md) | ready-for-agent | 12 |
+| 13 | [Designations API](auth-company/13-designations-api.md) | done | 12 |
 
 ### UI (one ticket per screen)
 

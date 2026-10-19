@@ -1,6 +1,7 @@
-const { Op, UniqueConstraintError } = require("sequelize");
+const { Op } = require("sequelize");
 const { sequelize, Department, Designation, Employee } = require("../models");
 const ErrorHandler = require("../utils/ErrorHandler");
+const { saveOrClash } = require("../utils/uniqueClash");
 
 // Departments (D31, D33, D36, D37). Always the caller's own company: the employer id
 // comes from the access token, and another company's department answers 404.
@@ -45,18 +46,22 @@ const findDepartment = async (employerId, id, options = {}) => {
 // LIKE pattern for a plain-text search: % and _ match themselves.
 const likePattern = (term) => `%${term.replace(/[\\%_]/g, "\\$&")}%`;
 
-// Company-wide counts by status, whatever the list filters.
+// Company-wide counts by status, whatever the list filters, plus the company's live
+// designations (the UI's "total designations" card).
 const companyStats = async (employerId) => {
-  const rows = await Department.findAll({
-    attributes: ["status", [sequelize.fn("COUNT", sequelize.col("id")), "count"]],
-    where: { employer_id: employerId },
-    group: ["status"],
-    raw: true,
-  });
+  const [rows, designations] = await Promise.all([
+    Department.findAll({
+      attributes: ["status", [sequelize.fn("COUNT", sequelize.col("id")), "count"]],
+      where: { employer_id: employerId },
+      group: ["status"],
+      raw: true,
+    }),
+    Designation.count({ where: { employer_id: employerId } }),
+  ]);
   const byStatus = Object.fromEntries(rows.map((row) => [row.status, Number(row.count)]));
   const active = byStatus.ACTIVE || 0;
   const inactive = byStatus.INACTIVE || 0;
-  return { total: active + inactive, active, inactive };
+  return { total: active + inactive, active, inactive, designations };
 };
 
 // GET /departments. Query is validated: { page, limit, search, status } ("" = no filter).
@@ -122,18 +127,6 @@ const UNIQUE_KEY_CODES = {
   uq_hrms_departments_employer_id_name_live_key: "DEPARTMENT_NAME_TAKEN",
   uq_hrms_departments_employer_id_code_live_key: "DEPARTMENT_CODE_TAKEN",
 };
-const saveOrClash = async (save) => {
-  try {
-    return await save();
-  } catch (err) {
-    if (err instanceof UniqueConstraintError) {
-      const text = [err.original && err.original.message, ...Object.keys(err.fields || {})].join(" ");
-      const index = Object.keys(UNIQUE_KEY_CODES).find((key) => text.includes(key));
-      if (index) throw new ErrorHandler(UNIQUE_KEY_CODES[index]);
-    }
-    throw err;
-  }
-};
 
 // "" and null both mean "none" for the optional fields.
 const orNull = (value) => (value === "" || value === null ? null : value);
@@ -144,17 +137,19 @@ const createDepartment = async ({ employerId, userId }, body) => {
   if (deptHeadId) await assertHeadUsable(employerId, deptHeadId);
   await assertUnique(employerId, body);
 
-  const dept = await saveOrClash(() =>
-    Department.create({
-      employer_id: employerId,
-      name: body.name,
-      code: body.code,
-      description: orNull(body.description ?? null),
-      status: body.status || "ACTIVE",
-      dept_head_id: deptHeadId,
-      created_by: userId,
-      updated_by: userId,
-    })
+  const dept = await saveOrClash(
+    () =>
+      Department.create({
+        employer_id: employerId,
+        name: body.name,
+        code: body.code,
+        description: orNull(body.description ?? null),
+        status: body.status || "ACTIVE",
+        dept_head_id: deptHeadId,
+        created_by: userId,
+        updated_by: userId,
+      }),
+    UNIQUE_KEY_CODES
   );
   return getDepartment({ employerId }, dept.id);
 };
@@ -172,7 +167,7 @@ const updateDepartment = async ({ employerId, userId }, id, body) => {
   }
   await assertUnique(employerId, body, dept.id);
 
-  await saveOrClash(() => dept.update(changes));
+  await saveOrClash(() => dept.update(changes), UNIQUE_KEY_CODES);
   return getDepartment({ employerId }, dept.id);
 };
 
@@ -203,4 +198,15 @@ const deleteDepartment = async ({ employerId, userId }, id) =>
     return { id: dept.id };
   });
 
-module.exports = { listDepartments, getDepartment, createDepartment, updateDepartment, deleteDepartment };
+module.exports = {
+  listDepartments,
+  getDepartment,
+  createDepartment,
+  updateDepartment,
+  deleteDepartment,
+  // Shared with the designations service.
+  findDepartment,
+  likePattern,
+  orNull,
+  UUID,
+};
