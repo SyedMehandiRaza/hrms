@@ -30,3 +30,12 @@ export const forgotPassword = ({ email }) =>
 // POST /auth/verify-otp → { resetToken } (single use, 15 minutes).
 export const verifyOtp = ({ email, otp }) =>
   client.post("/auth/verify-otp", { email, otp }).then((res) => res.data.data);
+
+// POST /auth/reset-password → { success: true }. Ends every session of the person.
+export const resetPassword = ({ resetToken, newPassword, confirmPassword }) =>
+  client.post("/auth/reset-password", { resetToken, newPassword, confirmPassword }).then((res) => res.data);
+
+// POST /auth/setup-password (welcome email's setup link) → { accessToken, mustChangePassword }
+// (logged in: the refresh cookie is set too).
+export const setupPassword = ({ token, newPassword, confirmPassword }) =>
+  client.post("/auth/setup-password", { token, newPassword, confirmPassword }).then((res) => res.data.data);

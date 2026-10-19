@@ -5,7 +5,7 @@ Verify OTP) and **set** (from the welcome email's setup link) (§4 Reset passwor
 
 **Blocked by:** 18 Verify OTP screen, 08 Temporary password, setup link and forced change
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 Verified by the ui-tester agent:
 
