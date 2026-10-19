@@ -104,6 +104,10 @@
     "picker": {
       "title": "Password changed",
       "subtitle": "You are still logged in on these devices. Choose the sessions to end; this device stays logged in."
-    }
+    },
+    "title": "Active Sessions",
+    "description": "Managing your active sessions across all devices prevents unauthorized access if you forgot to log out.",
+    "loading": "Loading sessions...",
+    "empty": "No other active sessions"
   }
 }

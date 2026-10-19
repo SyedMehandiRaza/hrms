@@ -10,6 +10,7 @@ import {
 import { toast } from "react-toastify";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import useChangePassword from "../../hooks/useChangePassword";
+import ActiveSessionsCard from "../../components/sessions/ActiveSessionsCard";
 import { STAFFING_PROFILE } from "../../data/groupH";
 
 // ── Shared input styles ───────────────────────────────────────────────────────
@@ -358,6 +359,9 @@ export default function StaffingCompanyProfile() {
               </button>
             </div>
           </div>
+
+          {/* Active sessions (D15) */}
+          <ActiveSessionsCard />
         </div>
       </div>
 

@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getStaticUser } from "../../data/session";
+import { useSession } from "../../hooks/useSession";
 
 import WorkInformation from "../../components/WorkInformation";
 import PersonalInformation from "../../components/PersonalInformation";
+import ActiveSessionsCard from "../../components/sessions/ActiveSessionsCard";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const TABS = [
@@ -17,6 +19,9 @@ export default function Profile() {
   const user = getStaticUser();
   const isEmployer = user?.role?.name?.toLowerCase() === "employer" || (typeof user?.role === "string" && user.role.toLowerCase() === "employer");
   const [tab, setTab] = useState("Personal Information");
+  // Admin-panel users manage sessions in Settings → Security & SSO; employees here (D15).
+  const { me } = useSession();
+  const showSessions = me?.account?.panel === "employee";
 
   const visibleTabs = TABS.filter(item => {
     if (isEmployer && item.id === "Work Information") return false;
@@ -57,7 +62,10 @@ export default function Profile() {
 
         {/* Tab Content */}
         {tab === "Personal Information" ? (
-          <PersonalInformation />
+          <>
+            <PersonalInformation />
+            {showSessions && <ActiveSessionsCard />}
+          </>
         ) : (
           <WorkInformation />
         )}

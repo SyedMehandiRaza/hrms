@@ -2,34 +2,13 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   MdOutlineShield,
-  MdOutlineDesktopMac,
-  MdOutlineSmartphone,
-  MdOutlineLogout,
   MdOutlineHistory,
   MdOutlineDownload,
   MdOutlineCheckCircle,
 } from "react-icons/md";
-import Ltr from "./Ltr";
+import ActiveSessionsCard from "./sessions/ActiveSessionsCard";
 
 // ── Data ──────────────────────────────────────────────────────────────────────
-const SESSIONS = [
-  {
-    id: 1,
-    icon: MdOutlineDesktopMac,
-    labelKey: "security.sessionMacbook",
-    subKey: "security.currentSession",
-    subColor: "text-cyan-600",
-    current: true,
-  },
-  {
-    id: 2,
-    icon: MdOutlineSmartphone,
-    labelKey: "security.sessionIphone",
-    subKey: "security.lastActive",
-    subColor: "text-gray-400",
-    current: false,
-  },
-];
 
 const ACTIVITY = [
   {
@@ -97,14 +76,6 @@ const Toggle = ({ checked, onChange }) => (
 export default function SecuritySsO() {
   const { t } = useTranslation("settings");
   const [twoFA, setTwoFA] = useState(true);
-  const [sessions, setSessions] = useState(SESSIONS);
-  const [loggedOut, setLoggedOut] = useState(false);
-
-  const logoutAll = () => {
-    setSessions((s) => s.filter((x) => x.current));
-    setLoggedOut(true);
-    setTimeout(() => setLoggedOut(false), 2500);
-  };
 
   return (
     <div className="space-y-5">
@@ -151,62 +122,8 @@ export default function SecuritySsO() {
           </div>
         </div>
 
-        {/* Active Sessions */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5 lg:p-6">
-          <div className="flex items-center gap-2 mb-2">
-            <MdOutlineDesktopMac className="text-cyan-600 text-xl" />
-            <h3 className="text-base font-bold text-gray-900">
-              {t("security.activeSessions")}
-            </h3>
-          </div>
-          <p className="text-sm text-gray-400 leading-relaxed mb-5">
-            {t("security.activeSessionsDesc")}
-          </p>
-
-          <div className="space-y-3 mb-4">
-            {sessions.map((sess) => {
-              const Icon = sess.icon;
-              return (
-                <div
-                  key={sess.id}
-                  className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-100 rounded-xl"
-                >
-                  <div className="w-9 h-9 bg-white border border-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Icon className="text-gray-500 text-xl" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">
-                      {t(sess.labelKey)}
-                    </p>
-                    <p className={`text-xs font-medium ${sess.subColor}`}>
-                      {t(sess.subKey)}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <button
-            type="button"
-            onClick={logoutAll}
-            className={`w-full flex items-center justify-center gap-2 border rounded-xl py-3 text-sm font-semibold transition-colors ${
-              loggedOut
-                ? "border-green-200 text-green-600 bg-green-50"
-                : "border-gray-200 text-red-500 hover:bg-red-50 hover:border-red-200"
-            }`}
-          >
-            {loggedOut ? (
-              <>
-                <MdOutlineCheckCircle className="text-lg" /> {t("security.sessionsTerminated")}
-              </>
-            ) : (
-              <>
-                <MdOutlineLogout className="text-lg" /> {t("security.logoutAll")}
-              </>
-            )}
-          </button>
-        </div>
+        {/* Active Sessions (GET /auth/sessions) */}
+        <ActiveSessionsCard />
       </div>
 
       {/* ── Recent Security Activity ── */}

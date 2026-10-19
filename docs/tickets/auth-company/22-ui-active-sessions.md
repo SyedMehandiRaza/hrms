@@ -6,7 +6,7 @@ Employee and Staffing-company panels (D15). Strings in English and Arabic.
 
 **Blocked by:** 21 Profile → Change password and session picker
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 Verified by the ui-tester agent with three browser contexts:
 
