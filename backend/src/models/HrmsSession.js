@@ -12,6 +12,7 @@ module.exports = (sequelize, DataTypes) => {
       user_agent: { type: DataTypes.TEXT },
       ip_address: { type: DataTypes.STRING(80) },
       expires_at: { type: DataTypes.DATE, allowNull: false },
+      last_used_at: { type: DataTypes.DATE },
       revoked_at: { type: DataTypes.DATE },
     },
     {

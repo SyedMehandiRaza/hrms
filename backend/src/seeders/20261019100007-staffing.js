@@ -22,8 +22,6 @@ module.exports = {
         city: "Dammam",
         address: "Industrial City 2, Dammam",
         status: "ACTIVE",
-        login_enabled: true,
-        must_change_password: false,
       },
     ]);
     await queryInterface.bulkInsert("hrms_staffing_company_projects", [

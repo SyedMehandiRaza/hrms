@@ -19,6 +19,8 @@ module.exports = (sequelize, DataTypes) => {
       lang_key: { type: DataTypes.ENUM("EN", "AR"), allowNull: false, defaultValue: "EN" },
       fcm_token: { type: DataTypes.TEXT },
       last_seen_at: { type: DataTypes.DATE },
+      failed_login_attempts: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+      locked_until: { type: DataTypes.DATE },
     },
     {
       tableName: "users",

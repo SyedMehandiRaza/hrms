@@ -17,8 +17,6 @@ module.exports = (sequelize, DataTypes) => {
       city: { type: DataTypes.STRING(100) },
       address: { type: DataTypes.TEXT },
       status: { type: DataTypes.ENUM("ACTIVE", "INACTIVE"), allowNull: false, defaultValue: "ACTIVE" },
-      login_enabled: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
-      must_change_password: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
       signature_url: { type: DataTypes.STRING(512) },
       signature_type: { type: DataTypes.ENUM("DRAWN", "TYPED", "UPLOADED") },
       signature_updated_at: { type: DataTypes.DATE },

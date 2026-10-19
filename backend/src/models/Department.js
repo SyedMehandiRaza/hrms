@@ -7,7 +7,7 @@ module.exports = (sequelize, DataTypes) => {
       id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
       employer_id: { type: DataTypes.UUID, allowNull: false, references: { model: "employers", key: "id" } },
       name: { type: DataTypes.STRING(150), allowNull: false },
-      code: { type: DataTypes.STRING(50) },
+      code: { type: DataTypes.STRING(50), allowNull: false },
       description: { type: DataTypes.TEXT },
       status: { type: DataTypes.ENUM("ACTIVE", "INACTIVE"), allowNull: false, defaultValue: "ACTIVE" },
       dept_head_id: { type: DataTypes.UUID, references: { model: "employees", key: "id" } },

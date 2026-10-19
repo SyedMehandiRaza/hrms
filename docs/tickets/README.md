@@ -12,7 +12,7 @@ Frontier = every ready-for-agent ticket whose blockers are all done.
 | # | Ticket | Status | Blocked by |
 |---|---|---|---|
 | 01 | [Error catalog and response shape](auth-company/01-error-catalog.md) | done | — |
-| 02 | [Schema changes](auth-company/02-schema-changes.md) | ready-for-agent | — |
+| 02 | [Schema changes](auth-company/02-schema-changes.md) | done | — |
 | 03 | [Mailer](auth-company/03-mailer.md) | ready-for-agent | — |
 | 04 | [Login, refresh, logout, current user, permission guard](auth-company/04-login-refresh-logout.md) | ready-for-agent | 01, 02 |
 | 05 | [Lockout and rate limits](auth-company/05-lockout-rate-limits.md) | ready-for-agent | 04 |
