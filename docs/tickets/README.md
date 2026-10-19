@@ -43,3 +43,4 @@ Frontier = every ready-for-agent ticket whose blockers are all done.
 | 25 | [Financial Year tab: timezone + start month](auth-company/25-ui-financial-year-tab.md) | done | 14, 11 |
 | 26 | [Departments list screen](auth-company/26-ui-departments-list.md) | done | 14, 12 |
 | 27 | [Department detail + designations screen](auth-company/27-ui-department-detail.md) | done | 26, 13 |
+| 28 | [Real email delivery over SMTP](auth-company/28-smtp-mailer.md) | done | 03 |

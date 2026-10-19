@@ -29,6 +29,7 @@
     "morgan": "^1.12.1",
     "multer": "^2.4.0",
     "mysql2": "^3.24.6",
+    "nodemailer": "^10.1.7",
     "sequelize": "^6.37.8"
   },
   "devDependencies": {

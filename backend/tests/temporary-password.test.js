@@ -1,3 +1,5 @@
+jest.mock("nodemailer");
+
 const crypto = require("crypto");
 const express = require("express");
 const request = require("supertest");
@@ -10,6 +12,7 @@ const app = require("../src/app");
 const db = require("../src/models");
 const mailer = require("../src/services/mailer");
 const { build } = require("./helpers/factory");
+const { useFailingSmtp, waitForCall, SMTP_PASS } = require("./helpers/smtp");
 const requireAuth = require("../src/middlewares/requireAuth");
 const requirePermission = require("../src/middlewares/requirePermission");
 const language = require("../src/middlewares/language");
@@ -278,6 +281,37 @@ describe("issueLoginCredentials for a person with no password", () => {
     expect(mailsTo(person.user.email)).toHaveLength(1);
     const { temporaryPassword } = welcomeSecrets(person.user.email);
     expect((await login(person.user.email, temporaryPassword)).status).toBe(200);
+  });
+
+  it("still saves the temporary password and setup link when SMTP delivery fails, and logs it safely", async () => {
+    const person = await createNewLogin();
+    const smtp = useFailingSmtp(new Error(`Invalid login: 535 rejected mailer@hrms.test/${SMTP_PASS}`));
+    const error = jest.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await expect(issue(person)).resolves.toEqual({ temporaryPassword: true });
+      await waitForCall(error);
+
+      expect(smtp.sendMail).toHaveBeenCalledTimes(1);
+      const message = smtp.sendMail.mock.calls[0][0];
+      expect(message).toMatchObject({ to: person.user.email, subject: "Your login details" });
+      const temporaryPassword = message.text.match(/Temporary password: (\S+)/)[1];
+      const setupToken = decodeURIComponent(message.text.match(/reset-password\?setup=(\S+)/)[1]);
+
+      const stored = await db.User.scope("withPassword").findByPk(person.user.id);
+      expect(await bcrypt.compare(temporaryPassword, stored.password)).toBe(true);
+      await person.account.reload();
+      expect(person.account.password_setup_required).toBe(true);
+      expect(person.account.password_setup_token_hash).toBe(sha256(setupToken));
+
+      const logged = error.mock.calls.map((args) => JSON.stringify(args)).join("\n");
+      expect(logged).toContain("[auth] welcome email failed");
+      expect(logged).toContain("Invalid login: 535");
+      expect(logged).not.toContain(SMTP_PASS);
+      expect(logged).not.toContain(temporaryPassword);
+      expect(logged).not.toContain(setupToken);
+    } finally {
+      smtp.restore();
+    }
   });
 
   it("changes nothing and sends nothing when the caller's transaction rolls back", async () => {

@@ -1,3 +1,5 @@
+jest.mock("nodemailer");
+
 const crypto = require("crypto");
 const express = require("express");
 const request = require("supertest");
@@ -10,6 +12,7 @@ const app = require("../src/app");
 const db = require("../src/models");
 const mailer = require("../src/services/mailer");
 const { build } = require("./helpers/factory");
+const { useFailingSmtp, waitForCall, SMTP_PASS } = require("./helpers/smtp");
 const language = require("../src/middlewares/language");
 const errorHandler = require("../src/middlewares/errorHandler");
 const { createAuthRouter } = require("../src/routes/auth.routes");
@@ -193,6 +196,31 @@ describe("POST /api/auth/forgot-password", () => {
     const res = await forgot(`  ${user.email.toUpperCase()} `);
     expect(res.body).toEqual(SENT_BODY);
     expect(mailsTo(user.email)).toHaveLength(1);
+  });
+
+  it("answers with the same 200 body when SMTP delivery fails, stores the code and logs the failure safely", async () => {
+    const { user } = await createPerson();
+    const smtp = useFailingSmtp(new Error(`Invalid login: 535 rejected mailer@hrms.test/${SMTP_PASS}`));
+    const error = jest.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await forgot(user.email);
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(SENT_BODY);
+
+      await waitForCall(error);
+      expect(smtp.sendMail).toHaveBeenCalledTimes(1);
+      expect(smtp.sendMail.mock.calls[0][0]).toMatchObject({ to: user.email, subject: "Your password reset code" });
+      expect(await otpRowsOf(user.id)).toHaveLength(1);
+
+      const logged = error.mock.calls.map((args) => JSON.stringify(args)).join("\n");
+      expect(logged).toContain("[auth] reset code email failed");
+      expect(logged).toContain("Invalid login: 535");
+      expect(logged).not.toContain(SMTP_PASS);
+      const code = smtp.sendMail.mock.calls[0][0].text.match(/(\d{6})/)[1];
+      expect(logged).not.toContain(code);
+    } finally {
+      smtp.restore();
+    }
   });
 
   describe("sends a code only to a person who can still log in somewhere", () => {
