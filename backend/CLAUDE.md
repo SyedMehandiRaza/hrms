@@ -27,7 +27,9 @@ backend/
 - Flow: route → validate(schema) → controller → service → model.
 - Errors: `next(new ErrorHandler(status, "message"))`. One global error middleware.
   Never send raw errors or stack traces to the client.
-- Response shape: success `{ success: true, data }`, error `{ success: false, message }`.
+- Response shape: success `{ success: true, data }`, error `{ success: false, code, message, errors? }`.
+  `message` is localized by `Accept-Language` (en/ar); codes and texts live in `src/constants/messages.js`.
+  Validation failures are 400 with an `errors` field map. Details: `docs/standards.md` §2.
 - Every protected route: `requireAuth` + `requireRole(...roles)`.
   Users must never read or change another user's/department's data unless their role allows it.
 - List endpoints: `?page=1&limit=20&search=` → `{ items, total, page, limit }`.
