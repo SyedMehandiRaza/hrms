@@ -171,7 +171,15 @@ const login = async ({ email, password, ip, userAgent }) => {
     throw err;
   }
 
-  // Ticket 08: an expired temporary password (password_setup_token_expires_at) → AUTH_SETUP_EXPIRED.
+  // A temporary password is valid 72 hours (ADR 0003); its expiry is the setup token's.
+  if (
+    account.password_setup_required &&
+    account.password_setup_token_expires_at &&
+    new Date(account.password_setup_token_expires_at) <= new Date()
+  ) {
+    logFailedLogin({ email, ip, reason: "AUTH_SETUP_EXPIRED" });
+    throw new ErrorHandler("AUTH_SETUP_EXPIRED");
+  }
 
   const tokens = await sequelize.transaction(async (transaction) => {
     const issued = await issueSession({ account, ip, userAgent }, transaction);
@@ -377,6 +385,8 @@ const resolveAccessToken = async (claims) => {
     accessLevel: account.access_level,
     roleId: account.role_id,
     permissions,
+    // requireAuth blocks most routes while this is true (ADR 0003).
+    mustChangePassword: account.password_setup_required,
   };
 };
 
@@ -420,9 +430,12 @@ module.exports = {
   resolveAccessToken,
   getMe,
   revokeSessions,
+  issueSession,
+  assertAccountUsable,
   sha256,
   isLocked,
   registerFailedPassword,
   clearLockout,
   BCRYPT_COST,
+  CURRENT_ACCOUNT_STATUSES,
 };

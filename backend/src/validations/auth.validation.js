@@ -107,8 +107,18 @@ const resetPasswordSchema = Joi.object({
   confirmPassword: confirmNewPassword(),
 });
 
+// POST /auth/setup-password (standards §7.2 "Reset / Set / Change password"). Like the
+// reset token, the setup token has no field on the form: a missing or malformed one is
+// AUTH_SETUP_LINK_INVALID, answered by the service.
+const setupPasswordSchema = Joi.object({
+  token: Joi.any(),
+  newPassword: resetPasswordSchema.extract("newPassword"),
+  confirmPassword: confirmNewPassword(),
+});
+
 module.exports = {
   loginSchema,
+  setupPasswordSchema,
   signupSchema,
   forgotPasswordSchema,
   verifyOtpSchema,

@@ -1,5 +1,6 @@
 const authService = require("../services/auth.service");
 const passwordResetService = require("../services/passwordReset.service");
+const credentialsService = require("../services/credentials.service");
 const { translate } = require("../utils/i18n");
 const { REFRESH_COOKIE, refreshCookieOptions } = require("../config/auth");
 
@@ -64,4 +65,14 @@ const resetPassword = async (req, res) => {
   res.json({ success: true });
 };
 
-module.exports = { login, signup, refresh, logout, me, forgotPassword, verifyOtp, resetPassword };
+// Setup link (ADR 0003): sets the password and logs in; same response as login.
+const setupPassword = async (req, res) => {
+  const { accessToken, refreshToken, refreshTtlMs, mustChangePassword } = await credentialsService.setupPassword({
+    ...req.body,
+    ...clientInfo(req),
+  });
+  setRefreshCookie(res, refreshToken, refreshTtlMs);
+  res.json({ success: true, data: { accessToken, mustChangePassword } });
+};
+
+module.exports = { login, signup, refresh, logout, me, forgotPassword, verifyOtp, resetPassword, setupPassword };

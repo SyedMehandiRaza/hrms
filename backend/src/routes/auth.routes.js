@@ -9,6 +9,7 @@ const {
   forgotPasswordSchema,
   verifyOtpSchema,
   resetPasswordSchema,
+  setupPasswordSchema,
 } = require("../validations/auth.validation");
 const authController = require("../controllers/auth.controller");
 
@@ -24,6 +25,7 @@ const createAuthRouter = (limits = getRateLimitConfig()) => {
   router.post("/forgot-password", authRateLimiter(limits), validate(forgotPasswordSchema), authController.forgotPassword);
   router.post("/verify-otp", authRateLimiter(limits), validate(verifyOtpSchema), authController.verifyOtp);
   router.post("/reset-password", authRateLimiter(limits), validate(resetPasswordSchema), authController.resetPassword);
+  router.post("/setup-password", authRateLimiter(limits), validate(setupPasswordSchema), authController.setupPassword);
   router.post("/refresh", refreshRateLimiter(limits), authController.refresh);
   router.post("/logout", authController.logout);
 

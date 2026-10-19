@@ -18,7 +18,7 @@ Frontier = every ready-for-agent ticket whose blockers are all done.
 | 05 | [Lockout and rate limits](auth-company/05-lockout-rate-limits.md) | done | 04 |
 | 06 | [Sign up](auth-company/06-signup.md) | done | 04 |
 | 07 | [Forgot password, verify code, reset](auth-company/07-forgot-reset-otp.md) | done | 03, 04 |
-| 08 | [Temporary password, setup link, forced change](auth-company/08-temporary-password.md) | ready-for-agent | 03, 04 |
+| 08 | [Temporary password, setup link, forced change](auth-company/08-temporary-password.md) | done | 03, 04 |
 | 09 | [Change password and sessions](auth-company/09-change-password-sessions.md) | ready-for-agent | 04 |
 | 10 | [Company profile and logo API](auth-company/10-company-profile-api.md) | ready-for-agent | 04 (Auth) |
 | 11 | [Time settings API](auth-company/11-time-settings-api.md) | ready-for-agent | 04 (Auth) |
