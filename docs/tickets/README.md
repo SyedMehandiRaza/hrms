@@ -29,7 +29,7 @@ Frontier = every ready-for-agent ticket whose blockers are all done.
 
 | # | Ticket | Status | Blocked by |
 |---|---|---|---|
-| 14 | [UI foundation: API client, session, guards, permissions](auth-company/14-ui-foundation.md) | ready-for-agent | 04 |
+| 14 | [UI foundation: API client, session, guards, permissions](auth-company/14-ui-foundation.md) | in-progress | 04 |
 | 15 | [Login screen](auth-company/15-ui-login.md) | ready-for-agent | 14, 05 |
 | 16 | [Sign up screen](auth-company/16-ui-signup.md) | ready-for-agent | 14, 06 |
 | 17 | [Forgot password screen](auth-company/17-ui-forgot-password.md) | ready-for-agent | 14, 07 |

@@ -31,7 +31,8 @@ import {
   MdOutlinePersonRemove,
 } from "react-icons/md";
 import { useTranslation } from "react-i18next";
-import { getStaticUser, STATIC_PERMISSION } from "../data/session";
+import { STATIC_PERMISSION } from "../data/session";
+import { useCurrentUser } from "../hooks/useSession";
 import { INVITATION_COUNTS } from "../data/groupA";
 import { capitalizeFirstLetter } from "../utils/assets";
 import { useCan } from "../hooks/usePermission";
@@ -42,7 +43,7 @@ const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(true);
   const [openMenus, setOpenMenus] = useState({});
   const location = useLocation();
-  const user = getStaticUser();
+  const user = useCurrentUser();
   const { t } = useTranslation("nav");
   const can = useCan();
   const approvalModules = STATIC_PERMISSION.approvalModules || [];
@@ -693,7 +694,7 @@ const Sidebar = () => {
             className="flex items-center gap-3 px-2 py-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
           >
             <img
-              src="https://ui-avatars.com/api/?name=Marcus+Thorne&background=22d3ee&color=fff&size=40"
+              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || "NA")}&background=22d3ee&color=fff&size=40`}
               alt={t("userAvatarAlt")}
               className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex-shrink-0"
             />

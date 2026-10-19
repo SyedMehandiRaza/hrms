@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import Login from "../pages/auth/Login";
 import SignUp from "../pages/auth/SignUp";
 import ForgotPassword from "../pages/auth/ForgotPassword";
-import VerifyOTP from "../pages/auth/VerifyOTP";
+import VerifyOtp from "../pages/auth/VerifyOtp";
 import ResetPassword from "../pages/auth/ResetPassword";
 import InviteLanding from "../pages/auth/InviteLanding";
 import AccessEnded from "../pages/auth/AccessEnded";
@@ -33,7 +33,7 @@ function AppRoutes() {
 
       <Route path="/forgot-password" element={<ForgotPassword />} />
 
-      <Route path="/verify-otp" element={<VerifyOTP />} />
+      <Route path="/verify-otp" element={<VerifyOtp />} />
 
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/invitations/token/:token" element={<InviteLanding />} />
@@ -44,7 +44,7 @@ function AppRoutes() {
       <Route
         path="/admin/*"
         element={
-          <ProtectedRoute allowedRoles={["ADMIN"]}>
+          <ProtectedRoute panel="admin">
             <AdminRoutes />
           </ProtectedRoute>
         }
@@ -54,7 +54,7 @@ function AppRoutes() {
       <Route
         path="/staffing-company/*"
         element={
-          <ProtectedRoute allowedRoles={["STAFFING_COMPANY"]}>
+          <ProtectedRoute panel="staffing-company">
             <StaffingCompanyRoutes />
           </ProtectedRoute>
         }
@@ -64,7 +64,7 @@ function AppRoutes() {
       <Route
         path="/employee/*"
         element={
-          <ProtectedRoute allowedRoles={["EMPLOYEE"]}>
+          <ProtectedRoute panel="employee">
             <EmployeeRoutes />
           </ProtectedRoute>
         }

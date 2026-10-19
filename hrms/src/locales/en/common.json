@@ -5,6 +5,8 @@
   "ui": {
     "loading": "Loading...",
     "loadingAria": "Loading",
+    "genericError": "Something went wrong. Please try again.",
+    "retry": "Retry",
     "selectOption": "Select an option",
     "search": "Search...",
     "noOptions": "No options found",

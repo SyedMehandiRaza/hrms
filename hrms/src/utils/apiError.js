@@ -1,8 +1,19 @@
 import { toast } from "react-toastify";
 import { serverErrors, serverMessage } from "./applyFieldErrors";
 
-// Pure error helpers (no network layer in the static build). They still accept
-// an error object shaped like { response: { data: { errName, message, errors } } }.
+// Error helpers for axios errors from src/api/* — the API answers
+// { success: false, code, message, errors? } (docs/standards.md §2).
+//
+//   apiErrorMessage(err)        → the server's localized message, or the generic
+//                                 "Something went wrong. Please try again."
+//   apiErrorCode(err)           → "DEPARTMENT_NAME_TAKEN" | undefined (network error)
+//   toastApiError(err)          → one toast with that message
+//   fieldErrorsOf(err, fields)  → { map: { field: message }, unmapped: [messages] }
+//   (react-hook-form forms: applyFieldErrors in ./applyFieldErrors.js)
+export const apiErrorMessage = (err, fallback) => serverMessage(err, fallback);
+
+export const apiErrorCode = (err) => err?.response?.data?.code;
+
 export const isPeriodClosedError = (error) =>
   error?.response?.data?.errName === "PeriodClosed";
 

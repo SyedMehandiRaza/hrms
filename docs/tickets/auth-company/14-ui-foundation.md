@@ -7,19 +7,19 @@ changes.
 
 **Blocked by:** 04 Login, refresh, logout
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-- [ ] Every API call sends the current UI language; switching to Arabic makes server messages Arabic.
-- [ ] When the access token expires, the next call refreshes once and retries without the user noticing; if
+- [x] Every API call sends the current UI language; switching to Arabic makes server messages Arabic.
+- [x] When the access token expires, the next call refreshes once and retries without the user noticing; if
       refresh fails the user lands on the login screen.
-- [ ] A 403 with `AUTH_ACCOUNT_INACTIVE` or `AUTH_COMPANY_INACTIVE` sends the user to the Access ended screen; a
+- [x] A 403 with `AUTH_ACCOUNT_INACTIVE` or `AUTH_COMPANY_INACTIVE` sends the user to the Access ended screen; a
       403 with `AUTH_PASSWORD_CHANGE_REQUIRED` opens the forced change modal (ticket 20) once it exists.
-- [ ] Reloading any page keeps a logged-in user logged in.
-- [ ] Route protection: an employee or staffing user opening an admin URL is redirected to their own dashboard;
+- [x] Reloading any page keeps a logged-in user logged in.
+- [x] Route protection: an employee or staffing user opening an admin URL is redirected to their own dashboard;
       a logged-out visitor is sent to login.
-- [ ] Permission checks used by the sidebar and buttons read the real permissions: the employee test user no
+- [x] Permission checks used by the sidebar and buttons read the real permissions: the employee test user no
       longer sees admin-only items.
-- [ ] A shared pattern exists for screens: loading state, empty state, error state with the server `message`,
+- [x] A shared pattern exists for screens: loading state, empty state, error state with the server `message`,
       and field errors shown under inputs from the `errors` map.
-- [ ] The Verify OTP route import uses the file's real casing (fixes Linux builds).
-- [ ] Lint passes for touched files.
+- [x] The Verify OTP route import uses the file's real casing (fixes Linux builds).
+- [x] Lint passes for touched files.

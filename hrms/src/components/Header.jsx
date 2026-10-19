@@ -21,12 +21,12 @@ import ProfileDropdown from "./ProfileDropdown";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { capitalizeFirstLetter } from "../utils/assets";
-import { getStaticUser } from "../data/session";
+import { useCurrentUser } from "../hooks/useSession";
 import { HEADER_PROJECTS, notificationStore } from "../data/groupA";
 
 // ── Header ────────────────────────────────────────────────────────────────────
 const Header = () => {
-  const user = getStaticUser();
+  const user = useCurrentUser();
   const projects = HEADER_PROJECTS;
   const loadingProjects = false;
   const [selectedProjectId, setSelectedProject] = useState("ALL");

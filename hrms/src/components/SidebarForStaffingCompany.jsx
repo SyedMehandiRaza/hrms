@@ -15,14 +15,14 @@ import {
   MdKeyboardArrowUp,
 } from "react-icons/md";
 import { useTranslation } from "react-i18next";
-import { getStaticUser } from "../data/session";
+import { useCurrentUser } from "../hooks/useSession";
 import { capitalizeFirstLetter } from "../utils/assets";
 
 const SidebarForStaffingCompany = () => {
   const [isOpen, setIsOpen] = useState(true);
   const [openMenus, setOpenMenus] = useState({});
   const location = useLocation();
-  const user = getStaticUser();
+  const user = useCurrentUser();
   const { t } = useTranslation("nav");
 
   const toggleMenu = (id) => {

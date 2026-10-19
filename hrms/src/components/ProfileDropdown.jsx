@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
 import { capitalizeFirstLetter } from "../utils/assets";
-import { getStaticUser } from "../data/session";
+import { useCurrentUser } from "../hooks/useSession";
 
 /**
  * ProfileDropdown - Responsive profile menu for all devices
@@ -18,7 +18,7 @@ import { getStaticUser } from "../data/session";
 const ProfileDropdown = ({ onClose }) => {
   const navigate = useNavigate();
   const { t } = useTranslation("shared");
-  const user = getStaticUser();
+  const user = useCurrentUser();
 
   const getProfileUrl = () => {
     switch (user?.layoutRole) {

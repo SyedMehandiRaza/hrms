@@ -1,5 +1,10 @@
-// Static session for the UI-only build — stands in for login, permissions and
-// the financial-year store. Nothing here talks to a backend.
+// The signed-in user in the shape the screens already use, built from the real
+// session (/auth/me, see data/sessionStore.js). The static profiles below only
+// fill fields the API does not have yet (employee_id etc., until the Employees
+// module) and stand in when nobody is logged in. The financial-year store is
+// still static.
+import { sessionStore } from "./sessionStore";
+import { assetUrl } from "../api/client";
 
 export const STATIC_USERS = {
   ADMIN: {
@@ -46,8 +51,46 @@ const HOME = {
   STAFFING_COMPANY: "/staffing-company/dashboard",
 };
 
-// The role is picked from the URL section, so every panel is reachable directly.
+const LAYOUT_BY_PANEL = {
+  admin: "ADMIN",
+  employee: "EMPLOYEE",
+  "staffing-company": "STAFFING_COMPANY",
+};
+
+// /auth/me data → the legacy user shape (null when logged out).
+export const toCurrentUser = (me) => {
+  if (!me) return null;
+  const layoutRole = LAYOUT_BY_PANEL[me.account?.panel] || "ADMIN";
+  const placeholder = STATIC_USERS[layoutRole];
+  const [first_name = "", ...rest] = (me.user?.name || "").trim().split(/\s+/);
+  return {
+    // Not in /auth/me yet — kept so the still-static screens keep working.
+    employee_id: placeholder.employee_id,
+    staffing_company_id: placeholder.staffing_company_id,
+    id: me.user?.id,
+    accountId: me.account?.id,
+    companyId: me.company?.id,
+    name: me.user?.name || "",
+    first_name,
+    last_name: rest.join(" "),
+    email: me.user?.email || "",
+    lang: me.user?.lang_key || null,
+    role: me.account?.access_level || "",
+    accessLevel: me.account?.access_level || "",
+    panel: me.account?.panel || null,
+    layoutRole,
+    company_name: me.company?.name || "",
+    company_logo: assetUrl(me.company?.logo),
+    company: me.company || null,
+    profile_image: null,
+  };
+};
+
+// The signed-in user (non-hook; components should prefer useCurrentUser()).
+// Logged out: the static profile of the URL's panel, so nothing crashes.
 export const getStaticUser = () => {
+  const real = toCurrentUser(sessionStore.getState().me);
+  if (real) return real;
   const path = typeof window !== "undefined" ? window.location.pathname : "";
   if (path.startsWith("/employee")) return STATIC_USERS.EMPLOYEE;
   if (path.startsWith("/staffing-company")) return STATIC_USERS.STAFFING_COMPANY;
@@ -56,9 +99,12 @@ export const getStaticUser = () => {
 
 export const homeFor = (layoutRole) => HOME[layoutRole] || HOME.ADMIN;
 
-// Everything is allowed in the static build.
+// isSuper = the company owner (access level ADMIN bypasses role checks).
+// approvalModules stays static until approval groups are wired.
 export const STATIC_PERMISSION = {
-  isSuper: true,
+  get isSuper() {
+    return sessionStore.getState().me?.account?.access_level === "ADMIN";
+  },
   modules: {},
   approvalModules: ["LEAVE", "OVERTIME", "ATTENDANCE", "LOAN", "EXIT"],
 };
