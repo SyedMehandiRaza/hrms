@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link, Navigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import {
   MdOutlineEmail,
@@ -11,14 +11,38 @@ import { BsGlobe } from "react-icons/bs";
 import AuthLeft from "../../components/AuthLeft";
 import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
+import * as authApi from "../../api/auth";
+import { establishSession, useSession } from "../../hooks/useSession";
+import { PANEL_HOME, sessionStore } from "../../data/sessionStore";
+import { apiErrorCode, apiErrorMessage } from "../../utils/apiError";
+import { applyFieldErrors } from "../../utils/applyFieldErrors";
+
+const INACTIVE_CODES = new Set(["AUTH_ACCOUNT_INACTIVE", "AUTH_COMPANY_INACTIVE"]);
+
+// Where a logged-in user goes: the page they were sent here from (only when it
+// belongs to their own panel), else their panel's dashboard.
+const landingPath = (panel, from) => {
+  const home = PANEL_HOME[panel];
+  if (!home) return null;
+  const path = from?.pathname;
+  if (path && (path === `/${panel}` || path.startsWith(`/${panel}/`))) {
+    return `${path}${from.search || ""}${from.hash || ""}`;
+  }
+  return home;
+};
 
 function Login() {
   const { t } = useTranslation("auth");
   const navigate = useNavigate();
+  const location = useLocation();
+  const { status, me } = useSession();
   const [showPassword, setShowPassword] = useState(false);
+  // In flight: the button is disabled and shows "Signing In...".
+  const [loading, setLoading] = useState(false);
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -26,13 +50,49 @@ function Login() {
       password: "",
     },
   });
-  const loading = false;
+  const from = location.state?.from;
 
-  // Static build: any valid form signs in to the admin panel.
-  const onSubmit = () => {
-    toast.success(t("more.loginSuccessfull"));
-    navigate("/admin/dashboard");
+  const onSubmit = async ({ email, password }) => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const data = await authApi.login({ email, password });
+      const session = await establishSession({
+        accessToken: data.accessToken,
+        mustChangePassword: data.mustChangePassword,
+      });
+      // The login answer's flag wins (ticket 20 opens the forced-change modal from it).
+      if (data.mustChangePassword) sessionStore.setMustChangePassword(true);
+      const target = landingPath(session.me?.account?.panel, from);
+      if (!target) throw new Error("Unknown panel");
+      toast.success(t("more.loginSuccessfull"));
+      navigate(target, { replace: true });
+    } catch (err) {
+      const code = apiErrorCode(err);
+      if (INACTIVE_CODES.has(code)) {
+        // /auth/login is skipped by the client interceptor, so access ends here (once).
+        const message = err.response.data.message || null;
+        sessionStore.endAccess(message);
+        navigate("/access-ended", { replace: true, state: { message } });
+        return;
+      }
+      // An inactive answer from /auth/me was already sent to /access-ended by the interceptor.
+      if (sessionStore.getState().accessEnded) return;
+      // No half-made session (e.g. /auth/me failed after a good login).
+      sessionStore.clear();
+      const { mapped } = applyFieldErrors(err, setError, { knownFields: ["email", "password"] });
+      if (mapped.length === 0) toast.error(apiErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
   };
+
+  // Already logged in (e.g. /login opened in a new tab) → their dashboard.
+  // Not while submitting: the submit navigates by itself.
+  if (status === "authenticated" && me && !loading) {
+    const target = landingPath(me.account?.panel, from);
+    if (target) return <Navigate to={target} replace />;
+  }
 
   return (
     <div className="flex min-h-screen bg-white">
@@ -62,7 +122,7 @@ function Login() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-6">
             {/* Email Input */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -74,6 +134,8 @@ function Login() {
                   type="email"
                   placeholder={t("login.emailPlaceholder")}
                   {...register("email", {
+                    // The server trims the email too.
+                    setValueAs: (v) => (typeof v === "string" ? v.trim() : v),
                     required: t("more.emailIsRequired"),
                     pattern: {
                       value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
@@ -106,11 +168,8 @@ function Login() {
                   type={showPassword ? "text" : "password"}
                   placeholder={t("login.passwordPlaceholder")}
                   {...register("password", {
+                    // Login only checks presence (D17), never the format.
                     required: t("more.passwordIsRequired"),
-                    minLength: {
-                      value: 8,
-                      message: t("more.passwordMustBeAtLeast"),
-                    },
                   })}
                   className={`w-full ps-12 pe-12 py-3 bg-gray-100 border rounded-lg focus:outline-none focus:ring-2 focus:bg-white transition-all ${errors.password
                       ? "border-red-500 focus:ring-red-500"

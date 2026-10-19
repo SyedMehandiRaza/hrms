@@ -4,7 +4,7 @@
 
 **Blocked by:** 14 UI foundation, 05 Lockout and rate limits
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 Verified by the ui-tester agent in a real browser:
 
