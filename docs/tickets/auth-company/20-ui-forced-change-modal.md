@@ -7,7 +7,7 @@ existing modal and form styles. Strings in English and Arabic.
 **Blocked by:** 15 Login screen, 08 Temporary password, setup link and forced change, 21 Profile → Change
 password and session picker (reuses its picker)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 Verified by the ui-tester agent (temporary-password user from the seed or created in the test):
 

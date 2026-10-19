@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import Loader from "../components/Loader";
 import { useSession } from "../hooks/useSession";
@@ -8,8 +9,11 @@ import { PANEL_HOME } from "../data/sessionStore";
 //   access ended (403 AUTH_*_INACTIVE) → /access-ended (state.message)
 //   anonymous → /login (state.from = where the user wanted to go)
 //   other panel's URL → the user's own dashboard
+// While a temporary password must be changed, the panel stays visible under the forced
+// change modal (App); its screens remount once the password is changed so they load
+// again (their requests were refused with AUTH_PASSWORD_CHANGE_REQUIRED).
 const ProtectedRoute = ({ panel, children }) => {
-  const { status, me, accessEnded, accessEndedMessage } = useSession();
+  const { status, me, accessEnded, accessEndedMessage, mustChangePassword } = useSession();
   const location = useLocation();
 
   if (status === "loading") {
@@ -29,7 +33,7 @@ const ProtectedRoute = ({ panel, children }) => {
     return <Navigate to={PANEL_HOME[ownPanel] || "/login"} replace />;
   }
 
-  return children;
+  return <Fragment key={mustChangePassword ? "password-change" : "ready"}>{children}</Fragment>;
 };
 
 export default ProtectedRoute;

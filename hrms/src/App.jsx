@@ -5,6 +5,7 @@ import { ToastContainer } from "react-toastify";
 import { useTranslation } from "react-i18next";
 import { setNavigator } from "./api/client";
 import { startSession } from "./hooks/useSession";
+import ForcedPasswordChangeModal from "./components/ForcedPasswordChangeModal";
 
 function App() {
   const { i18n } = useTranslation();
@@ -24,6 +25,9 @@ function App() {
   return (
     <>
       <AppRoutes />
+
+      {/* Temporary password → forced change over every panel (D21, ADR 0003). */}
+      <ForcedPasswordChangeModal />
 
       <ToastContainer
         position={isArabic ? "top-left" : "top-right"}

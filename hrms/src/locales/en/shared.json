@@ -109,5 +109,15 @@
     "description": "Managing your active sessions across all devices prevents unauthorized access if you forgot to log out.",
     "loading": "Loading sessions...",
     "empty": "No other active sessions"
+  },
+  "forcedChange": {
+    "title": "Change your temporary password",
+    "subtitle": "You logged in with a temporary password. Set a new password to continue.",
+    "currentPassword": "Temporary Password",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm Password",
+    "submit": "Change Password",
+    "saving": "Changing Password...",
+    "logout": "Log out"
   }
 }
