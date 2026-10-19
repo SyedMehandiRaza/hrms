@@ -15,6 +15,17 @@ const login = async (req, res) => {
   res.json({ success: true, data: { accessToken, mustChangePassword } });
 };
 
+// 201 with the login data plus the current user (same shape as GET /auth/me), so the
+// UI can go straight to the dashboard without a second call.
+const signup = async (req, res) => {
+  const { accessToken, refreshToken, refreshTtlMs, mustChangePassword, me } = await authService.signup({
+    ...req.body,
+    ...clientInfo(req),
+  });
+  setRefreshCookie(res, refreshToken, refreshTtlMs);
+  res.status(201).json({ success: true, data: { accessToken, mustChangePassword, me } });
+};
+
 const refresh = async (req, res) => {
   const { accessToken, refreshToken, refreshTtlMs } = await authService.refresh({
     refreshToken: req.cookies?.[REFRESH_COOKIE],
@@ -34,4 +45,4 @@ const me = async (req, res) => {
   res.json({ success: true, data: await authService.getMe(req.auth) });
 };
 
-module.exports = { login, refresh, logout, me };
+module.exports = { login, signup, refresh, logout, me };

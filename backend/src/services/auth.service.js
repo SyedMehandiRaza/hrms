@@ -1,16 +1,29 @@
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { Op } = require("sequelize");
-const { sequelize, User, HrmsAccount, HrmsSession, Employer, CompanyTimeSetting } = require("../models");
+const { Op, UniqueConstraintError } = require("sequelize");
+const {
+  sequelize,
+  User,
+  HrmsAccount,
+  HrmsSession,
+  Employer,
+  CompanyTimeSetting,
+  FinancialYear,
+} = require("../models");
 const ErrorHandler = require("../utils/ErrorHandler");
 const { getAuthConfig } = require("../config/auth");
-const { PANEL_BY_ACCESS_LEVEL } = require("../constants/accessLevels");
+const { ACCESS_LEVELS, PANEL_BY_ACCESS_LEVEL } = require("../constants/accessLevels");
 const { loadPermissions } = require("./permission.service");
 
 const ACTIVE = "ACTIVE";
 const REVOKED = "REVOKED";
 const EXPIRED = "EXPIRED";
+
+const CURRENT_ACCOUNT_STATUSES = ["ACTIVE", "SUSPENDED"];
+
+// Password hashing cost (standards §1).
+const BCRYPT_COST = 12;
 
 const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
 
@@ -147,7 +160,7 @@ const login = async ({ email, password, ip, userAgent }) => {
 
   // One current account per person (ADR 0002): ACTIVE or SUSPENDED, not deleted.
   const account = await HrmsAccount.findOne({
-    where: { user_id: user.id, status: { [Op.in]: ["ACTIVE", "SUSPENDED"] } },
+    where: { user_id: user.id, status: { [Op.in]: CURRENT_ACCOUNT_STATUSES } },
     include: [{ model: Employer, as: "employer", required: false }],
   });
 
@@ -167,6 +180,108 @@ const login = async ({ email, password, ip, userAgent }) => {
   });
 
   return { ...tokens, mustChangePassword: account.password_setup_required };
+};
+
+// ---------- sign up (D4, D6, D19, D20; ADR 0002) ----------
+
+// A new company starts in Saudi time with the financial year starting in January.
+const SIGNUP_TIMEZONE = "Asia/Riyadh";
+const SIGNUP_FY_START_MONTH = 1;
+
+const yearIn = (timeZone, date) =>
+  Number(new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric" }).format(date));
+
+// An email that is already registered may sign up again only when the person has no
+// current account anywhere (ADR 0002) and proves it is them with their existing
+// password; the person record is then reused with its password unchanged. A person
+// with no accounts at all is treated the same way. Everything else is AUTH_EMAIL_TAKEN:
+//   - a deleted or non-ACTIVE person record (login would refuse them anyway);
+//   - a person who already owns a company (employers.user_id is unique);
+//   - no stored password, or a different one.
+const assertEmailReusable = async (user, password) => {
+  const taken = () => new ErrorHandler("AUTH_EMAIL_TAKEN");
+  if (isDeleted(user) || user.user_status !== ACTIVE) throw taken();
+
+  const current = await HrmsAccount.count({ where: { user_id: user.id, status: { [Op.in]: CURRENT_ACCOUNT_STATUSES } } });
+  if (current > 0) throw taken();
+
+  const owned = await Employer.count({ where: { user_id: user.id }, paranoid: false });
+  if (owned > 0) throw taken();
+
+  if (!user.password || !(await bcrypt.compare(password, user.password))) throw taken();
+};
+
+// POST /auth/signup. One transaction creates (or reuses) the person, then the company,
+// its time settings, the current financial year (OPEN) and the owner's ADMIN account,
+// and logs in with a session exactly like login. No roles are created (D6).
+const signup = async ({ companyName, name, email, phone, password, ip, userAgent }) => {
+  const existing = await User.scope("withPassword").findOne({ where: { email }, paranoid: false });
+  if (existing) await assertEmailReusable(existing, password);
+  const passwordHash = existing ? null : await bcrypt.hash(password, BCRYPT_COST);
+
+  let created;
+  try {
+    created = await sequelize.transaction(async (transaction) => {
+      const now = new Date();
+      const user =
+        existing ||
+        (await User.create({ name, email, password: passwordHash, signup_by: "EMAIL" }, { transaction }));
+
+      const employer = await Employer.create(
+        { user_id: user.id, company_name: companyName, company_phone_number: phone || null, employer_status: ACTIVE },
+        { transaction }
+      );
+      await CompanyTimeSetting.create(
+        { employer_id: employer.id, timezone: SIGNUP_TIMEZONE, fy_start_month: SIGNUP_FY_START_MONTH },
+        { transaction }
+      );
+
+      const year = yearIn(SIGNUP_TIMEZONE, now);
+      await FinancialYear.create(
+        {
+          employer_id: employer.id,
+          year_key: year,
+          label: `FY ${year}`,
+          start_date: `${year}-01-01`,
+          end_date: `${year}-12-31`,
+          status: "OPEN",
+          opened_at: now,
+        },
+        { transaction }
+      );
+
+      const account = await HrmsAccount.create(
+        {
+          user_id: user.id,
+          employer_id: employer.id,
+          access_level: ACCESS_LEVELS.ADMIN,
+          status: ACTIVE,
+          password_setup_required: false,
+          password_set_at: now,
+          last_login_at: now,
+        },
+        { transaction }
+      );
+
+      const tokens = await issueSession({ account, ip, userAgent }, transaction);
+      return { account, tokens };
+    });
+  } catch (err) {
+    // Two sign ups with the same email at once: the loser hits users.email or
+    // employers.user_id.
+    if (err instanceof UniqueConstraintError) throw new ErrorHandler("AUTH_EMAIL_TAKEN");
+    throw err;
+  }
+
+  const { account, tokens } = created;
+  const permissions = await loadPermissions({
+    accessLevel: account.access_level,
+    roleId: account.role_id,
+    employerId: account.employer_id,
+  });
+  const me = await getMe({ accountId: account.id, employerId: account.employer_id, permissions });
+
+  return { ...tokens, mustChangePassword: account.password_setup_required, me };
 };
 
 // Loads a session with its account, person and company in one query.
@@ -299,6 +414,7 @@ const getMe = async (auth) => {
 
 module.exports = {
   login,
+  signup,
   refresh,
   logout,
   resolveAccessToken,
