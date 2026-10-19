@@ -33,4 +33,46 @@ const updateCompanySchema = Joi.object({
     .messages({ ...required("addressRequired"), "string.max": "addressMax" }),
 });
 
-module.exports = { updateCompanySchema };
+// A valid IANA zone name (D30): one Intl knows, e.g. "Europe/London", "UTC" or an
+// alias such as "Asia/Kolkata" (Node lists the older "Asia/Calcutta"). Offsets such
+// as "+03:00" are not zone names. A wrong-case name is stored with its real case.
+const ZONE_NAME = /^[A-Za-z][A-Za-z0-9_+-]*(\/[A-Za-z0-9_+-]+)*$/;
+const normalizeTimezone = (value) => {
+  if (!ZONE_NAME.test(value)) return null;
+  try {
+    const resolved = new Intl.DateTimeFormat("en-US", { timeZone: value }).resolvedOptions().timeZone;
+    return resolved.toLowerCase() === value.toLowerCase() ? resolved : value;
+  } catch {
+    return null;
+  }
+};
+
+const TIMEZONE_INVALID = "COMPANY_TIMEZONE_INVALID";
+const FY_START_INVALID = "COMPANY_FY_START_INVALID";
+
+// PATCH /company/time-settings (D30, standards §7.2 "Time settings"). Only these two
+// fields are read; anything else (e.g. lock_mode) is stripped by validate(). Each
+// field's message key is its own error code, so one bad field answers with that code
+// (validate's singleFieldCode). Sending neither field is checked by the service.
+const updateTimeSettingsSchema = Joi.object({
+  timezone: Joi.string()
+    .trim()
+    .max(64)
+    .custom((value, helpers) => normalizeTimezone(value) || helpers.error("any.invalid"))
+    .messages({
+      "string.base": TIMEZONE_INVALID,
+      "string.empty": TIMEZONE_INVALID,
+      "string.max": TIMEZONE_INVALID,
+      "any.invalid": TIMEZONE_INVALID,
+    }),
+  fy_start_month: Joi.number().integer().min(1).max(12).messages({
+    "number.base": FY_START_INVALID,
+    "number.integer": FY_START_INVALID,
+    "number.min": FY_START_INVALID,
+    "number.max": FY_START_INVALID,
+    "number.unsafe": FY_START_INVALID,
+    "number.infinity": FY_START_INVALID,
+  }),
+});
+
+module.exports = { updateCompanySchema, updateTimeSettingsSchema };
