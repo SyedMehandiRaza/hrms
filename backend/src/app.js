@@ -9,6 +9,7 @@ const ErrorHandler = require("./utils/ErrorHandler");
 const language = require("./middlewares/language");
 const errorHandler = require("./middlewares/errorHandler");
 const { getCorsOrigin } = require("./config/auth");
+const { getUploadRoot } = require("./services/storage.service");
 
 const app = express();
 
@@ -21,6 +22,18 @@ app.use(cookieParser());
 if (process.env.NODE_ENV !== "test") {
   app.use(morgan("dev"));
 }
+
+// Uploaded files (e.g. company logos), read-only. No directory listing or index files.
+// Helmet's same-origin resource policy would stop the UI (another origin) from
+// showing the images, so these responses allow cross-origin embedding.
+app.use(
+  "/uploads",
+  (req, res, next) => {
+    res.set("Cross-Origin-Resource-Policy", "cross-origin");
+    next();
+  },
+  express.static(getUploadRoot(), { index: false, redirect: false, dotfiles: "ignore" })
+);
 
 app.use("/api", routes);
 
