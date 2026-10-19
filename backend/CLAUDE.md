@@ -25,8 +25,10 @@ backend/
 
 ## Rules
 - Flow: route → validate(schema) → controller → service → model.
-- Errors: `next(new ErrorHandler(status, "message"))`. One global error middleware.
-  Never send raw errors or stack traces to the client.
+- Errors: `next(new ErrorHandler("CODE"))` or `next(new ErrorHandler("CODE", { errors }))`; the status
+  comes from the catalog. One global error middleware. Never send raw errors or stack traces to the client.
+- Joi schemas set message KEYS, not text: `.messages({ "any.required": "emailRequired" })` (keys in
+  `FIELD_MESSAGES`, or a code). `validate()` reports every bad field; `req.lang` is `en` | `ar`.
 - Response shape: success `{ success: true, data }`, error `{ success: false, code, message, errors? }`.
   `message` is localized by `Accept-Language` (en/ar); codes and texts live in `src/constants/messages.js`.
   Validation failures are 400 with an `errors` field map. Details: `docs/standards.md` §2.

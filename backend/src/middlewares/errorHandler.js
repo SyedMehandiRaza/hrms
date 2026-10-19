@@ -1,19 +1,29 @@
 const ErrorHandler = require("../utils/ErrorHandler");
+const { resolveLang, translate } = require("../utils/i18n");
 
-// Single global error middleware. Never leaks raw errors or stack traces.
+// Single global error middleware. Answers { success: false, code, message, errors? }
+// with message (and field messages) in the caller's language. Never leaks raw
+// errors or stack traces; unexpected errors are logged on the server.
 const errorHandler = (err, req, res, next) => {
+  const lang = req.lang || resolveLang(req.headers["accept-language"]);
+  const send = (status, code, errors) => {
+    const body = { success: false, code, message: translate(code, lang) };
+    if (errors) {
+      body.errors = Object.fromEntries(Object.entries(errors).map(([field, key]) => [field, translate(key, lang)]));
+    }
+    return res.status(status).json(body);
+  };
+
   if (err instanceof ErrorHandler) {
-    return res.status(err.statusCode).json({ success: false, message: err.message });
+    return send(err.statusCode, err.code, err.errors);
   }
 
   if (err.type === "entity.parse.failed") {
-    return res.status(400).json({ success: false, message: "Malformed JSON body" });
+    return send(400, "INVALID_JSON");
   }
 
-  if (process.env.NODE_ENV !== "test") {
-    console.error(err);
-  }
-  return res.status(500).json({ success: false, message: "Internal server error" });
+  console.error(err);
+  return send(500, "INTERNAL_ERROR");
 };
 
 module.exports = errorHandler;

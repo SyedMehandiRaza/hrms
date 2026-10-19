@@ -5,7 +5,7 @@ const requireRole =
   (...allowed) =>
   (req, res, next) => {
     if (!req.user || !allowed.includes(req.user.accessLevel)) {
-      return next(new ErrorHandler(403, "You do not have permission to perform this action"));
+      return next(new ErrorHandler("FORBIDDEN"));
     }
     return next();
   };
