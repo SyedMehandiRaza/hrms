@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
 import { capitalizeFirstLetter } from "../utils/assets";
-import { useCurrentUser } from "../hooks/useSession";
+import { useState } from "react";
+import { endSession, useCurrentUser } from "../hooks/useSession";
 
 /**
  * ProfileDropdown - Responsive profile menu for all devices
@@ -33,10 +34,18 @@ const ProfileDropdown = ({ onClose }) => {
 
   const profileUrl = getProfileUrl();
 
-  const handleLogout = () => {
+  // Header logout in every panel (ticket 23): POST /auth/logout, then the
+  // local session is cleared even if that call failed. `replace` keeps the
+  // dashboard out of the Back history; ProtectedRoute bounces any older panel
+  // entry to /login because the session is now anonymous.
+  const [loggingOut, setLoggingOut] = useState(false);
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
     onClose?.();
+    await endSession();
     toast.success(t("toast.loggedOut"));
-    navigate("/login");
+    navigate("/login", { replace: true });
   };
 
   const handleNavigate = (path) => {
@@ -83,6 +92,7 @@ const ProfileDropdown = ({ onClose }) => {
       {/* Logout Button */}
       <button
         onClick={handleLogout}
+        disabled={loggingOut}
         className="w-full px-4 sm:px-5 py-3 sm:py-3.5 flex items-center gap-3 text-start hover:bg-red-50 active:bg-red-50 transition-colors touch-target"
       >
         <MdLogout className="text-xl sm:text-2xl text-red-600 flex-shrink-0" />

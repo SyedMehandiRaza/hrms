@@ -5,7 +5,7 @@ ended screen explains why a user was signed out (§4 Logout, Access ended, D34).
 
 **Blocked by:** 14 UI foundation
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 Verified by the ui-tester agent:
 

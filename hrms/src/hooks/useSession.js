@@ -14,6 +14,8 @@ import * as authApi from "../api/auth";
 //   reloadMe()              re-read /auth/me (e.g. after the company profile changed)
 //   endSession()            logout: POST /auth/logout, then clear (always succeeds)
 
+const INACTIVE_CODES = new Set(["AUTH_ACCOUNT_INACTIVE", "AUTH_COMPANY_INACTIVE"]);
+
 const getState = () => sessionStore.getState();
 
 export const useSession = () => useSyncExternalStore(sessionStore.subscribe, getState, getState);
@@ -38,10 +40,16 @@ export const startSession = () => {
       try {
         await authApi.refresh();
         await reloadMe();
-      } catch {
-        // An inactive account/company already went to /access-ended (and kept
-        // its message); anything else simply means "not logged in".
-        if (sessionStore.getState().status === "loading") sessionStore.clear();
+      } catch (err) {
+        // An inactive answer from /auth/me already went to /access-ended (and
+        // kept its message). /auth/refresh is skipped by the interceptor, so an
+        // inactive refresh ends access here: the route guard then shows
+        // /access-ended with the server message. Anything else simply means
+        // "not logged in".
+        if (sessionStore.getState().status !== "loading") return;
+        const data = err?.response?.data;
+        if (INACTIVE_CODES.has(data?.code)) sessionStore.endAccess(data.message || null);
+        else sessionStore.clear();
       }
     })();
   }
