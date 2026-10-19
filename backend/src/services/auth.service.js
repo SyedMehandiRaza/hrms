@@ -26,6 +26,36 @@ const logFailedLogin = ({ email, ip, reason }) => {
   console.warn("[auth] login failed", { email, ip, reason });
 };
 
+// Lockout (D10): 5 consecutive wrong passwords lock the person for 15 minutes.
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCK_MS = 15 * 60 * 1000;
+
+const isLocked = (user, now = new Date()) => !!user.locked_until && new Date(user.locked_until) > now;
+
+// Counts one wrong password (login now; change-password reuses it). A lock that has
+// already passed starts the count again from one. The failure that reaches the limit
+// sets locked_until and returns { locked: true }; the caller answers AUTH_ACCOUNT_LOCKED.
+const registerFailedPassword = async (user, transaction) => {
+  const now = new Date();
+  const lockPassed = !!user.locked_until && !isLocked(user, now);
+  const attempts = (lockPassed ? 0 : user.failed_login_attempts || 0) + 1;
+  const locked = attempts >= MAX_FAILED_ATTEMPTS;
+  await user.update(
+    {
+      failed_login_attempts: attempts,
+      locked_until: locked ? new Date(now.getTime() + LOCK_MS) : lockPassed ? null : user.locked_until,
+    },
+    { transaction }
+  );
+  return { locked };
+};
+
+// Clears the counter and any lock (successful login now; password reset reuses it).
+const clearLockout = async (user, transaction) => {
+  if (!user.failed_login_attempts && !user.locked_until) return;
+  await user.update({ failed_login_attempts: 0, locked_until: null }, { transaction });
+};
+
 // Soft-deleted (paranoid) row loaded with paranoid: false.
 const isDeleted = (row) => row.isSoftDeleted();
 
@@ -97,14 +127,23 @@ const login = async ({ email, password, ip, userAgent }) => {
   const user = await User.scope("withPassword").findOne({ where: { email } });
   const matches = await bcrypt.compare(password, user?.password || (await dummyHash()));
 
+  // A locked person gets 423 whatever the password; the comparison above still ran,
+  // so a locked account answers in the same time. Unknown emails are never locked.
+  if (user && isLocked(user)) {
+    logFailedLogin({ email, ip, reason: "AUTH_ACCOUNT_LOCKED" });
+    throw new ErrorHandler("AUTH_ACCOUNT_LOCKED");
+  }
+
   if (!user || !user.password || !matches) {
-    // Ticket 05: count the failure on users.failed_login_attempts and lock after 5 here.
     logFailedLogin({ email, ip, reason: user ? "WRONG_PASSWORD" : "UNKNOWN_EMAIL" });
+    if (user) {
+      const { locked } = await registerFailedPassword(user);
+      if (locked) throw new ErrorHandler("AUTH_ACCOUNT_LOCKED");
+    }
     throw new ErrorHandler("AUTH_INVALID_CREDENTIALS");
   }
 
-  // Ticket 05: refuse while users.locked_until is in the future (AUTH_ACCOUNT_LOCKED) and
-  // reset failed_login_attempts / locked_until on success.
+  await clearLockout(user);
 
   // One current account per person (ADR 0002): ACTIVE or SUSPENDED, not deleted.
   const account = await HrmsAccount.findOne({
@@ -258,4 +297,15 @@ const getMe = async (auth) => {
   };
 };
 
-module.exports = { login, refresh, logout, resolveAccessToken, getMe, revokeSessions, sha256 };
+module.exports = {
+  login,
+  refresh,
+  logout,
+  resolveAccessToken,
+  getMe,
+  revokeSessions,
+  sha256,
+  isLocked,
+  registerFailedPassword,
+  clearLockout,
+};

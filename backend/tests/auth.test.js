@@ -14,6 +14,11 @@ const requirePermission = require("../src/middlewares/requirePermission");
 const requireAccessLevel = require("../src/middlewares/requireAccessLevel");
 const language = require("../src/middlewares/language");
 const errorHandler = require("../src/middlewares/errorHandler");
+const cookieParser = require("cookie-parser");
+const authService = require("../src/services/auth.service");
+const { createAuthRouter } = require("../src/routes/auth.routes");
+const { authRateLimiter } = require("../src/middlewares/rateLimit");
+const { getRateLimitConfig } = require("../src/config/rateLimit");
 const { MESSAGES } = require("../src/constants/messages");
 
 const PASSWORD = "Test@12345";
@@ -862,6 +867,331 @@ describe("tenant scoping", () => {
 
     const authB = await guarded("/departments", b.token);
     expect(authB.body.data.employerId).toBe(coB.employer.id);
+  });
+});
+
+// ---------- lockout (D10) ----------
+
+const WRONG = "Wrong@12345";
+const LOCK_MS = 15 * 60 * 1000;
+
+// Fakes only Date, so the DB driver's own timers keep working.
+const fakeClock = (start) => {
+  jest.useFakeTimers({
+    doNotFake: [
+      "nextTick",
+      "setImmediate",
+      "clearImmediate",
+      "setTimeout",
+      "clearTimeout",
+      "setInterval",
+      "clearInterval",
+      "queueMicrotask",
+      "hrtime",
+      "performance",
+    ],
+    now: start,
+  });
+};
+
+const sessionCountOf = (userId) =>
+  db.HrmsSession.count({ include: [{ model: db.HrmsAccount, as: "hrmsAccount", where: { user_id: userId } }] });
+
+describe("login lockout", () => {
+  let company;
+  beforeAll(async () => {
+    company = await createCompany();
+  });
+
+  afterEach(() => jest.useRealTimers());
+
+  const newPerson = async (user = {}) => (await createLogin(company.employer, { accessLevel: "EMPLOYEE", user })).user;
+
+  const failTimes = async (email, times) => {
+    const responses = [];
+    for (let i = 0; i < times; i += 1) responses.push(await login(email, WRONG));
+    return responses;
+  };
+
+  it("counts each wrong password; four wrong then the right one logs in and resets the counter", async () => {
+    const person = await newPerson();
+    const failures = await failTimes(person.email, 4);
+    failures.forEach((res) => {
+      expect(res.status).toBe(401);
+      expect(res.body).toEqual(errorBody("AUTH_INVALID_CREDENTIALS"));
+    });
+    await person.reload();
+    expect(person.failed_login_attempts).toBe(4);
+    expect(person.locked_until).toBeNull();
+
+    const ok = await login(person.email);
+    expect(ok.status).toBe(200);
+    await person.reload();
+    expect(person.failed_login_attempts).toBe(0);
+    expect(person.locked_until).toBeNull();
+  });
+
+  it("counts only consecutive failures: a success in between starts over", async () => {
+    const person = await newPerson();
+    await failTimes(person.email, 4);
+    expect((await login(person.email)).status).toBe(200);
+    const again = await failTimes(person.email, 4);
+    again.forEach((res) => expect(res.status).toBe(401));
+    await person.reload();
+    expect(person.failed_login_attempts).toBe(4);
+  });
+
+  it("locks on the fifth wrong password: 423 AUTH_ACCOUNT_LOCKED for 15 minutes", async () => {
+    const start = new Date("2026-10-19T08:00:00Z");
+    fakeClock(start);
+    const person = await newPerson();
+    const responses = await failTimes(person.email, 5);
+
+    responses.slice(0, 4).forEach((res) => expect(res.status).toBe(401));
+    const fifth = responses[4];
+    expect(fifth.status).toBe(423);
+    expect(fifth.body).toEqual(errorBody("AUTH_ACCOUNT_LOCKED"));
+    expect(fifth.body.message).toBe("Too many failed attempts. Try again in 15 minutes.");
+    expect(setCookieOf(fifth)).toBeUndefined();
+
+    await person.reload();
+    expect(new Date(person.locked_until).getTime()).toBe(start.getTime() + LOCK_MS);
+  });
+
+  it("refuses even the correct password while locked, without extending the lock", async () => {
+    const start = new Date("2026-10-19T09:00:00Z");
+    fakeClock(start);
+    const person = await newPerson();
+    await failTimes(person.email, 5);
+
+    jest.setSystemTime(new Date(start.getTime() + 5 * 60 * 1000));
+    const right = await login(person.email);
+    expect(right.status).toBe(423);
+    expect(right.body).toEqual(errorBody("AUTH_ACCOUNT_LOCKED"));
+    expect(setCookieOf(right)).toBeUndefined();
+
+    const wrong = await login(person.email, WRONG);
+    expect(wrong.status).toBe(423);
+    expect(wrong.body).toEqual(errorBody("AUTH_ACCOUNT_LOCKED"));
+
+    jest.setSystemTime(new Date(start.getTime() + LOCK_MS - 1000));
+    expect((await login(person.email)).status).toBe(423);
+
+    await person.reload();
+    expect(new Date(person.locked_until).getTime()).toBe(start.getTime() + LOCK_MS);
+    expect(await sessionCountOf(person.id)).toBe(0);
+  });
+
+  it("logs in with the correct password once the 15 minutes have passed, and clears the lock", async () => {
+    const start = new Date("2026-10-19T10:00:00Z");
+    fakeClock(start);
+    const person = await newPerson();
+    await failTimes(person.email, 5);
+
+    jest.setSystemTime(new Date(start.getTime() + LOCK_MS + 1000));
+    const res = await login(person.email);
+    expect(res.status).toBe(200);
+    expect(res.body.data.accessToken).toEqual(expect.any(String));
+
+    await person.reload();
+    expect(person.failed_login_attempts).toBe(0);
+    expect(person.locked_until).toBeNull();
+  });
+
+  it("starts counting from one again when a wrong password comes after the lock has passed", async () => {
+    const start = new Date("2026-10-19T11:00:00Z");
+    fakeClock(start);
+    const person = await newPerson();
+    await failTimes(person.email, 5);
+
+    jest.setSystemTime(new Date(start.getTime() + LOCK_MS + 1000));
+    const res = await login(person.email, WRONG);
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual(errorBody("AUTH_INVALID_CREDENTIALS"));
+    await person.reload();
+    expect(person.failed_login_attempts).toBe(1);
+    expect(person.locked_until).toBeNull();
+  });
+
+  it("never locks an email that doesn't exist", async () => {
+    const email = uniqueEmail("nobody");
+    const responses = await failTimes(email, 7);
+    responses.forEach((res) => {
+      expect(res.status).toBe(401);
+      expect(res.body).toEqual(errorBody("AUTH_INVALID_CREDENTIALS"));
+    });
+  });
+
+  it("checks the lock before the person's status (credentials → lock → status)", async () => {
+    const person = await newPerson({
+      user_status: "INACTIVE",
+      locked_until: new Date(Date.now() + LOCK_MS),
+      failed_login_attempts: 5,
+    });
+    const res = await login(person.email);
+    expect(res.status).toBe(423);
+    expect(res.body.code).toBe("AUTH_ACCOUNT_LOCKED");
+  });
+
+  it("answers the locked message in Arabic when asked", async () => {
+    const person = await newPerson({ locked_until: new Date(Date.now() + LOCK_MS), failed_login_attempts: 5 });
+    const res = await login(person.email).set("Accept-Language", "ar");
+    expect(res.status).toBe(423);
+    expect(res.body).toEqual({ success: false, code: "AUTH_ACCOUNT_LOCKED", message: MESSAGES.AUTH_ACCOUNT_LOCKED.ar });
+  });
+
+  it("logs refused logins on a locked account with the reason, never the password", async () => {
+    const person = await newPerson({ locked_until: new Date(Date.now() + LOCK_MS), failed_login_attempts: 5 });
+    await login(person.email);
+    const logged = JSON.stringify(console.warn.mock.calls);
+    expect(logged).toContain(person.email);
+    expect(logged).toContain("AUTH_ACCOUNT_LOCKED");
+    expect(logged).not.toContain(PASSWORD);
+  });
+
+  describe("reusable helpers (password reset and change password use them)", () => {
+    it("registerFailedPassword counts a failure and reports the lock on the fifth", async () => {
+      const person = await newPerson();
+      for (let i = 1; i <= 4; i += 1) {
+        expect(await authService.registerFailedPassword(person)).toEqual({ locked: false });
+      }
+      expect(await authService.registerFailedPassword(person)).toEqual({ locked: true });
+      await person.reload();
+      expect(person.failed_login_attempts).toBe(5);
+      expect(person.locked_until).not.toBeNull();
+      expect(authService.isLocked(person)).toBe(true);
+    });
+
+    it("clearLockout removes the counter and the lock", async () => {
+      const person = await newPerson({ locked_until: new Date(Date.now() + LOCK_MS), failed_login_attempts: 5 });
+      expect(authService.isLocked(person)).toBe(true);
+      await authService.clearLockout(person);
+      await person.reload();
+      expect(person.failed_login_attempts).toBe(0);
+      expect(person.locked_until).toBeNull();
+      expect(authService.isLocked(person)).toBe(false);
+      expect((await login(person.email)).status).toBe(200);
+    });
+  });
+});
+
+// ---------- rate limits (D11) ----------
+
+// The real auth router with explicit limits (the main app uses generous limits under test).
+const limitedApp = (limits) => {
+  const limited = express();
+  limited.use(language);
+  limited.use(express.json());
+  limited.use(cookieParser());
+  limited.use("/api/auth", createAuthRouter(limits));
+  limited.use(errorHandler);
+  return limited;
+};
+
+describe("rate limits", () => {
+  const PRODUCTION_LIMITS = { windowMs: 60 * 1000, authMax: 10, refreshMax: 60 };
+
+  it("gives the 11th login within a minute from one IP 429 RATE_LIMITED", async () => {
+    const limited = limitedApp(PRODUCTION_LIMITS);
+    const email = uniqueEmail("nobody");
+    for (let i = 0; i < 10; i += 1) {
+      const res = await request(limited).post("/api/auth/login").send({ email, password: WRONG });
+      expect(res.status).toBe(401);
+    }
+    const eleventh = await request(limited).post("/api/auth/login").send({ email, password: WRONG });
+    expect(eleventh.status).toBe(429);
+    expect(eleventh.body).toEqual(errorBody("RATE_LIMITED"));
+    expect(eleventh.body.message).toBe("Too many requests. Please try again in a minute.");
+  });
+
+  it("counts requests the validator rejects too", async () => {
+    const limited = limitedApp({ ...PRODUCTION_LIMITS, authMax: 2 });
+    await request(limited).post("/api/auth/login").send({});
+    await request(limited).post("/api/auth/login").send({});
+    const res = await request(limited).post("/api/auth/login").send({});
+    expect(res.status).toBe(429);
+    expect(res.body).toEqual(errorBody("RATE_LIMITED"));
+  });
+
+  it("answers the rate-limit message in Arabic when asked", async () => {
+    const limited = limitedApp({ ...PRODUCTION_LIMITS, authMax: 1 });
+    await request(limited).post("/api/auth/login").send({});
+    const res = await request(limited).post("/api/auth/login").set("Accept-Language", "ar").send({});
+    expect(res.status).toBe(429);
+    expect(res.body).toEqual({ success: false, code: "RATE_LIMITED", message: MESSAGES.RATE_LIMITED.ar });
+  });
+
+  it("allows 60 refreshes per minute from one IP, then 429", async () => {
+    const limited = limitedApp(PRODUCTION_LIMITS);
+    for (let i = 0; i < 60; i += 1) {
+      const res = await request(limited).post("/api/auth/refresh");
+      expect(res.status).toBe(401);
+    }
+    const res = await request(limited).post("/api/auth/refresh");
+    expect(res.status).toBe(429);
+    expect(res.body).toEqual(errorBody("RATE_LIMITED"));
+  });
+
+  it("keeps the login and refresh budgets separate", async () => {
+    const limited = limitedApp({ ...PRODUCTION_LIMITS, authMax: 1, refreshMax: 1 });
+    expect((await request(limited).post("/api/auth/login").send({})).status).toBe(400);
+    expect((await request(limited).post("/api/auth/refresh")).status).toBe(401);
+    expect((await request(limited).post("/api/auth/login").send({})).status).toBe(429);
+    expect((await request(limited).post("/api/auth/refresh")).status).toBe(429);
+  });
+
+  it("allows requests again after the window passes", async () => {
+    const limited = limitedApp({ windowMs: 300, authMax: 1, refreshMax: 1 });
+    expect((await request(limited).post("/api/auth/refresh")).status).toBe(401);
+    expect((await request(limited).post("/api/auth/refresh")).status).toBe(429);
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    expect((await request(limited).post("/api/auth/refresh")).status).toBe(401);
+  });
+
+  it("builds a 10-per-minute limiter the other public auth routes reuse", async () => {
+    const probe = express();
+    probe.use(language);
+    probe.post("/signup", authRateLimiter(PRODUCTION_LIMITS), (req, res) => res.json({ success: true }));
+    probe.use(errorHandler);
+    for (let i = 0; i < 10; i += 1) expect((await request(probe).post("/signup")).status).toBe(200);
+    const res = await request(probe).post("/signup");
+    expect(res.status).toBe(429);
+    expect(res.body).toEqual(errorBody("RATE_LIMITED"));
+  });
+
+  describe("configuration", () => {
+    const KEYS = ["NODE_ENV", "RATE_LIMIT_WINDOW_MS", "RATE_LIMIT_AUTH_MAX", "RATE_LIMIT_REFRESH_MAX"];
+    let saved;
+    beforeEach(() => {
+      saved = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
+      KEYS.forEach((k) => delete process.env[k]);
+    });
+    afterEach(() => {
+      KEYS.forEach((k) => {
+        if (saved[k] === undefined) delete process.env[k];
+        else process.env[k] = saved[k];
+      });
+    });
+
+    it("defaults to 10 per minute on the auth routes and 60 per minute on refresh", () => {
+      process.env.NODE_ENV = "production";
+      expect(getRateLimitConfig()).toEqual({ windowMs: 60 * 1000, authMax: 10, refreshMax: 60 });
+    });
+
+    it("reads the limits from the environment", () => {
+      process.env.NODE_ENV = "production";
+      process.env.RATE_LIMIT_WINDOW_MS = "1000";
+      process.env.RATE_LIMIT_AUTH_MAX = "3";
+      process.env.RATE_LIMIT_REFRESH_MAX = "4";
+      expect(getRateLimitConfig()).toEqual({ windowMs: 1000, authMax: 3, refreshMax: 4 });
+    });
+
+    it("uses generous limits under test so the rest of the suite isn't throttled", () => {
+      process.env.NODE_ENV = "test";
+      const config = getRateLimitConfig();
+      expect(config.authMax).toBeGreaterThanOrEqual(1000);
+      expect(config.refreshMax).toBeGreaterThanOrEqual(1000);
+    });
   });
 });
 
