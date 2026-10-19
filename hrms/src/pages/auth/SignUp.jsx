@@ -14,6 +14,19 @@ import { BsGlobe } from "react-icons/bs";
 import AuthLeft from "../../components/AuthLeft";
 import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
+import * as authApi from "../../api/auth";
+import { establishSession } from "../../hooks/useSession";
+import { PANEL_HOME } from "../../data/sessionStore";
+import { apiErrorMessage } from "../../utils/apiError";
+import { applyFieldErrors } from "../../utils/applyFieldErrors";
+import { isStrongPassword } from "../../utils/passwordRule";
+
+// The server trims these too; the rules run on the trimmed value.
+const trim = (v) => (typeof v === "string" ? v.trim() : v);
+
+// Server field → form input (the others keep their names).
+const FIELD_MAP = { name: "contactPersonName", phone: "phoneNumber" };
+const KNOWN_FIELDS = ["companyName", "contactPersonName", "email", "phoneNumber", "password", "confirmPassword"];
 
 function SignUp() {
   const { t } = useTranslation("auth");
@@ -21,12 +34,13 @@ function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const loading = false;
+  // In flight: the button is disabled and shows "Creating Account...".
+  const [loading, setLoading] = useState(false);
 
   const {
     register,
     handleSubmit,
-    watch,
+    setError,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -39,12 +53,33 @@ function SignUp() {
     },
   });
 
-  // Watch the password so the confirm field can validate against it.
-  const passwordValue = watch("password");
-
-  const onSubmit = () => {
-    toast.success(t("signup.success"));
-    navigate("/login");
+  // Sign up logs the owner in (refresh cookie + access token) and lands on the
+  // Admin dashboard. On an error the typed values stay in the form.
+  const onSubmit = async (values) => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const data = await authApi.signup({
+        companyName: values.companyName,
+        name: values.contactPersonName,
+        email: values.email,
+        phone: values.phoneNumber || undefined,
+        password: values.password,
+        confirmPassword: values.confirmPassword,
+      });
+      await establishSession({
+        accessToken: data.accessToken,
+        mustChangePassword: data.mustChangePassword,
+        me: data.me,
+      });
+      toast.success(t("signup.success"));
+      navigate(PANEL_HOME.admin, { replace: true });
+    } catch (err) {
+      const { mapped } = applyFieldErrors(err, setError, { fieldMap: FIELD_MAP, knownFields: KNOWN_FIELDS });
+      if (mapped.length === 0) toast.error(apiErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const inputClass = (hasError) =>
@@ -83,7 +118,7 @@ function SignUp() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
             {/* Company Name */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -95,10 +130,15 @@ function SignUp() {
                   type="text"
                   placeholder={t("signup.companyNamePlaceholder")}
                   {...register("companyName", {
+                    setValueAs: trim,
                     required: t("validation.companyNameRequired"),
                     minLength: {
                       value: 2,
                       message: t("validation.companyNameMin"),
+                    },
+                    maxLength: {
+                      value: 100,
+                      message: t("validation.companyNameMax"),
                     },
                   })}
                   className={inputClass(errors.companyName)}
@@ -122,10 +162,15 @@ function SignUp() {
                   type="text"
                   placeholder={t("signup.contactNamePlaceholder")}
                   {...register("contactPersonName", {
+                    setValueAs: trim,
                     required: t("validation.yourNameRequired"),
                     minLength: {
                       value: 2,
                       message: t("validation.nameMin"),
+                    },
+                    maxLength: {
+                      value: 100,
+                      message: t("validation.nameMax"),
                     },
                   })}
                   className={inputClass(errors.contactPersonName)}
@@ -149,6 +194,7 @@ function SignUp() {
                   type="email"
                   placeholder={t("signup.emailPlaceholder")}
                   {...register("email", {
+                    setValueAs: trim,
                     required: t("more.emailIsRequired"),
                     pattern: {
                       value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
@@ -176,8 +222,10 @@ function SignUp() {
                   type="tel"
                   placeholder={t("signup.phonePlaceholder")}
                   {...register("phoneNumber", {
+                    // Optional; digits only, 6–15 (the server's rule, D28).
+                    setValueAs: trim,
                     pattern: {
-                      value: /^[0-9+\-\s()]{6,20}$/,
+                      value: /^\d{6,15}$/,
                       message: t("validation.invalidPhone"),
                     },
                   })}
@@ -202,11 +250,8 @@ function SignUp() {
                   type={showPassword ? "text" : "password"}
                   placeholder={t("signup.passwordPlaceholder")}
                   {...register("password", {
-                    required: t("more.passwordIsRequired"),
-                    minLength: {
-                      value: 8,
-                      message: t("more.passwordMustBeAtLeast"),
-                    },
+                    // No separate "required" text on sign up (§7.2): empty gets the rule text.
+                    validate: (value) => isStrongPassword(value) || t("validation.passwordWeak"),
                   })}
                   className={`${inputClass(errors.password)} pe-12`}
                 />
@@ -241,8 +286,8 @@ function SignUp() {
                   placeholder={t("signup.confirmPasswordPlaceholder")}
                   {...register("confirmPassword", {
                     required: t("more.pleaseConfirmYourPassword"),
-                    validate: (value) =>
-                      value === passwordValue || t("validation.passwordsDoNotMatch"),
+                    validate: (value, formValues) =>
+                      value === formValues.password || t("validation.passwordsDoNotMatch"),
                   })}
                   className={`${inputClass(errors.confirmPassword)} pe-12`}
                 />

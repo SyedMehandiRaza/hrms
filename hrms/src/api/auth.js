@@ -17,3 +17,7 @@ export const logout = () => client.post("/auth/logout").then((res) => res.data);
 // { user, account: { id, access_level, panel }, company: { id, name, logo, timezone, currency },
 //   mustChangePassword, permissions: { module: { read, create, update, delete } } }
 export const me = () => client.get("/auth/me").then((res) => res.data.data);
+
+// POST /auth/signup → { accessToken, mustChangePassword, me } (the refresh cookie is set too).
+// Body: { companyName, name, email, phone?, password, confirmPassword }.
+export const signup = (body) => client.post("/auth/signup", body).then((res) => res.data.data);

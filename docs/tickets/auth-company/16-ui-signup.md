@@ -5,7 +5,7 @@ logged in (§4 Sign up, D39 copy change).
 
 **Blocked by:** 14 UI foundation, 06 Sign up
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 Verified by the ui-tester agent:
 

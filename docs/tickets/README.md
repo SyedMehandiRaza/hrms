@@ -31,7 +31,7 @@ Frontier = every ready-for-agent ticket whose blockers are all done.
 |---|---|---|---|
 | 14 | [UI foundation: API client, session, guards, permissions](auth-company/14-ui-foundation.md) | done | 04 |
 | 15 | [Login screen](auth-company/15-ui-login.md) | in-progress | 14, 05 |
-| 16 | [Sign up screen](auth-company/16-ui-signup.md) | ready-for-agent | 14, 06 |
+| 16 | [Sign up screen](auth-company/16-ui-signup.md) | in-progress | 14, 06 |
 | 17 | [Forgot password screen](auth-company/17-ui-forgot-password.md) | ready-for-agent | 14, 07 |
 | 18 | [Verify OTP screen](auth-company/18-ui-verify-otp.md) | ready-for-agent | 17 |
 | 19 | [Reset / Set password screen](auth-company/19-ui-reset-set-password.md) | ready-for-agent | 18, 08 |
