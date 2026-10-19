@@ -63,7 +63,8 @@ Module-specific rules live in `docs/plans/`; terms in `docs/CONTEXT.md`; reasons
 ## 6. Email
 
 - All mail goes through `backend/src/services/mailer` with driver `MAIL_DRIVER`
-  (`console` in dev/test, `smtp` later). Tests read a captured outbox.
+  (`console` in dev, `memory` in tests, `smtp` for real delivery via `SMTP_HOST/PORT/SECURE/USER/PASS`).
+  Tests read a captured outbox. Credentials and passwords are never logged.
 - Language follows `users.lang_key`.
 
 ## 7. Message catalog (exact English text)
