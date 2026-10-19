@@ -9,6 +9,7 @@ import {
 } from "react-icons/md";
 import { toast } from "react-toastify";
 import ConfirmationModal from "../../components/ConfirmationModal";
+import useChangePassword from "../../hooks/useChangePassword";
 import { STAFFING_PROFILE } from "../../data/groupH";
 
 // ── Shared input styles ───────────────────────────────────────────────────────
@@ -30,7 +31,6 @@ export default function StaffingCompanyProfile() {
   const { t } = useTranslation("staffing");
   const loading = false;
   const savingProfile = false;
-  const savingPw = false;
 
   // Profile Form
   const {
@@ -45,11 +45,17 @@ export default function StaffingCompanyProfile() {
     register: regPw,
     handleSubmit: handlePw,
     reset: resetPw,
-    watch: watchPw,
+    setError: setPwError,
     formState: { errors: pwErrors },
-  } = useForm();
+  } = useForm({ defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" } });
 
-  const newPw = watchPw("newPassword", "");
+  // POST /auth/change-password, then the session picker (useChangePassword).
+  const {
+    rules: pwRules,
+    submit: changePassword,
+    saving: savingPw,
+    picker: sessionPicker,
+  } = useChangePassword({ setError: setPwError, successMessage: t("profile.toast.passwordSuccess") });
 
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
@@ -62,9 +68,8 @@ export default function StaffingCompanyProfile() {
     toast.success(t("profile.toast.updateSuccess"));
   };
 
-  const onPasswordUpdate = () => {
-    toast.success(t("profile.toast.passwordSuccess"));
-    resetPw();
+  const onPasswordUpdate = async (data) => {
+    if (await changePassword(data)) resetPw();
   };
 
   if (loading) {
@@ -264,7 +269,7 @@ export default function StaffingCompanyProfile() {
                 </label>
                 <div className="relative">
                   <input
-                    {...regPw("currentPassword", { required: t("profile.validation.required") })}
+                    {...regPw("currentPassword", pwRules.currentPassword)}
                     type={showCurrent ? "text" : "password"}
                     className={inputCls(pwErrors.currentPassword) + " pe-10"}
                   />
@@ -292,14 +297,7 @@ export default function StaffingCompanyProfile() {
                 </label>
                 <div className="relative">
                   <input
-                    {...regPw("newPassword", {
-                      required: t("profile.validation.required"),
-                      minLength: { value: 8, message: t("profile.validation.minPassword") },
-                      pattern: {
-                        value: /^(?=.*[A-Z])(?=.*\d)/,
-                        message: t("profile.validation.passwordPattern"),
-                      },
-                    })}
+                    {...regPw("newPassword", pwRules.newPassword)}
                     type={showNew ? "text" : "password"}
                     className={inputCls(pwErrors.newPassword) + " pe-10"}
                   />
@@ -323,10 +321,7 @@ export default function StaffingCompanyProfile() {
                 </label>
                 <div className="relative">
                   <input
-                    {...regPw("confirmPassword", {
-                      required: t("profile.validation.required"),
-                      validate: (v) => v === newPw || t("profile.validation.passwordMismatch"),
-                    })}
+                    {...regPw("confirmPassword", pwRules.confirmPassword)}
                     type={showConfirm ? "text" : "password"}
                     className={inputCls(pwErrors.confirmPassword) + " pe-10"}
                   />
@@ -381,6 +376,8 @@ export default function StaffingCompanyProfile() {
           isLoading={savingProfile || savingPw}
         />
       )}
+
+      {sessionPicker}
     </div>
   );
 }

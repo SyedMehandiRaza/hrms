@@ -90,5 +90,20 @@
   "toast": {
     "loggedOut": "Logged out successfully"
   },
-  "userProfileAlt": "User Profile"
+  "userProfileAlt": "User Profile",
+  "sessions": {
+    "selectAll": "Select all",
+    "thisDevice": "This device",
+    "lastUsed": "Last used",
+    "keepAll": "Keep all",
+    "endSelected": "End selected sessions",
+    "ending": "Ending sessions...",
+    "toast": {
+      "ended": "Selected sessions have been ended."
+    },
+    "picker": {
+      "title": "Password changed",
+      "subtitle": "You are still logged in on these devices. Choose the sessions to end; this device stays logged in."
+    }
+  }
 }

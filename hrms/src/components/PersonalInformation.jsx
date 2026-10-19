@@ -14,6 +14,7 @@ import { getStaticUser } from "../data/session";
 import { myProfile } from "../data/groupB";
 import CustomDropdown from "./CustomDropdown";
 import ConfirmationModal from "./ConfirmationModal";
+import useChangePassword from "../hooks/useChangePassword";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 // Values are persisted as-is; only the visible labels are translated.
@@ -68,7 +69,6 @@ function PersonalInformation() {
   const loading = false;
   const [savingProfile] = useState(false);
   const [photoBusy] = useState(false);
-  const [savingPw] = useState(false);
 
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
@@ -95,12 +95,18 @@ function PersonalInformation() {
   const {
     register: regPw,
     handleSubmit: handlePw,
-    watch: watchPw,
     reset: resetPw,
+    setError: setPwError,
     formState: { errors: pwErrors },
-  } = useForm();
+  } = useForm({ defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" } });
 
-  const newPw = watchPw("newPassword", "");
+  // POST /auth/change-password, then the session picker (useChangePassword).
+  const {
+    rules: pwRules,
+    submit: changePassword,
+    saving: savingPw,
+    picker: sessionPicker,
+  } = useChangePassword({ setError: setPwError, successMessage: t("personal.toast.passwordChanged") });
 
   // Static build: saves are acknowledged locally (no request is sent).
   const onProfileSave = () => {
@@ -122,9 +128,8 @@ function PersonalInformation() {
     toast.success(t("personal.toast.photoRemoved"));
   };
 
-  const onPasswordUpdate = () => {
-    toast.success(t("personal.toast.passwordChanged"));
-    resetPw();
+  const onPasswordUpdate = async (data) => {
+    if (await changePassword(data)) resetPw();
   };
 
   if (loading) {
@@ -372,7 +377,7 @@ function PersonalInformation() {
             </label>
             <div className="relative">
               <input
-                {...regPw("currentPassword", { required: t("personal.validation.required") })}
+                {...regPw("currentPassword", pwRules.currentPassword)}
                 type={showCurrent ? "text" : "password"}
                 className={inputCls(pwErrors.currentPassword) + " pe-10"}
               />
@@ -400,14 +405,7 @@ function PersonalInformation() {
             </label>
             <div className="relative">
               <input
-                {...regPw("newPassword", {
-                  required: t("personal.validation.required"),
-                  minLength: { value: 8, message: t("personal.validation.passwordMinLength") },
-                  pattern: {
-                    value: /^(?=.*[A-Z])(?=.*\d)/,
-                    message: t("personal.validation.passwordPattern"),
-                  },
-                })}
+                {...regPw("newPassword", pwRules.newPassword)}
                 type={showNew ? "text" : "password"}
                 className={inputCls(pwErrors.newPassword) + " pe-10"}
               />
@@ -431,10 +429,7 @@ function PersonalInformation() {
             </label>
             <div className="relative">
               <input
-                {...regPw("confirmPassword", {
-                  required: t("personal.validation.required"),
-                  validate: (v) => v === newPw || t("personal.validation.passwordsMismatch"),
-                })}
+                {...regPw("confirmPassword", pwRules.confirmPassword)}
                 type={showConfirm ? "text" : "password"}
                 className={inputCls(pwErrors.confirmPassword) + " pe-10"}
               />
@@ -487,6 +482,8 @@ function PersonalInformation() {
           isLoading={savingProfile || photoBusy || savingPw}
         />
       )}
+
+      {sessionPicker}
     </div>
   );
 }

@@ -36,7 +36,7 @@ Frontier = every ready-for-agent ticket whose blockers are all done.
 | 18 | [Verify OTP screen](auth-company/18-ui-verify-otp.md) | done | 17 |
 | 19 | [Reset / Set password screen](auth-company/19-ui-reset-set-password.md) | done | 18, 08 |
 | 20 | [Forced change-password modal](auth-company/20-ui-forced-change-modal.md) | ready-for-agent | 15, 08, 21 |
-| 21 | [Profile → Change password + session picker](auth-company/21-ui-change-password-picker.md) | ready-for-agent | 14, 09 |
+| 21 | [Profile → Change password + session picker](auth-company/21-ui-change-password-picker.md) | in-progress | 14, 09 |
 | 22 | [Active sessions list](auth-company/22-ui-active-sessions.md) | ready-for-agent | 21 |
 | 23 | [Header logout + Access ended](auth-company/23-ui-logout-access-ended.md) | done | 14 |
 | 24 | [Company Profile screen](auth-company/24-ui-company-profile.md) | ready-for-agent | 14, 10 |

@@ -39,3 +39,19 @@ export const resetPassword = ({ resetToken, newPassword, confirmPassword }) =>
 // (logged in: the refresh cookie is set too).
 export const setupPassword = ({ token, newPassword, confirmPassword }) =>
   client.post("/auth/setup-password", { token, newPassword, confirmPassword }).then((res) => res.data.data);
+
+// POST /auth/change-password → { success: true }. Sessions stay; the UI then offers the
+// session picker (D15, D24). Errors: AUTH_CURRENT_PASSWORD_WRONG (errors.currentPassword),
+// AUTH_PASSWORD_SAME (errors.newPassword), 423 AUTH_ACCOUNT_LOCKED (the session was ended).
+export const changePassword = ({ currentPassword, newPassword, confirmPassword }) =>
+  client.post("/auth/change-password", { currentPassword, newPassword, confirmPassword }).then((res) => res.data);
+
+// GET /auth/sessions → [{ id, device, ip, created_at, last_used_at, current }], newest use first.
+export const listSessions = () => client.get("/auth/sessions").then((res) => res.data.data);
+
+// POST /auth/sessions/revoke → { revoked }. Pass { sessionIds: [...] } or { all: true }
+// (every other session); the current session can't be ended here.
+export const revokeSessions = ({ sessionIds, all } = {}) =>
+  client
+    .post("/auth/sessions/revoke", all ? { all: true } : { sessionIds })
+    .then((res) => res.data.data);

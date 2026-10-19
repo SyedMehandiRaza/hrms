@@ -6,7 +6,7 @@ default**, a checkbox per session, "End selected sessions" and "Keep all". Strin
 
 **Blocked by:** 14 UI foundation, 09 Change password and sessions
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 Verified by the ui-tester agent with two browser contexts logged in as the same user:
 
