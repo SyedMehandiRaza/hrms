@@ -6,49 +6,59 @@ import AuthLeft from "../../components/AuthLeft";
 import { useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
+import * as authApi from "../../api/auth";
+import { apiErrorMessage, fieldErrorsOf } from "../../utils/apiError";
+
+// A new code can be requested 60 seconds after the last one (the server's resend gap).
+const RESEND_SECONDS = 60;
+const EMPTY_OTP = ["", "", "", "", "", ""];
+
+// 60 → "01:00", 9 → "00:09".
+const formatTimer = (seconds) =>
+  `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+
+// The server's message for a failed call: the first field message (e.g. the
+// otp's), else the top-level message, else the generic text.
+const errorText = (err) => Object.values(fieldErrorsOf(err).map)[0] || apiErrorMessage(err);
 
 function VerifyOTP() {
   const { t } = useTranslation("auth");
-  const [timer, setTimer] = useState(59);
-  const [canResend, setCanResend] = useState(false);
+  const [timer, setTimer] = useState(RESEND_SECONDS);
   const navigate = useNavigate();
   const location = useLocation();
   const inputRefs = useRef([]);
-  const email = location.state?.email || "ahmed@fyinder.com";
+  // Passed by Forgot Password in the navigation state.
+  const email = location.state?.email || "";
 
-  const loading = false;
+  // In flight: Verify shows "Verifying..."; Resend is disabled.
+  const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
 
   const {
     control,
     handleSubmit,
-    watch,
+    getValues,
     setValue,
     formState: { errors },
   } = useForm({
     defaultValues: {
-      otp: ["", "", "", "", "", ""],
+      otp: EMPTY_OTP,
     },
   });
 
-  const otpValues = watch("otp");
-
-  // Timer effect
+  // Countdown: one tick per second until 0, when Resend unlocks.
+  const canResend = timer === 0;
   useEffect(() => {
-    if (timer > 0 && !canResend) {
-      const interval = setInterval(() => {
-        setTimer((prev) => prev - 1);
-      }, 1000);
-      return () => clearInterval(interval);
-    } else if (timer === 0) {
-      setCanResend(true);
-    }
-  }, [timer, canResend]);
+    if (timer <= 0) return undefined;
+    const tick = setTimeout(() => setTimer((prev) => prev - 1), 1000);
+    return () => clearTimeout(tick);
+  }, [timer]);
 
   // Handle OTP input change
   const handleOTPChange = (index, value) => {
     if (isNaN(value)) return;
 
-    const newOtp = [...otpValues];
+    const newOtp = [...getValues("otp")];
     newOtp[index] = value.slice(-1);
     setValue("otp", newOtp);
 
@@ -60,7 +70,7 @@ function VerifyOTP() {
 
   // Handle backspace
   const handleKeyDown = (index, e) => {
-    if (e.key === "Backspace" && !otpValues[index] && index > 0) {
+    if (e.key === "Backspace" && !getValues("otp")[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
   };
@@ -71,34 +81,57 @@ function VerifyOTP() {
     const pastedData = e.clipboardData.getData("text").slice(0, 6);
     const newOtp = pastedData
       .split("")
-      .concat(otpValues.slice(pastedData.length));
+      .concat(getValues("otp").slice(pastedData.length));
     setValue("otp", newOtp.slice(0, 6));
   };
 
-  const onSubmit = (data) => {
+  // The right code → a reset token, handed to Reset Password in the navigation
+  // state (never in the URL). A wrong/expired code or too many attempts → the
+  // server's message.
+  const onSubmit = async (data) => {
+    if (loading) return;
     if (!email) {
       toast.error(t("more.emailNotFoundPleaseGo"));
       return;
     }
     const otpCode = data.otp.join("");
 
-    if (otpCode.length !== 6) {
+    // Nothing is sent until all 6 digits are there.
+    if (!/^\d{6}$/.test(otpCode)) {
       toast.error(t("more.pleaseEnterCompleteOtp"));
       return;
     }
-    toast.success(t("verify.otpVerifiedRedirecting"));
-    navigate("/reset-password");
+    setLoading(true);
+    try {
+      const { resetToken } = await authApi.verifyOtp({ email, otp: otpCode });
+      toast.success(t("verify.otpVerifiedRedirecting"));
+      navigate("/reset-password", { state: { resetToken } });
+    } catch (err) {
+      toast.error(errorText(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleResendOTP = () => {
+  // Resend = a new forgot-password request for the same email: a new code, the
+  // old one stops working. Too soon → the server's message.
+  const handleResendOTP = async () => {
+    if (resending) return;
     if (!email) {
       toast.error(t("more.emailNotFoundPleaseGo"));
       return;
     }
-    setValue("otp", ["", "", "", "", "", ""]);
-    setTimer(59);
-    setCanResend(false);
-    toast.success(t("more.aNewOtpHasBeen"));
+    setResending(true);
+    try {
+      await authApi.forgotPassword({ email });
+      setValue("otp", EMPTY_OTP);
+      setTimer(RESEND_SECONDS);
+      toast.success(t("more.aNewOtpHasBeen"));
+    } catch (err) {
+      toast.error(errorText(err));
+    } finally {
+      setResending(false);
+    }
   };
 
   return (
@@ -127,21 +160,29 @@ function VerifyOTP() {
               {t("verify.title")}
             </h1>
             <p className="text-gray-600 text-sm">{t("verify.subtitle")}</p>
-            {email && (
+            {email ? (
               <p className="text-gray-500 text-xs mt-2">
                 {t("verify.emailLabel")}{" "}
                 <span className="font-semibold">{email}</span>
               </p>
+            ) : (
+              // Opened without an email (e.g. directly): send them back to Forgot Password.
+              <div className="mt-2">
+                <p className="text-red-500 text-xs">
+                  {t("more.emailNotFoundPleaseGo")}
+                </p>
+                <Link
+                  to="/forgot-password"
+                  className="inline-block mt-1 text-xs font-semibold text-cyan-600 hover:text-cyan-700 transition-colors"
+                >
+                  {t("login.forgotPassword")}
+                </Link>
+              </div>
             )}
           </div>
 
           {/* Form */}
-          <form
-            onSubmit={handleSubmit(onSubmit, (err) =>
-              console.log("Validation errors:", err),
-            )}
-            className="space-y-6"
-          >
+          <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-6">
             {/* OTP Input Fields */}
             <div>
               <div className="flex gap-3 justify-center mb-6">
@@ -150,7 +191,6 @@ function VerifyOTP() {
                     key={index}
                     name={`otp.${index}`}
                     control={control}
-                    rules={{ required: t("more.required") }}
                     render={({ field }) => (
                       <input
                         {...field}
@@ -188,15 +228,15 @@ function VerifyOTP() {
                 <span>
                   {canResend
                     ? t("verify.didntReceive")
-                    : t("verify.resendInTimer", { time: `${String(timer).padStart(2, "0")}:00` })}
+                    : t("verify.resendInTimer", { time: formatTimer(timer) })}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={handleResendOTP}
-                disabled={!canResend}
+                disabled={!canResend || resending}
                 className={`font-semibold transition-colors ${
-                  canResend
+                  canResend && !resending
                     ? "text-cyan-600 hover:text-cyan-700 cursor-pointer"
                     : "text-gray-400 cursor-not-allowed"
                 }`}
@@ -208,7 +248,7 @@ function VerifyOTP() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading || otpValues.some((digit) => !digit)}
+              disabled={loading}
               className="w-full cursor-pointer py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-semibold rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
             >
               {loading ? (

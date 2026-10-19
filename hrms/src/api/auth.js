@@ -26,3 +26,7 @@ export const signup = (body) => client.post("/auth/signup", body).then((res) => 
 // (the same answer whether or not the email is known). Also used to resend a code.
 export const forgotPassword = ({ email }) =>
   client.post("/auth/forgot-password", { email }).then((res) => res.data);
+
+// POST /auth/verify-otp → { resetToken } (single use, 15 minutes).
+export const verifyOtp = ({ email, otp }) =>
+  client.post("/auth/verify-otp", { email, otp }).then((res) => res.data.data);

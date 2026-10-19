@@ -5,7 +5,7 @@ with the reset token (§4 Verify OTP).
 
 **Blocked by:** 17 Forgot password screen
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 Verified by the ui-tester agent:
 
