@@ -1,0 +1,255 @@
+- generic [ref=f133e2]:
+  - generic [ref=f133e3]:
+    - complementary [ref=f133e4]:
+      - generic [ref=f133e5]:
+        - heading "Enterprise HRMS" [level=1] [ref=f133e6]
+        - paragraph [ref=f133e7]: Admin Console
+      - navigation [ref=f133e8]:
+        - link "Dashboard" [ref=f133e9] [cursor=pointer]:
+          - /url: /admin/dashboard
+        - link "Employees" [ref=f133e14] [cursor=pointer]:
+          - /url: /admin/employees
+        - link "Exits" [ref=f133e19] [cursor=pointer]:
+          - /url: /admin/exits
+        - link "Departments" [ref=f133e24] [cursor=pointer]:
+          - /url: /admin/departments
+        - link "Invitations 3" [ref=f133e29] [cursor=pointer]:
+          - /url: /admin/invitations
+          - generic [ref=f133e35]: Invitations
+          - generic [ref=f133e36]: "3"
+        - generic [ref=f133e37]:
+          - button "Attendance Management" [ref=f133e38] [cursor=pointer]
+          - generic:
+            - link "Attendance" [ref=f133e49] [cursor=pointer]:
+              - /url: /admin/attendance
+            - link "Overtime Request" [ref=f133e56] [cursor=pointer]:
+              - /url: /admin/attendance/request
+            - link "Correction Request" [ref=f133e64] [cursor=pointer]:
+              - /url: /admin/attendance/correction-requests
+            - link "Reports" [ref=f133e71] [cursor=pointer]:
+              - /url: /admin/attendance/reports
+        - generic [ref=f133e76]:
+          - button "Payroll Management" [ref=f133e77] [cursor=pointer]
+          - generic:
+            - link "Payroll" [ref=f133e88] [cursor=pointer]:
+              - /url: /admin/payroll-overview
+            - link "Salary Component" [ref=f133e95] [cursor=pointer]:
+              - /url: /admin/salary-component
+            - link "Salary Report" [ref=f133e102] [cursor=pointer]:
+              - /url: /admin/salary-report
+            - link "Approvals" [ref=f133e109] [cursor=pointer]:
+              - /url: /admin/payroll-approvals
+            - link "Transaction" [ref=f133e116] [cursor=pointer]:
+              - /url: /admin/payroll-transactions
+            - link "Staffing Billing" [ref=f133e123] [cursor=pointer]:
+              - /url: /admin/staffing-billing
+            - link "Loan Approvals" [ref=f133e131] [cursor=pointer]:
+              - /url: /admin/loan-approvals
+            - link "Leave Encashment" [ref=f133e138] [cursor=pointer]:
+              - /url: /admin/leave-encashments
+            - link "Salary Increments" [ref=f133e145] [cursor=pointer]:
+              - /url: /admin/salary-increments
+            - link "Annual Reports" [ref=f133e152] [cursor=pointer]:
+              - /url: /admin/annual-reports
+        - generic [ref=f133e158]:
+          - button "Documents Management" [ref=f133e159] [cursor=pointer]
+          - generic:
+            - link "Documents" [ref=f133e170] [cursor=pointer]:
+              - /url: /admin/documents
+            - link "Document Type" [ref=f133e177] [cursor=pointer]:
+              - /url: /admin/document-type
+        - generic [ref=f133e182]:
+          - button "Contract Management" [ref=f133e183] [cursor=pointer]
+          - generic:
+            - link "Contracts" [ref=f133e194] [cursor=pointer]:
+              - /url: /admin/contracts
+            - link "Contract Type" [ref=f133e201] [cursor=pointer]:
+              - /url: /admin/contract-types
+        - generic [ref=f133e206]:
+          - button "Contract Studio" [ref=f133e207] [cursor=pointer]
+          - generic:
+            - link "Dashboard" [ref=f133e218] [cursor=pointer]:
+              - /url: /admin/new-contracts/dashboard
+            - link "Documents" [ref=f133e225] [cursor=pointer]:
+              - /url: /admin/new-contracts/documents
+            - link "Templates" [ref=f133e232] [cursor=pointer]:
+              - /url: /admin/new-contracts/templates
+            - link "Send Contract" [ref=f133e239] [cursor=pointer]:
+              - /url: /admin/new-contracts/create
+            - link "Contracts" [ref=f133e246] [cursor=pointer]:
+              - /url: /admin/new-contracts
+        - link "Holiday Management" [ref=f133e251] [cursor=pointer]:
+          - /url: /admin/holiday-management
+        - link "Leave Management" [ref=f133e256] [cursor=pointer]:
+          - /url: /admin/leave-management
+        - link "Shift Management" [ref=f133e261] [cursor=pointer]:
+          - /url: /admin/shift-management
+        - link "Projects" [ref=f133e267] [cursor=pointer]:
+          - /url: /admin/projects
+        - link "Head Offices" [ref=f133e273] [cursor=pointer]:
+          - /url: /admin/head-offices
+        - link "Staffing Companies" [ref=f133e279] [cursor=pointer]:
+          - /url: /admin/staffing-companies
+        - link "Invoices" [ref=f133e284] [cursor=pointer]:
+          - /url: /admin/invoices
+        - link "Approvals" [ref=f133e290] [cursor=pointer]:
+          - /url: /admin/approvals
+        - link "Visa Management" [ref=f133e295] [cursor=pointer]:
+          - /url: /admin/visa-management
+        - link "Settings" [ref=f133e300] [cursor=pointer]:
+          - /url: /admin/settings
+      - link [ref=f133e306] [cursor=pointer]:
+        - /url: /admin/profile
+        - img "User Avatar" [ref=f133e307]
+        - generic [ref=f133e308]:
+          - paragraph [ref=f133e309]: Ahmed Al Mansoori
+          - paragraph [ref=f133e310]: OWNER
+    - generic [ref=f133e311]:
+      - banner [ref=f133e312]:
+        - generic [ref=f133e313]:
+          - button "AP All Projects" [ref=f133e315] [cursor=pointer]:
+            - generic [ref=f133e316]: AP
+            - generic [ref=f133e317]: All Projects
+          - button "Choose financial year" [ref=f133e324] [cursor=pointer]:
+            - generic [ref=f133e328]: FY 2026
+          - textbox "Search employees, documents..." [ref=f133e337]
+          - generic [ref=f133e338]:
+            - button "Toggle language" [ref=f133e339] [cursor=pointer]: ع
+            - button "Notifications" [ref=f133e341] [cursor=pointer]:
+              - generic [ref=f133e345]: "3"
+            - generic [ref=f133e347] [cursor=pointer]:
+              - generic [ref=f133e348]:
+                - paragraph [ref=f133e349]: HRMS Portal
+                - paragraph [ref=f133e350]: OWNER
+              - img "User Profile" [ref=f133e351]
+      - main [ref=f133e352]:
+        - generic [ref=f133e353]:
+          - generic [ref=f133e354]:
+            - generic [ref=f133e355]:
+              - generic [ref=f133e356]:
+                - link "PROJECTS" [ref=f133e357] [cursor=pointer]:
+                  - /url: /admin/projects
+                - generic [ref=f133e361]: PRJ-001
+              - generic [ref=f133e362]:
+                - heading "Marina Tower Fit-out" [level=1] [ref=f133e363]
+                - generic [ref=f133e364]: Active
+            - generic [ref=f133e366]:
+              - button "Edit Project" [ref=f133e367] [cursor=pointer]
+              - button "Assign Employees" [ref=f133e371] [cursor=pointer]
+          - generic [ref=f133e375]:
+            - img "Project" [ref=f133e377]
+            - generic [ref=f133e378]:
+              - generic [ref=f133e379]:
+                - heading "DESCRIPTION" [level=3] [ref=f133e380]
+                - paragraph [ref=f133e381]: Interior fit-out of floors 12–30 including MEP works and joinery.
+              - generic [ref=f133e382]:
+                - generic [ref=f133e387]:
+                  - paragraph [ref=f133e388]: Target Completion
+                  - paragraph [ref=f133e389]: Dec 2026
+                - generic [ref=f133e395]:
+                  - paragraph [ref=f133e396]: Radius
+                  - paragraph [ref=f133e397]:
+                    - generic [ref=f133e398]: 250m
+                - generic [ref=f133e399]:
+                  - generic [ref=f133e404]:
+                    - paragraph [ref=f133e405]: Offline attendance
+                    - generic [ref=f133e406]: Allowed
+                  - switch "Allow offline attendance for this project" [checked] [ref=f133e408] [cursor=pointer]
+                - generic [ref=f133e415]:
+                  - paragraph [ref=f133e416]: Location
+                  - paragraph [ref=f133e417]: Dubai Marina
+          - generic [ref=f133e418]:
+            - generic [ref=f133e419]:
+              - generic [ref=f133e420]:
+                - heading "Assigned Workforce" [level=3] [ref=f133e421]
+                - paragraph [ref=f133e422]: Total 5 personnel currently active on project site
+              - generic [ref=f133e423]:
+                - textbox "Search employees..." [ref=f133e424]
+                - generic [ref=f133e426]:
+                  - combobox [ref=f133e427]:
+                    - option "Status"
+                    - option "All Status" [selected]
+                    - option "Active"
+                    - option "Inactive"
+                  - button "All Status" [ref=f133e428] [cursor=pointer]
+                  - generic:
+                    - generic:
+                      - button "All Status"
+                      - button "Active"
+                      - button "Inactive"
+                - button "Clear Filters" [ref=f133e433] [cursor=pointer]
+            - table [ref=f133e438]:
+              - rowgroup [ref=f133e439]:
+                - row [ref=f133e440]:
+                  - columnheader "S.N" [ref=f133e441]
+                  - columnheader "Employee Name" [ref=f133e442]
+                  - columnheader "Role" [ref=f133e443]
+                  - columnheader "Type" [ref=f133e444]
+                  - columnheader "Staffing Company" [ref=f133e445]
+                  - columnheader "Status" [ref=f133e446]
+                  - columnheader "Action" [ref=f133e447]
+              - rowgroup [ref=f133e448]:
+                - row [ref=f133e449]:
+                  - cell "1" [ref=f133e450]
+                  - cell "RM Rahul Menon rahul.menon@fyinder.com" [ref=f133e451]:
+                    - generic [ref=f133e452]:
+                      - generic [ref=f133e453]: RM
+                      - generic [ref=f133e454]:
+                        - paragraph [ref=f133e455]: Rahul Menon
+                        - paragraph [ref=f133e456]: rahul.menon@fyinder.com
+                  - cell "Software Engineer" [ref=f133e457]
+                  - cell "FULL-TIME" [ref=f133e458]
+                  - cell "—" [ref=f133e460]
+                  - cell "Active" [ref=f133e461]
+                  - cell [ref=f133e463]:
+                    - button "Remove from project" [ref=f133e464] [cursor=pointer]
+                - row [ref=f133e468]:
+                  - cell "2" [ref=f133e469]
+                  - cell "MS Maria Santos maria.santos@fyinder.com" [ref=f133e470]:
+                    - generic [ref=f133e471]:
+                      - generic [ref=f133e472]: MS
+                      - generic [ref=f133e473]:
+                        - paragraph [ref=f133e474]: Maria Santos
+                        - paragraph [ref=f133e475]: maria.santos@fyinder.com
+                  - cell "Software Engineer" [ref=f133e476]
+                  - cell "FULL-TIME" [ref=f133e477]
+                  - cell "—" [ref=f133e479]
+                  - cell "Active" [ref=f133e480]
+                  - cell [ref=f133e482]:
+                    - button "Remove from project" [ref=f133e483] [cursor=pointer]
+                - row [ref=f133e487]:
+                  - cell "3" [ref=f133e488]
+                  - cell "IS Imran Sheikh imran.sheikh@fyinder.com" [ref=f133e489]:
+                    - generic [ref=f133e490]:
+                      - generic [ref=f133e491]: IS
+                      - generic [ref=f133e492]:
+                        - paragraph [ref=f133e493]: Imran Sheikh
+                        - paragraph [ref=f133e494]: imran.sheikh@fyinder.com
+                  - cell "Technician" [ref=f133e495]
+                  - cell "CONTRACT" [ref=f133e496]
+                  - cell "Gulf Manpower Services" [ref=f133e498]
+                  - cell "Active" [ref=f133e499]
+                  - cell [ref=f133e501]:
+                    - button "Remove from project" [ref=f133e502] [cursor=pointer]
+                - row [ref=f133e506]:
+                  - cell "4" [ref=f133e507]
+                  - cell "JM Joseph Mathew joseph.mathew@fyinder.com" [ref=f133e508]:
+                    - generic [ref=f133e509]:
+                      - generic [ref=f133e510]: JM
+                      - generic [ref=f133e511]:
+                        - paragraph [ref=f133e512]: Joseph Mathew
+                        - paragraph [ref=f133e513]: joseph.mathew@fyinder.com
+                  - cell "Technician" [ref=f133e514]
+                  - cell "CONTRACT" [ref=f133e515]
+                  - cell "Al Sahraa Recruitment" [ref=f133e517]
+                  - cell "Active" [ref=f133e518]
+                  - cell [ref=f133e520]:
+                    - button "Remove from project" [ref=f133e521] [cursor=pointer]
+            - generic [ref=f133e525]:
+              - paragraph [ref=f133e526]: Showing 1 to 4 of 5 employees
+              - generic [ref=f133e527]:
+                - button [disabled] [ref=f133e528]
+                - button "1" [ref=f133e532] [cursor=pointer]
+                - button "2" [ref=f133e533] [cursor=pointer]
+                - button [ref=f133e534] [cursor=pointer]
+  - region "Notifications Alt+T"
