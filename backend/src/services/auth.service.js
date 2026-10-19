@@ -424,4 +424,5 @@ module.exports = {
   isLocked,
   registerFailedPassword,
   clearLockout,
+  BCRYPT_COST,
 };

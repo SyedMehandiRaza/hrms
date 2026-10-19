@@ -3,7 +3,13 @@ const validate = require("../middlewares/validate");
 const requireAuth = require("../middlewares/requireAuth");
 const { authRateLimiter, refreshRateLimiter } = require("../middlewares/rateLimit");
 const { getRateLimitConfig } = require("../config/rateLimit");
-const { loginSchema, signupSchema } = require("../validations/auth.validation");
+const {
+  loginSchema,
+  signupSchema,
+  forgotPasswordSchema,
+  verifyOtpSchema,
+  resetPasswordSchema,
+} = require("../validations/auth.validation");
 const authController = require("../controllers/auth.controller");
 
 // Built by a factory so tests can mount the real routes with small limits.
@@ -15,6 +21,9 @@ const createAuthRouter = (limits = getRateLimitConfig()) => {
   // Public / cookie-based (the refresh cookie is scoped to /api/auth).
   router.post("/login", authRateLimiter(limits), validate(loginSchema), authController.login);
   router.post("/signup", authRateLimiter(limits), validate(signupSchema), authController.signup);
+  router.post("/forgot-password", authRateLimiter(limits), validate(forgotPasswordSchema), authController.forgotPassword);
+  router.post("/verify-otp", authRateLimiter(limits), validate(verifyOtpSchema), authController.verifyOtp);
+  router.post("/reset-password", authRateLimiter(limits), validate(resetPasswordSchema), authController.resetPassword);
   router.post("/refresh", refreshRateLimiter(limits), authController.refresh);
   router.post("/logout", authController.logout);
 

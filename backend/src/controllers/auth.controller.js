@@ -1,4 +1,6 @@
 const authService = require("../services/auth.service");
+const passwordResetService = require("../services/passwordReset.service");
+const { translate } = require("../utils/i18n");
 const { REFRESH_COOKIE, refreshCookieOptions } = require("../config/auth");
 
 const clientInfo = (req) => ({ ip: req.ip, userAgent: req.get("user-agent") });
@@ -45,4 +47,21 @@ const me = async (req, res) => {
   res.json({ success: true, data: await authService.getMe(req.auth) });
 };
 
-module.exports = { login, signup, refresh, logout, me };
+// Always 200 with the neutral AUTH_RESET_SENT message, known email or not (ADR 0001):
+// { success: true, code: "AUTH_RESET_SENT", message }.
+const forgotPassword = async (req, res) => {
+  await passwordResetService.requestReset(req.body);
+  res.json({ success: true, code: "AUTH_RESET_SENT", message: translate("AUTH_RESET_SENT", req.lang) });
+};
+
+// 200 { success: true, data: { resetToken } }.
+const verifyOtp = async (req, res) => {
+  res.json({ success: true, data: await passwordResetService.verifyOtp(req.body) });
+};
+
+const resetPassword = async (req, res) => {
+  await passwordResetService.resetPassword(req.body);
+  res.json({ success: true });
+};
+
+module.exports = { login, signup, refresh, logout, me, forgotPassword, verifyOtp, resetPassword };

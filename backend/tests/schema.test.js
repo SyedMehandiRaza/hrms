@@ -241,3 +241,26 @@ describe("deriveDepartmentCode (backfill for departments without a code)", () =>
     expect(deriveDepartmentCode("  Human Resources  ", [])).toBe("HUMAN RESOURCES");
   });
 });
+
+describe("password_reset_otps: reset token columns (ticket auth-company#07)", () => {
+  it("has a nullable unique reset_token_hash and a nullable reset_token_expires_at", async () => {
+    const cols = await columnsOf("password_reset_otps");
+    expect(cols.reset_token_hash).toMatchObject({ allowNull: true });
+    expect(cols.reset_token_hash.type).toMatch(/^CHAR\(64\)/);
+    expect(cols.reset_token_expires_at).toMatchObject({ allowNull: true });
+    expect(cols.reset_token_expires_at.type).toMatch(/^DATETIME/);
+
+    const indexes = await qi().showIndex("password_reset_otps");
+    const unique = indexes.find((ix) => ix.fields.some((f) => f.attribute === "reset_token_hash"));
+    expect(unique).toMatchObject({ unique: true });
+  });
+
+  it("stores a reset token hash and expiry", async () => {
+    const expires = new Date(Date.UTC(2026, 9, 19, 8, 15, 0));
+    const hash = "a".repeat(64);
+    const row = await build(db, "PasswordResetOtp", { reset_token_hash: hash, reset_token_expires_at: expires });
+    const fresh = await db.PasswordResetOtp.findByPk(row.id);
+    expect(fresh.reset_token_hash).toBe(hash);
+    expect(fresh.reset_token_expires_at.toISOString()).toBe(expires.toISOString());
+  });
+});

@@ -67,4 +67,52 @@ const signupSchema = Joi.object({
     }),
 });
 
-module.exports = { loginSchema, signupSchema, PASSWORD_RULE };
+// POST /auth/forgot-password (standards §7.2 "Forgot": email as Login).
+const forgotPasswordSchema = Joi.object({ email: email() });
+
+// POST /auth/verify-otp: the 6-digit code as a string (standards §7.2 "Verify OTP").
+const verifyOtpSchema = Joi.object({
+  email: email(),
+  otp: Joi.string().trim().pattern(/^\d{6}$/).required().messages({
+    "any.required": "otpIncomplete",
+    "string.empty": "otpIncomplete",
+    "string.base": "otpIncomplete",
+    "string.pattern.base": "otpIncomplete",
+  }),
+});
+
+// Confirmation of a new password: required, then equal to newPassword.
+const confirmNewPassword = () =>
+  Joi.string()
+    .required()
+    .custom((value, helpers) => (value === helpers.state.ancestors[0].newPassword ? value : helpers.error("any.only")))
+    .messages({
+      "any.required": "confirmPasswordRequired",
+      "string.empty": "confirmPasswordRequired",
+      "string.base": "confirmPasswordRequired",
+      "any.only": "AUTH_PASSWORD_MISMATCH",
+    });
+
+// POST /auth/reset-password (standards §7.2 "Reset / Set / Change password"). The reset
+// token has no field on the form: a missing or malformed one is AUTH_RESET_TOKEN_INVALID,
+// answered by the service, so it is let through here.
+const resetPasswordSchema = Joi.object({
+  resetToken: Joi.any(),
+  newPassword: Joi.string().pattern(PASSWORD_RULE).required().messages({
+    "any.required": "passwordRequired",
+    "string.empty": "passwordRequired",
+    "string.base": "passwordRequired",
+    "string.pattern.base": "AUTH_PASSWORD_WEAK",
+  }),
+  confirmPassword: confirmNewPassword(),
+});
+
+module.exports = {
+  loginSchema,
+  signupSchema,
+  forgotPasswordSchema,
+  verifyOtpSchema,
+  resetPasswordSchema,
+  PASSWORD_RULE,
+  email,
+};
