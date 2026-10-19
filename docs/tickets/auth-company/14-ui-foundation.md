@@ -7,7 +7,7 @@ changes.
 
 **Blocked by:** 04 Login, refresh, logout
 
-**Status:** in-progress
+**Status:** done
 
 - [x] Every API call sends the current UI language; switching to Arabic makes server messages Arabic.
 - [x] When the access token expires, the next call refreshes once and retries without the user noticing; if
