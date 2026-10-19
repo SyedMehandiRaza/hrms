@@ -42,4 +42,4 @@ Frontier = every ready-for-agent ticket whose blockers are all done.
 | 24 | [Company Profile screen](auth-company/24-ui-company-profile.md) | in-progress | 14, 10 |
 | 25 | [Financial Year tab: timezone + start month](auth-company/25-ui-financial-year-tab.md) | in-progress | 14, 11 |
 | 26 | [Departments list screen](auth-company/26-ui-departments-list.md) | in-progress | 14, 12 |
-| 27 | [Department detail + designations screen](auth-company/27-ui-department-detail.md) | ready-for-agent | 26, 13 |
+| 27 | [Department detail + designations screen](auth-company/27-ui-department-detail.md) | in-progress | 26, 13 |

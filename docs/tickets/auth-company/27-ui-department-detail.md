@@ -5,7 +5,7 @@ existing modal (D32).
 
 **Blocked by:** 26 Departments list screen, 13 Designations API
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 Verified by the ui-tester agent:
 

@@ -3,8 +3,14 @@ import { FiX, FiLock, FiSave } from "react-icons/fi";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
+import { createDesignation, updateDesignation } from "../api/designations";
+import { applyFieldErrors } from "../utils/applyFieldErrors";
+import { apiErrorCode, apiErrorMessage, toastApiError } from "../utils/apiError";
 
-function DesignationModal({ isOpen, onClose, initialData, mode = "create", departmentName = "Engineering", departmentId, onSaved }) {
+// 409 duplicates belong under the input they are about.
+const CONFLICT_FIELDS = { DESIGNATION_NAME_TAKEN: "name", DESIGNATION_CODE_TAKEN: "code" };
+
+function DesignationModal({ isOpen, onClose, initialData, mode = "create", departmentName = "", departmentId, onSaved }) {
   const { t } = useTranslation("employees");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const {
@@ -12,6 +18,7 @@ function DesignationModal({ isOpen, onClose, initialData, mode = "create", depar
     handleSubmit,
     reset,
     setValue,
+    setError,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -40,25 +47,39 @@ function DesignationModal({ isOpen, onClose, initialData, mode = "create", depar
   if (!isOpen) return null;
 
   const onSubmit = async (data) => {
+    // "" clears the code / description on edit.
     const payload = {
       name: data.name,
-      code: data.code,
-      description: data.description,
+      code: data.code || "",
+      description: data.description || "",
       status: data.isActive ? "ACTIVE" : "INACTIVE",
-      department_id: departmentId ? Number(departmentId) : null,
     };
 
     setIsSubmitting(true);
-    // Static build: the caller merges the saved row into its local list.
-    if (mode === "edit") {
-      toast.success(t("departments.designationModal.toast.updated"));
-      if (onSaved) onSaved({ ...initialData, ...payload, id: initialData.id });
-    } else {
-      toast.success(t("departments.designationModal.toast.created"));
-      if (onSaved) onSaved(payload);
+    try {
+      const saved =
+        mode === "edit"
+          ? await updateDesignation(initialData.id, payload)
+          : await createDesignation(departmentId, payload);
+      toast.success(
+        t(mode === "edit" ? "departments.designationModal.toast.updated" : "departments.designationModal.toast.created"),
+      );
+      if (onSaved) onSaved(saved);
+      onClose();
+    } catch (err) {
+      const conflictField = CONFLICT_FIELDS[apiErrorCode(err)];
+      if (conflictField) {
+        setError(conflictField, { type: "server", message: apiErrorMessage(err) }, { shouldFocus: true });
+      } else {
+        const { mapped, unmapped } = applyFieldErrors(err, setError, {
+          knownFields: ["name", "code", "description"],
+        });
+        if (!mapped.length) toastApiError(err);
+        unmapped.forEach((message) => toast.error(message));
+      }
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
-    onClose();
   };
 
   const isEdit = mode === "edit";
@@ -117,7 +138,7 @@ function DesignationModal({ isOpen, onClose, initialData, mode = "create", depar
 
         {/* Body */}
         <div className="p-6 overflow-y-auto">
-          <form id="designation-form" onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          <form id="designation-form" noValidate onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div>
               <label className="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">
                 {t("departments.detail.table.designationName")} <span className="text-red-500">*</span>

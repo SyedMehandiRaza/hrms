@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import Pagination from "../../components/Pagination";
 import {
   MdOutlineChevronRight,
@@ -15,28 +15,29 @@ import { Link, useParams } from "react-router-dom";
 import DesignationModal from "../../components/DesignationModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import { TableLoader } from "../../components/Loader";
-import { departmentDetailById, DESIGNATION_ROWS } from "../../data/groupC";
-import { nextId, paginate } from "../../data/common";
+import { ScreenError, ScreenLoader } from "../../components/ScreenState";
+import { getDepartment } from "../../api/departments";
+import { listByDepartment, removeDesignation } from "../../api/designations";
+import useApiQuery from "../../hooks/useApiQuery";
+import { useFormat } from "../../hooks/useFormat";
+import { toastApiError } from "../../utils/apiError";
 import { toast } from "react-toastify";
 import CustomDropdown from "../../components/CustomDropdown";
 import { useCan } from "../../hooks/usePermission";
 import { MODULES, ACTIONS } from "../../constants/permissions";
 import { useTranslation } from "react-i18next";
 
+const LIMIT = 10;
+
 function DepartmentDetail() {
   const { t } = useTranslation("employees");
+  const { fmtDate } = useFormat();
   const { id } = useParams();
   const can = useCan();
   const canCreateDesig = can(MODULES.DESIGNATION, ACTIONS.CREATE);
   const canUpdateDesig = can(MODULES.DESIGNATION, ACTIONS.UPDATE);
   const canDeleteDesig = can(MODULES.DESIGNATION, ACTIONS.DELETE);
 
-  const currentDepartment = useMemo(() => departmentDetailById(id), [id]);
-  const desigLoading = false;
-  // Static build: this department's designations live in local state.
-  const [allDesigs, setAllDesigs] = useState(() =>
-    DESIGNATION_ROWS.filter((d) => String(d.department_id) === String(currentDepartment.id)),
-  );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("create");
   const [selectedDesignation, setSelectedDesignation] = useState(null);
@@ -45,16 +46,30 @@ function DepartmentDetail() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
-  const LIMIT = 10;
 
-  // After a designation is created/edited: merge it into the local list.
-  const reloadAfterChange = (saved) => {
-    if (!saved) return;
-    setAllDesigs((prev) =>
-      saved.id && prev.some((d) => d.id === saved.id)
-        ? prev.map((d) => (d.id === saved.id ? { ...d, ...saved } : d))
-        : [{ employee_count: 0, ...saved, id: nextId(DESIGNATION_ROWS.concat(prev)) }, ...prev],
-    );
+  const {
+    data: dept,
+    loading: deptLoading,
+    error: deptError,
+    reload: reloadDept,
+  } = useApiQuery(() => getDepartment(id), [id]);
+
+  const {
+    data: designationList,
+    loading: desigLoading,
+    error: desigError,
+    reload: reloadDesigs,
+  } = useApiQuery(() => listByDepartment(id, { page, limit: LIMIT, status: statusFilter }), [id, page, statusFilter]);
+
+  const desigs = designationList?.items || [];
+  const desigTotal = designationList?.total ?? 0;
+
+  // After a designation is created (newest first → page 1), edited or deleted: fetch the
+  // table and the department's counts again.
+  const reloadAfterChange = () => {
+    if (modalMode === "create" && page !== 1) setPage(1);
+    else reloadDesigs();
+    reloadDept();
   };
 
   const openCreateModal = () => {
@@ -95,13 +110,22 @@ function DepartmentDetail() {
   const confirmDeleteDesignation = async () => {
     if (!desigToDelete) return;
     setIsDeleting(true);
-    setAllDesigs((prev) => prev.filter((d) => d.id !== desigToDelete));
-    toast.success(t("departments.detail.toast.deleted"));
-    // Deleting the last row of a page → step back a page.
-    if (desigs.length === 1 && page > 1) setPage((p) => p - 1);
-    setIsDeleteModalOpen(false);
-    setIsDeleting(false);
-    setDesigToDelete(null);
+    try {
+      await removeDesignation(desigToDelete);
+      toast.success(t("departments.detail.toast.deleted"));
+      // Deleting the last row of a page → step back a page.
+      if (desigs.length === 1 && page > 1) setPage((p) => p - 1);
+      else reloadDesigs();
+      reloadDept();
+    } catch (err) {
+      // e.g. 409 "This designation has employees and can't be deleted."
+      toastApiError(err);
+      reloadDesigs();
+    } finally {
+      setIsDeleteModalOpen(false);
+      setIsDeleting(false);
+      setDesigToDelete(null);
+    }
   };
 
   const closeModal = () => {
@@ -109,30 +133,37 @@ function DepartmentDetail() {
     setSelectedDesignation(null);
   };
 
-  const dept =
-    currentDepartment?.department ||
-    currentDepartment?.data ||
-    currentDepartment ||
-    {};
+  const breadcrumbs = (name) => (
+    <div className="flex items-center gap-1.5 text-sm flex-wrap mb-4">
+      <Link
+        to="/admin/departments"
+        className="text-gray-400 hover:text-cyan-600 transition-colors"
+      >
+        {t("departments.list.title")}
+      </Link>
+      <MdOutlineChevronRight className="text-gray-300 rtl:rotate-180" />
+      <span className="text-cyan-600 font-semibold">{name || " "}</span>
+    </div>
+  );
 
-  const filteredDesigs = allDesigs.filter((d) => !statusFilter || d.status === statusFilter);
-  const pageData = paginate(filteredDesigs, page, LIMIT);
-  const desigs = pageData.rows;
-  const designationList = { total: pageData.total };
+  // The department itself: loading, then the page or the server's message
+  // (e.g. "The requested record was not found.").
+  // A reload after a change keeps the page on screen.
+  if (deptError || !dept || (deptLoading && dept.id !== id)) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-2 bg-gray-50 min-h-screen font-sans">
+        {breadcrumbs("")}
+        <div className="bg-white rounded-lg border border-gray-200">
+          {deptError ? <ScreenError error={deptError} onRetry={reloadDept} /> : <ScreenLoader />}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-2 bg-gray-50 min-h-screen font-sans">
       {/* Breadcrumbs */}
-      <div className="flex items-center gap-1.5 text-sm flex-wrap mb-4">
-        <Link
-          to="/admin/departments"
-          className="text-gray-400 hover:text-cyan-600 transition-colors"
-        >
-          {t("departments.list.title")}
-        </Link>
-        <MdOutlineChevronRight className="text-gray-300 rtl:rotate-180" />
-        <span className="text-cyan-600 font-semibold">{dept.name || " "}</span>
-      </div>
+      {breadcrumbs(dept.name)}
 
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -146,15 +177,15 @@ function DepartmentDetail() {
           </p>
         </div>
         <div className="flex items-center gap-3 w-full md:w-auto">
-          <button
-            onClick={openCreateModal}
-            disabled={!canCreateDesig}
-            title={canCreateDesig ? "" : t("departments.detail.noCreatePermission")}
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-[#17A2B8] text-white rounded-md font-medium hover:bg-[#138496] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#17A2B8]"
-          >
-            <MdOutlineAdd />
-            {t("departments.detail.addDesignation")}
-          </button>
+          {canCreateDesig && (
+            <button
+              onClick={openCreateModal}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-[#17A2B8] text-white rounded-md font-medium hover:bg-[#138496] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#17A2B8]"
+            >
+              <MdOutlineAdd />
+              {t("departments.detail.addDesignation")}
+            </button>
+          )}
         </div>
       </div>
 
@@ -197,18 +228,15 @@ function DepartmentDetail() {
               </p>
               <div className="flex items-center gap-2">
                 <img
-                  src={
-                    dept?.deptHead?.profile_url ||
-                    `https://ui-avatars.com/api/?name=${encodeURIComponent(dept?.deptHead?.full_name || dept.deptHead || "NA")}&background=F3F4F6&color=6B7280`
-                  }
-                  alt={dept?.deptHead?.full_name || t("departments.list.headAlt")}
+                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(dept.head_name || "NA")}&background=F3F4F6&color=6B7280`}
+                  alt={dept.head_name || t("departments.list.headAlt")}
                   className="w-6 h-6 rounded-full object-cover bg-gray-200"
                   onError={(e) => {
                     e.target.src = "https://i.pravatar.cc/150?u=static";
                   }}
                 />
                 <span className="text-sm font-semibold text-[#17A2B8]">
-                  {dept?.deptHead?.full_name || dept.deptHead || t("departments.list.notAssigned")}
+                  {dept.head_name || t("departments.list.notAssigned")}
                 </span>
               </div>
             </div>
@@ -218,7 +246,7 @@ function DepartmentDetail() {
               </p>
               <p className="text-sm font-semibold text-gray-900">
                 {dept.created_at
-                  ? new Date(dept.created_at).toLocaleDateString("en-US", {
+                  ? fmtDate(dept.created_at, {
                       year: "numeric",
                       month: "long",
                       day: "numeric",
@@ -238,7 +266,7 @@ function DepartmentDetail() {
             {t("departments.detail.totalEmployees")}
           </p>
           <h3 className="text-4xl font-bold text-gray-800">
-            {dept.employee_count ?? 0}
+            {dept.total_employees ?? 0}
           </h3>
         </div>
 
@@ -251,10 +279,7 @@ function DepartmentDetail() {
             {t("departments.list.table.designations")}
           </p>
           <h3 className="text-4xl font-bold text-gray-800">
-            {designationList?.data?.total ||
-              designationList?.total ||
-              desigs.length ||
-              0}
+            {dept.designation_count ?? 0}
           </h3>
         </div>
       </div>
@@ -319,6 +344,12 @@ function DepartmentDetail() {
             <tbody className="divide-y divide-gray-100">
               {desigLoading ? (
                 <TableLoader colSpan={5} />
+              ) : desigError ? (
+                <tr>
+                  <td colSpan={5}>
+                    <ScreenError error={desigError} onRetry={reloadDesigs} />
+                  </td>
+                </tr>
               ) : desigs.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="py-4 text-center text-gray-500">
@@ -360,22 +391,24 @@ function DepartmentDetail() {
                         >
                           <MdOutlineRemoveRedEye className="text-lg" />
                         </button>
-                        <button
-                          onClick={() => openEditModal(desig)}
-                          disabled={!canUpdateDesig}
-                          title={canUpdateDesig ? t("departments.actions.edit") : t("departments.actions.noEditPermission")}
-                          className="hover:text-blue-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-gray-400"
-                        >
-                          <MdOutlineEdit className="text-lg" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteDesignation(desig.id)}
-                          disabled={!canDeleteDesig}
-                          title={canDeleteDesig ? t("departments.actions.delete") : t("departments.actions.noDeletePermission")}
-                          className="hover:text-red-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-gray-400"
-                        >
-                          <MdOutlineDelete className="text-lg" />
-                        </button>
+                        {canUpdateDesig && (
+                          <button
+                            onClick={() => openEditModal(desig)}
+                            title={t("departments.actions.edit")}
+                            className="hover:text-blue-500 transition-colors"
+                          >
+                            <MdOutlineEdit className="text-lg" />
+                          </button>
+                        )}
+                        {canDeleteDesig && (
+                          <button
+                            onClick={() => handleDeleteDesignation(desig.id)}
+                            title={t("departments.actions.delete")}
+                            className="hover:text-red-500 transition-colors"
+                          >
+                            <MdOutlineDelete className="text-lg" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -388,18 +421,8 @@ function DepartmentDetail() {
         {/* Pagination */}
         <Pagination
           page={page}
-          totalPages={
-            Math.ceil(
-              (designationList?.data?.total ||
-                designationList?.total ||
-                desigs.length) / LIMIT,
-            ) || 1
-          }
-          total={
-            designationList?.data?.total ||
-            designationList?.total ||
-            desigs.length
-          }
+          totalPages={Math.max(1, Math.ceil(desigTotal / LIMIT))}
+          total={desigTotal}
           limit={LIMIT}
           onPage={setPage}
           label={t("departments.detail.paginationLabel")}
