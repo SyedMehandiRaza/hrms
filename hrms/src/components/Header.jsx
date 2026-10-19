@@ -364,7 +364,7 @@ const Header = () => {
                 {/* Name/role — Hidden on small screens */}
                 <div className="text-end hidden lg:block">
                   <p className="text-xs sm:text-sm font-semibold text-gray-900 whitespace-nowrap">
-                    {t("header.portalName")}
+                    {user?.company_name || t("header.portalName")}
                   </p>
                   <p className="text-xs text-gray-500">
                     {capitalizeFirstLetter(user?.role?.name || user?.role || "")}
@@ -372,8 +372,8 @@ const Header = () => {
                 </div>
 
                 <img
-                  src="https://ui-avatars.com/api/?name=User+Profile&background=0066cc&color=fff&size=40"
-                  alt="User Profile"
+                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || "User Profile")}&background=0066cc&color=fff&size=40`}
+                  alt={user?.name || "User Profile"}
                   className="w-7 h-7 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded border-2 border-blue-200 hover:border-blue-400 transition-colors flex-shrink-0"
                 />
               </div>
