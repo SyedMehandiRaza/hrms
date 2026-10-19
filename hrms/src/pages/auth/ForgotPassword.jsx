@@ -6,31 +6,44 @@ import { BsGlobe } from "react-icons/bs";
 import AuthLeft from "../../components/AuthLeft";
 import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
+import * as authApi from "../../api/auth";
+import { apiErrorMessage } from "../../utils/apiError";
+import { applyFieldErrors } from "../../utils/applyFieldErrors";
 
 function ForgotPassword() {
   const { t } = useTranslation("auth");
   const [success] = useState(false);
   const navigate = useNavigate();
-  const loading = false;
+  // In flight: the button is disabled and shows "Sending OTP...".
+  const [loading, setLoading] = useState(false);
 
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors },
-    watch,
   } = useForm({
     defaultValues: {
       email: "",
     },
   });
 
-  const emailValue = watch("email");
-
-  const onSubmit = (data) => {
-    toast.success(
-      "OTP sent successfully. Redirecting to verification page...",
-    );
-    navigate("/verify-otp", { state: { email: data.email } });
+  // The server answers the same for known and unknown emails (AUTH_RESET_SENT):
+  // show its message and go on to Verify OTP with the email. Too soon
+  // (AUTH_OTP_RESEND_TOO_SOON) or any other error → its message, stay here.
+  const onSubmit = async ({ email }) => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const res = await authApi.forgotPassword({ email });
+      toast.success(res.message);
+      navigate("/verify-otp", { state: { email } });
+    } catch (err) {
+      const { mapped } = applyFieldErrors(err, setError, { knownFields: ["email"] });
+      if (mapped.length === 0) toast.error(apiErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -72,7 +85,7 @@ function ForgotPassword() {
 
           {/* Form */}
           {!success ? (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-6">
               {/* Email Input */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -84,6 +97,8 @@ function ForgotPassword() {
                     type="email"
                     placeholder={t("forgot.emailPlaceholder")}
                     {...register("email", {
+                      // The server trims the email too.
+                      setValueAs: (v) => (typeof v === "string" ? v.trim() : v),
                       required: t("more.emailIsRequired"),
                       pattern: {
                         value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
@@ -107,7 +122,7 @@ function ForgotPassword() {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={loading || !emailValue}
+                disabled={loading}
                 className="w-full py-3 bg-gradient-to-r cursor-pointer from-cyan-500 to-cyan-600 text-white font-semibold rounded-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
               >
                 {loading ? (

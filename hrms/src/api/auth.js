@@ -21,3 +21,8 @@ export const me = () => client.get("/auth/me").then((res) => res.data.data);
 // POST /auth/signup → { accessToken, mustChangePassword, me } (the refresh cookie is set too).
 // Body: { companyName, name, email, phone?, password, confirmPassword }.
 export const signup = (body) => client.post("/auth/signup", body).then((res) => res.data.data);
+
+// POST /auth/forgot-password → the whole body { success, code: "AUTH_RESET_SENT", message }
+// (the same answer whether or not the email is known). Also used to resend a code.
+export const forgotPassword = ({ email }) =>
+  client.post("/auth/forgot-password", { email }).then((res) => res.data);

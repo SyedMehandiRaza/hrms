@@ -4,7 +4,7 @@
 
 **Blocked by:** 14 UI foundation, 07 Forgot password, verify code, reset
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 Verified by the ui-tester agent:
 
