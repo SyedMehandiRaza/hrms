@@ -7,6 +7,8 @@ const uploadImage = require("../middlewares/uploadImage");
 const { ACCESS_LEVELS } = require("../constants/accessLevels");
 const { projectSchema, statusSchema, listProjectsSchema, officeOptionsSchema } = require("../validations/project.validation");
 const projectController = require("../controllers/project.controller");
+const assignmentController = require("../controllers/projectAssignment.controller");
+const { assignSchema, workforceSchema, assignableSchema } = require("../validations/projectAssignment.validation");
 
 // /projects (workforce D7–D16, ADR 0010): ADMIN, or a role with the matching project flag.
 // Staffing-company logins never (workforce D57), whatever their role allows.
@@ -25,5 +27,11 @@ router.put("/:id", ...can("update"), validate(projectSchema), projectController.
 router.patch("/:id/status", ...can("update"), validate(statusSchema), projectController.changeStatus);
 router.put("/:id/image", ...can("update"), uploadImage("image", "PROJECT_IMAGE_INVALID"), projectController.uploadImage);
 router.delete("/:id/image", ...can("update"), projectController.deleteImage);
+
+// Workforce (D13–D15): list it, offer who can be added, assign as a secondary project, remove.
+router.get("/:id/employees", ...can("read"), validate(workforceSchema, "query"), assignmentController.listWorkforce);
+router.get("/:id/assignable-employees", ...can("update"), validate(assignableSchema, "query"), assignmentController.listAssignable);
+router.post("/:id/employees", ...can("update"), validate(assignSchema), assignmentController.assignEmployees);
+router.delete("/:id/employees/:employeeId", ...can("update"), assignmentController.removeEmployee);
 
 module.exports = router;
