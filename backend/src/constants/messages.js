@@ -208,6 +208,119 @@ const MESSAGES = Object.freeze({
     en: "This designation has employees and can't be deleted.",
     ar: "لا يمكن حذف هذا المسمى الوظيفي لأنه مرتبط بموظفين.", // AR: needs native review
   },
+
+  // ---------- Contract Studio (standards §7.3) ----------
+  // {{placeholders}} are filled from `new ErrorHandler(code, { params })`.
+  CONTRACT_TYPE_NAME_TAKEN: {
+    status: 409,
+    en: "A contract type with this name already exists.",
+    ar: "يوجد نوع عقد بهذا الاسم بالفعل.", // AR: needs native review
+  },
+  CONTRACT_TYPE_CODE_TAKEN: {
+    status: 409,
+    en: "A contract type with this code already exists.",
+    ar: "يوجد نوع عقد بهذا الرمز بالفعل.", // AR: needs native review
+  },
+  CONTRACT_TYPE_IN_USE: {
+    status: 409,
+    en: "This contract type is in use and can't be deleted. Deactivate it instead.",
+    ar: "نوع العقد هذا مستخدم ولا يمكن حذفه. قم بإلغاء تفعيله بدلًا من ذلك.", // AR: needs native review
+  },
+  CONTRACT_DOCUMENT_INVALID: {
+    status: 400,
+    en: "Upload a PDF file up to 20 MB and 50 pages.",
+    ar: "ارفع ملف PDF بحجم أقصاه 20 ميجابايت و50 صفحة.", // AR: needs native review
+  },
+  CONTRACT_UPLOAD_LIMIT: {
+    status: 400,
+    en: "You can upload at most 10 files at a time.",
+    ar: "يمكنك رفع 10 ملفات كحد أقصى في المرة الواحدة.", // AR: needs native review
+  },
+  CONTRACT_DOCUMENT_IN_USE: {
+    status: 409,
+    en: "This document is used by a template or contract and can't be deleted. Archive it instead.",
+    ar: "هذا المستند مستخدم في قالب أو عقد ولا يمكن حذفه. قم بأرشفته بدلًا من ذلك.", // AR: needs native review
+  },
+  CONTRACT_DOCUMENT_ARCHIVED: {
+    status: 409,
+    en: "This document is archived and can't be used for templates.",
+    ar: "هذا المستند مؤرشف ولا يمكن استخدامه في القوالب.", // AR: needs native review
+  },
+  CONTRACT_TEMPLATE_IN_USE: {
+    status: 409,
+    en: "This template is used by contracts and can't be deleted. Archive it instead.",
+    ar: "هذا القالب مستخدم في عقود ولا يمكن حذفه. قم بأرشفته بدلًا من ذلك.", // AR: needs native review
+  },
+  CONTRACT_TEMPLATE_INACTIVE: {
+    status: 409,
+    en: "This template is archived. Choose an active template.",
+    ar: "هذا القالب مؤرشف. اختر قالبًا نشطًا.", // AR: needs native review
+  },
+  CONTRACT_AUDIENCE_UNSUPPORTED: {
+    status: 400,
+    en: "Only Employee and Staffing Company contracts are available right now.",
+    ar: "تتوفر حاليًا عقود الموظفين وشركات التوظيف فقط.", // AR: needs native review
+  },
+  CONTRACT_BULK_LIMIT: {
+    status: 400,
+    en: "You can send to at most 200 recipients at a time.",
+    ar: "يمكنك الإرسال إلى 200 مستلم كحد أقصى في المرة الواحدة.", // AR: needs native review
+  },
+  CONTRACT_FIELD_MISSING: {
+    status: 400,
+    en: "Some contract values are missing: {{fields}}.",
+    ar: "بعض قيم العقد مفقودة: {{fields}}.", // AR: needs native review
+  },
+  CONTRACT_NO_OPEN_FY: {
+    status: 409,
+    en: "There's no open financial year for today. Open one before sending contracts.",
+    ar: "لا توجد سنة مالية مفتوحة لتاريخ اليوم. افتح سنة مالية قبل إرسال العقود.", // AR: needs native review
+  },
+  CONTRACT_ACTIVE_EXISTS: {
+    status: 409,
+    en: "This recipient already has an active contract of this type ({{number}}). Revoke it or wait for it to finish.",
+    ar: "لدى هذا المستلم عقد نشط من هذا النوع بالفعل ({{number}}). قم بإلغائه أو انتظر حتى ينتهي.", // AR: needs native review
+  },
+  CONTRACT_RECIPIENT_INACTIVE: {
+    status: 409,
+    en: "This recipient is no longer active.",
+    ar: "لم يعد هذا المستلم نشطًا.", // AR: needs native review
+  },
+  CONTRACT_STATUS_INVALID: {
+    status: 409,
+    en: "This contract can no longer be changed.",
+    ar: "لم يعد من الممكن تغيير هذا العقد.", // AR: needs native review
+  },
+  CONTRACT_ALREADY_SIGNED: {
+    status: 409,
+    en: "You have already signed this contract.",
+    ar: "لقد وقّعت هذا العقد بالفعل.", // AR: needs native review
+  },
+  CONTRACT_EXPIRED: {
+    status: 409,
+    en: "This contract has expired. Contact HR for a new one.",
+    ar: "انتهت صلاحية هذا العقد. تواصل مع الموارد البشرية للحصول على عقد جديد.", // AR: needs native review
+  },
+  CONTRACT_REVOKED: {
+    status: 409,
+    en: "This contract was withdrawn by HR.",
+    ar: "سحبت الموارد البشرية هذا العقد.", // AR: needs native review
+  },
+  CONTRACT_CONSENT_REQUIRED: {
+    status: 400,
+    en: "Please confirm that you agree to sign electronically.",
+    ar: "يرجى تأكيد موافقتك على التوقيع إلكترونيًا.", // AR: needs native review
+  },
+  CONTRACT_SELF_APPROVAL: {
+    status: 403,
+    en: "You can't approve a contract you signed yourself.",
+    ar: "لا يمكنك اعتماد عقد قمت بتوقيعه بنفسك.", // AR: needs native review
+  },
+  PAYLOAD_TOO_LARGE: {
+    status: 413,
+    en: "The request is too large.",
+    ar: "الطلب كبير جدًا.", // AR: needs native review
+  },
 });
 
 // Field message key → { en, ar } for the `errors` map (standards §7.2).
@@ -303,6 +416,144 @@ const FIELD_MESSAGES = Object.freeze({
   designationCodeNoEmoji: {
     en: "Designation Code cannot contain emojis",
     ar: "لا يمكن أن يحتوي رمز المسمى الوظيفي على رموز تعبيرية",
+  },
+
+  // ---------- Contract Studio (standards §7.3) ----------
+  // Contract type
+  contractTypeNameRequired: { en: "Contract Type Name is required", ar: "اسم نوع العقد مطلوب" },
+  contractTypeNameMax: { en: "Name cannot exceed 150 characters", ar: "يجب ألا يتجاوز الاسم 150 حرفًا" },
+  noEmojis: { en: "Emojis are not allowed", ar: "لا يُسمح باستخدام الرموز التعبيرية" },
+  codeRequired: { en: "Code is required", ar: "الرمز مطلوب" },
+  codeMin: { en: "Code must be at least 2 characters", ar: "يجب ألا يقل الرمز عن حرفين" },
+  codeMax100: { en: "Code cannot exceed 100 characters", ar: "يجب ألا يتجاوز الرمز 100 حرف" },
+  descriptionMax500: { en: "Description cannot exceed 500 characters", ar: "يجب ألا يتجاوز الوصف 500 حرف" },
+
+  // Document rename
+  documentNameRequired: {
+    en: "Document name is required",
+    ar: "اسم المستند مطلوب", // AR: needs native review
+  },
+  documentNameMax: {
+    en: "Document name cannot exceed 255 characters",
+    ar: "لا يمكن أن يتجاوز اسم المستند 255 حرفًا", // AR: needs native review
+  },
+
+  // Template
+  templateNameRequired: { en: "Give the template a name.", ar: "أدخل اسمًا للقالب." },
+  templateNameMax: {
+    en: "Template name cannot exceed 255 characters",
+    ar: "لا يمكن أن يتجاوز اسم القالب 255 حرفًا", // AR: needs native review
+  },
+  templateDocumentRequired: { en: "Select a source document first.", ar: "اختر مستندًا مصدرًا أولًا." },
+  templateFieldsRequired: { en: "Add at least one field or column.", ar: "أضف حقلًا أو عمودًا واحدًا على الأقل." },
+  templateSignatureRequired: {
+    en: "Add at least one signature field.",
+    ar: "أضف حقل توقيع واحدًا على الأقل.", // AR: needs native review
+  },
+  templateFieldOutsidePage: {
+    en: "Fields must sit inside the page.",
+    ar: "يجب أن تكون الحقول داخل الصفحة.", // AR: needs native review
+  },
+  templateSignatureLimit: {
+    en: "A template can have at most 20 signature and initials fields",
+    ar: "يمكن أن يحتوي القالب على 20 حقلًا للتوقيع والأحرف الأولى كحد أقصى", // AR: needs native review
+  },
+  templateFieldLimit: {
+    en: "A template can have at most 200 fields",
+    ar: "يمكن أن يحتوي القالب على 200 حقل كحد أقصى", // AR: needs native review
+  },
+  templateLabelMax: {
+    en: "Label cannot exceed 160 characters",
+    ar: "لا يمكن أن يتجاوز العنوان 160 حرفًا", // AR: needs native review
+  },
+  contractTypeRequired: {
+    en: "Choose a contract type",
+    ar: "اختر نوع العقد", // AR: needs native review
+  },
+  mergeFieldUnknown: {
+    en: "Unknown merge field",
+    ar: "حقل دمج غير معروف", // AR: needs native review
+  },
+
+  // Draft / send
+  contractTemplateRequired: { en: "Pick a template to continue.", ar: "اختر قالبًا للمتابعة." },
+  contractRecipientsRequired: { en: "Select at least one recipient.", ar: "حدِّد مستلمًا واحدًا على الأقل." },
+  contractNameMax: {
+    en: "Contract name cannot exceed 255 characters",
+    ar: "لا يمكن أن يتجاوز اسم العقد 255 حرفًا", // AR: needs native review
+  },
+  startDateRequired: { en: "Start date is required", ar: "تاريخ البدء مطلوب" },
+  dateInvalid: { en: "Enter a valid date (YYYY-MM-DD)", ar: "أدخل تاريخًا صالحًا (YYYY-MM-DD)" },
+  endDateBeforeStart: {
+    en: "End date must be on or after the start date",
+    ar: "يجب أن يكون تاريخ الانتهاء في تاريخ البدء أو بعده",
+  },
+  endDatePast: {
+    en: "End date can't be in the past",
+    ar: "لا يمكن أن يكون تاريخ الانتهاء في الماضي", // AR: needs native review
+  },
+  renewalDueRange: {
+    en: "Renewal due must be between the start and end dates",
+    ar: "يجب أن يكون موعد التجديد بين تاريخي البدء والانتهاء", // AR: needs native review
+  },
+  signByRange: {
+    en: "Sign-by date must be between tomorrow and 90 days from today",
+    ar: "يجب أن يكون تاريخ آخر موعد للتوقيع بين الغد و90 يومًا من اليوم", // AR: needs native review
+  },
+  rateInvalid: {
+    en: "Rate must be a positive amount with up to 2 decimals",
+    ar: "يجب أن يكون السعر مبلغًا موجبًا بخانتين عشريتين كحد أقصى", // AR: needs native review
+  },
+  rateUnitRequired: {
+    en: "Choose how the rate is paid",
+    ar: "اختر طريقة دفع السعر", // AR: needs native review
+  },
+  currencyInvalid: {
+    en: "Choose a valid currency",
+    ar: "اختر عملة صالحة", // AR: needs native review
+  },
+  noticePeriodRange: {
+    en: "Notice period must be 0–365 days",
+    ar: "يجب أن تكون فترة الإشعار من 0 إلى 365 يومًا", // AR: needs native review
+  },
+
+  // Sign (submit)
+  fieldRequired: {
+    en: "This field is required",
+    ar: "هذا الحقل مطلوب", // AR: needs native review
+  },
+  inputMax500: {
+    en: "This field cannot exceed 500 characters",
+    ar: "لا يمكن أن يتجاوز هذا الحقل 500 حرف", // AR: needs native review
+  },
+  signatureLength: {
+    en: "Signature must be 2–100 characters",
+    ar: "يجب أن يتكون التوقيع من 2 إلى 100 حرف", // AR: needs native review
+  },
+  initialsLength: {
+    en: "Initials must be 1–10 characters",
+    ar: "يجب أن تتكون الأحرف الأولى من 1 إلى 10 أحرف", // AR: needs native review
+  },
+  signatureImageInvalid: {
+    en: "Signature image is invalid or too large",
+    ar: "صورة التوقيع غير صالحة أو كبيرة جدًا", // AR: needs native review
+  },
+
+  // Reject / Revoke
+  contractReasonRequired: { en: "Reason is required", ar: "السبب مطلوب" },
+  contractReasonMin: {
+    en: "Reason must be at least 10 characters",
+    ar: "يجب ألا يقل السبب عن 10 أحرف", // AR: needs native review
+  },
+  contractReasonMax: {
+    en: "Reason cannot exceed 500 characters",
+    ar: "لا يمكن أن يتجاوز السبب 500 حرف", // AR: needs native review
+  },
+
+  // Stored auto-revoke reason (shown in the activity log).
+  recipientNoLongerActive: {
+    en: "Recipient is no longer active.",
+    ar: "لم يعد المستلم نشطًا.", // AR: needs native review
   },
 });
 

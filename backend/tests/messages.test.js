@@ -6,7 +6,8 @@ const { resolveLang, translate } = require("../src/utils/i18n");
 
 // The catalog must match docs/standards.md §7 word for word, so the doc is the
 // single source of truth and this test catches any drift.
-const standards = fs.readFileSync(path.resolve(__dirname, "../../docs/standards.md"), "utf8");
+// Line endings normalised: the checkout may use CRLF (core.autocrlf).
+const standards = fs.readFileSync(path.resolve(__dirname, "../../docs/standards.md"), "utf8").replace(/\r\n/g, "\n");
 
 const section = (startHeading, endPattern) => {
   const start = standards.indexOf(startHeading);
@@ -15,7 +16,9 @@ const section = (startHeading, endPattern) => {
   return end === -1 ? rest : rest.slice(0, end);
 };
 
-const docCodes = section("### 7.1", /^### /m)
+// §7.1 (shared codes) and §7.3 (Contract Studio codes).
+const docCodes = [section("### 7.1", /^### /m), section("### 7.3", /^##? /m)]
+  .join("\n")
   .split("\n")
   .map((line) => line.match(/^\| `([A-Z_]+)` \| (\d{3}) \| (.+) \|$/))
   .filter(Boolean)
@@ -46,12 +49,12 @@ const uiArabicFor = (english) =>
     .map((key) => uiAr[key])
     .filter(Boolean);
 
-describe("message catalog (standards §7.1)", () => {
+describe("message catalog (standards §7.1 and §7.3)", () => {
   it("parses the standards table (sanity check)", () => {
     expect(docCodes.length).toBeGreaterThanOrEqual(40);
   });
 
-  it("has exactly the codes listed in standards §7.1", () => {
+  it("has exactly the codes listed in standards §7.1 and §7.3", () => {
     expect(Object.keys(MESSAGES).sort()).toEqual(docCodes.map((c) => c.code).sort());
   });
 

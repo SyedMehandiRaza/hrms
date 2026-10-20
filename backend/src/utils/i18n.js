@@ -11,12 +11,16 @@ const resolveLang = (header) =>
     ? "ar"
     : "en";
 
+// Replaces {{name}} with params.name; placeholders without a value stay as they are.
+const fill = (text, params) =>
+  params ? text.replace(/\{\{(\w+)\}\}/g, (match, name) => (params[name] === undefined ? match : String(params[name]))) : text;
+
 // Translates an error code or a field message key. Unknown keys come back
 // unchanged, so a raw text (e.g. Joi's default message) still reaches the client.
-const translate = (key, lang = "en") => {
+const translate = (key, lang = "en", params) => {
   const entry = MESSAGES[key] || FIELD_MESSAGES[key];
   if (!entry) return key;
-  return entry[LANGS.includes(lang) ? lang : "en"];
+  return fill(entry[LANGS.includes(lang) ? lang : "en"], params);
 };
 
-module.exports = { resolveLang, translate };
+module.exports = { resolveLang, translate, fill };
