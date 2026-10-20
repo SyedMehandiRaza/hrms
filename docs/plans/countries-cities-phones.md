@@ -56,7 +56,7 @@ Builds on Auth + Company (done) and changes some Workforce tickets (§7).
 17. Valid = a valid number (mobile **or** fixed line, confirmed) for that country — office and company phones are
     often landlines. Otherwise the field error
     "Enter a valid phone number for the selected country." This **replaces** the "6–15 digits" rule everywhere.
-18. Uniqueness checks (employee phone per company, `users.phone_number` globally) compare E.164 values, so
+18. Uniqueness checks (employee phone per company; `users.phone_number` is no longer globally unique, workforce D46) compare E.164 values, so
     `0501234567` and `+966501234567` are the same number.
 19. Responses return `phone` (E.164) and `phoneCountry` (iso2). The UI shows the number in national format with the
     code from the country.

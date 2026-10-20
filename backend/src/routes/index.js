@@ -13,6 +13,7 @@ const salaryComponentRoutes = require("./salaryComponent.routes");
 const approvalGroupRoutes = require("./approvalGroup.routes");
 const approvalRoutes = require("./approval.routes");
 const employeeDraftRoutes = require("./employeeDraft.routes");
+const employeeRoutes = require("./employee.routes");
 const { roleRouter, staffingCompanyRouter } = require("./lookup.routes");
 const { designationRouter, departmentDesignationsRouter } = require("./designation.routes");
 
@@ -31,6 +32,7 @@ router.use("/salary-components", salaryComponentRoutes);
 router.use("/approval-groups", approvalGroupRoutes);
 router.use("/approvals", approvalRoutes);
 router.use("/employee-drafts", employeeDraftRoutes);
+router.use("/employees", employeeRoutes);
 router.use("/roles", roleRouter);
 router.use("/staffing-companies", staffingCompanyRouter);
 router.use("/departments/:id/designations", departmentDesignationsRouter);

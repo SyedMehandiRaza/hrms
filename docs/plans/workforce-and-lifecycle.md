@@ -162,7 +162,9 @@ Out of scope: salary calculation, payroll runs, attendance screens, employee doc
     uppercased, unique per company (`EMPLOYEE_ID_NUMBER_TAKEN`).
 46. Email required: one current account per email (ADR 2) → `ACCOUNT_EMAIL_IN_OTHER_COMPANY` or
     `EMPLOYEE_EMAIL_TAKEN`. Phone required, unique per company (`EMPLOYEE_PHONE_TAKEN`). The step-1 duplicate check
-    uses the same rules (`GET /employees/check-unique`).
+    uses the same rules (`GET /employees/check-unique`). Decided 2026-10-21: the phone is unique **per company only**;
+    the global unique index on `users.phone_number` is dropped (migration `20261021600009`), so two companies may
+    have employees with the same number.
 47. Every employee gets a login: temporary password + setup link (ADR 3). If the person already has a password
     (ADR 2), just a welcome email. Resend from Employee Detail (`employee:update`).
 48. Access level: EMPLOYEE | GENERAL_EMPLOYEE | SUB_ADMIN. ADMIN → `ACCOUNT_ADMIN_EXISTS`; STAFFING_COMPANY (or any
