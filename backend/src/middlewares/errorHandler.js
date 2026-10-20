@@ -22,6 +22,10 @@ const errorHandler = (err, req, res, next) => {
     return send(400, "INVALID_JSON");
   }
 
+  if (err.type === "entity.too.large") {
+    return send(413, "PAYLOAD_TOO_LARGE");
+  }
+
   console.error(err);
   return send(500, "INTERNAL_ERROR");
 };

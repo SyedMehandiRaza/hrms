@@ -12,5 +12,7 @@ router.get("/", requireAuth, validate(myContractsListSchema, "query"), contractS
 router.get("/:id", requireAuth, contractSignerController.getMine);
 router.get("/:id/document", requireAuth, contractSignerController.myDocument);
 router.get("/:id/pdf", requireAuth, contractSignerController.myPdf);
+// Body checks run in the service, after the state checks (decision 37).
+router.post("/:id/submit", requireAuth, contractSignerController.submitContract);
 
 module.exports = router;

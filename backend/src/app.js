@@ -13,11 +13,25 @@ const { getUploadRoot } = require("./services/storage.service");
 
 const app = express();
 
+// Behind a reverse proxy, TRUST_PROXY (hop count, "true", or proxy addresses) makes req.ip
+// the client's address: signing evidence and rate limits need it (plan decision 32).
+const trustProxy = (value) => {
+  if (/^\d+$/.test(value)) return Number(value);
+  if (value === "true" || value === "false") return value === "true";
+  return value;
+};
+if (process.env.TRUST_PROXY) app.set("trust proxy", trustProxy(process.env.TRUST_PROXY));
+
 app.use(language);
 app.use(helmet());
 // The UI sends the refresh cookie, so CORS must allow credentials for its origin.
 app.use(cors({ origin: getCorsOrigin(), credentials: true }));
-app.use(express.json({ limit: "1mb" }));
+// JSON bodies up to 1 MB, except a contract submit with drawn signatures: up to 15 MB
+// (plan decision 29). Larger → 413 PAYLOAD_TOO_LARGE.
+const jsonDefault = express.json({ limit: "1mb" });
+const jsonSubmit = express.json({ limit: "15mb" });
+const LARGE_BODY_ROUTE = /^\/api\/my\/contracts\/[^/]+\/submit\/?$/;
+app.use((req, res, next) => (LARGE_BODY_ROUTE.test(req.path) ? jsonSubmit : jsonDefault)(req, res, next));
 app.use(cookieParser());
 if (process.env.NODE_ENV !== "test") {
   app.use(morgan("dev"));

@@ -68,7 +68,7 @@ workforce branch (`hrms-project-moduleA`) being merged into main (plan section 7
 | 23 | [Contracts list, detail, stats and preview](contract-studio/23-contracts-list-detail-preview.md) | done | 07, 11, 22 |
 | 08 | [Send contracts (single and bulk)](contract-studio/08-send-api.md) | done | 07, 22 |
 | 09 | [Signer inbox API](contract-studio/09-signer-inbox-api.md) | done | 08, 11 |
-| 10 | [Sign (submit)](contract-studio/10-sign-api.md) | ready-for-agent | 09 |
+| 10 | [Sign (submit)](contract-studio/10-sign-api.md) | done | 09 |
 | 24 | [Reject](contract-studio/24-reject-api.md) | ready-for-agent | 09 |
 | 11 | [PDF rendering service](contract-studio/11-pdf-rendering.md) | done | 01 |
 | 12 | [Approve and revoke](contract-studio/12-approve-revoke-api.md) | ready-for-agent | 10, 11 |
