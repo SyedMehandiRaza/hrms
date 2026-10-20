@@ -160,7 +160,7 @@ describe("GET /api/employees/:id", () => {
       ["HOUSING", "FIXED", 1250],
       ["TRANSPORT", "FIXED", 500],
     ]);
-    expect(d.approval_group).toEqual({ id: group.id, name: "Site approvals", code: "SITE" });
+    expect(d.approval_group).toEqual({ id: group.id, name: "Site approvals", code: "SITE", project_mismatch: false });
   });
 
   it("no approval group → approval_group null; names in Arabic with Accept-Language: ar", async () => {

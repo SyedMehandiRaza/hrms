@@ -182,4 +182,14 @@ const editEmployeeSchema = createEmployeeSchema.keys({
   draft_id: ignored,
 });
 
-module.exports = { editEmployeeSchema, listEmployeesSchema, bulkStatusSchema, createEmployeeSchema, checkUniqueSchema, ACCESS_LEVELS, SALARY_MODES };
+// PUT /employees/:id/main-project { projectId, effectiveFrom? } (D55).
+const mainProjectSchema = Joi.object({
+  projectId: Joi.string().trim().required().messages(required("mainProjectRequired")),
+  effectiveFrom: Joi.string()
+    .trim()
+    .empty(["", null])
+    .custom((value, helpers) => (isRealDate(value) ? value : helpers.error("date.invalid")))
+    .messages({ "string.base": "mainProjectEffectiveInvalid", "date.invalid": "mainProjectEffectiveInvalid" }),
+});
+
+module.exports = { mainProjectSchema, editEmployeeSchema, listEmployeesSchema, bulkStatusSchema, createEmployeeSchema, checkUniqueSchema, ACCESS_LEVELS, SALARY_MODES };

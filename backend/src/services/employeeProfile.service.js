@@ -230,9 +230,16 @@ const getEmployee = async (auth, id, lang, { afterEdit = false } = {}) => {
   });
   const routing = await EmployeeApprovalRouting.findOne({
     where: { employee_id: employee.id, module_key: "ALL" },
-    include: [{ model: ApprovalGroup, as: "approvalGroup", attributes: ["id", "group_name", "group_code"] }],
+    include: [{ model: ApprovalGroup, as: "approvalGroup", attributes: ["id", "group_name", "group_code", "scope", "project_id"] }],
   });
   const place = (row, key) => (row ? { id: row.id, name: localName(row, lang, key) } : null);
+  const projects = await projectsOf(employee);
+  const main = projects.current.find((p) => p.is_main);
+  const group = routing && routing.approvalGroup;
+  // A PROJECT group stays after a main project change and is flagged when it no longer matches (D55).
+  const approvalGroup = group
+    ? { id: group.id, name: group.group_name, code: group.group_code, project_mismatch: group.scope === "PROJECT" && (!main || group.project_id !== main.id) }
+    : null;
   return {
     overview: {
       id: employee.id,
@@ -262,11 +269,11 @@ const getEmployee = async (auth, id, lang, { afterEdit = false } = {}) => {
       staffing_company: ref(employee.staffingCompany),
       overtime_rate: num(employee.overtime_rate),
     },
-    projects: await projectsOf(employee),
+    projects,
     shift: ref(employee.shift),
     leave_policies: await leavePoliciesOf(employee),
     salary: await salaryOf(employee),
-    approval_group: routing && routing.approvalGroup ? { id: routing.approvalGroup.id, name: routing.approvalGroup.group_name, code: routing.approvalGroup.group_code } : null,
+    approval_group: approvalGroup,
   };
 };
 

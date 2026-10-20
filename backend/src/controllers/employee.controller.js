@@ -1,5 +1,6 @@
 const employeeService = require("../services/employee.service");
 const employeeProfileService = require("../services/employeeProfile.service");
+const employeeMainProjectService = require("../services/employeeMainProject.service");
 
 const createEmployee = async (req, res) => {
   res.status(201).json({ success: true, data: await employeeService.createEmployee(req.auth, req.body) });
@@ -11,6 +12,11 @@ const checkUnique = async (req, res) => {
 
 const updateEmployee = async (req, res) => {
   const id = await employeeService.updateEmployee(req.auth, req.params.id, req.body);
+  res.json({ success: true, data: await employeeProfileService.getEmployee(req.auth, id, req.lang, { afterEdit: true }) });
+};
+
+const changeMainProject = async (req, res) => {
+  const id = await employeeMainProjectService.changeMainProject(req.auth, req.params.id, req.body);
   res.json({ success: true, data: await employeeProfileService.getEmployee(req.auth, id, req.lang, { afterEdit: true }) });
 };
 
@@ -30,4 +36,4 @@ const resendLogin = async (req, res) => {
   res.json({ success: true, data: await employeeProfileService.resendLogin(req.auth, req.params.id) });
 };
 
-module.exports = { createEmployee, updateEmployee, checkUnique, listEmployees, getEmployee, bulkStatus, resendLogin };
+module.exports = { createEmployee, updateEmployee, changeMainProject, checkUnique, listEmployees, getEmployee, bulkStatus, resendLogin };
