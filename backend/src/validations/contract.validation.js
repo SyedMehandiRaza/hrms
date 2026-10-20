@@ -186,8 +186,19 @@ const createContractsSchema = Joi.object({
 // PUT /contracts/:id (drafts): name and terms only; template/recipient keys are stripped.
 const editDraftSchema = Joi.object(termFields);
 
+// GET /contracts?status=&audience=&type=&q=&page=&limit=
+const CONTRACT_STATUSES = ["DRAFT", "SENT", "VIEWED", "SUBMITTED", "COMPLETED", "REJECTED", "EXPIRED", "REVOKED"];
+const listContractsSchema = Joi.object({
+  ...pagination,
+  q: search,
+  status: Joi.string().valid(...CONTRACT_STATUSES).allow("").default("").messages({ "string.base": INVALID, "any.only": INVALID }),
+  audience: Joi.string().valid("EMPLOYEE", "STAFFING_COMPANY").allow("").default("").messages({ "string.base": INVALID, "any.only": INVALID }),
+  type: optionalId,
+});
+
 module.exports = {
   createContractsSchema,
+  listContractsSchema,
   editDraftSchema,
   RATE_UNITS,
   recipientLookupSchema,

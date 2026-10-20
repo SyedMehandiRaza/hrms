@@ -51,6 +51,15 @@ const setupCompany = async (name) => {
   return { ...company, document, type, staffType, template, staffingTemplate, fy, year, token: await h.ownerToken(company) };
 };
 
+// Gives a document the real sample PDF in private storage (CONTRACT_STORAGE_DIR must be set).
+const SAMPLE_PDF = require("fs").readFileSync(require("path").resolve(__dirname, "../../seed-assets/contracts/sample-contract.pdf"));
+const attachSampleFile = async (document) => {
+  const { saveNew } = require("../../src/services/contractFiles.service");
+  const stored = await saveNew(document.employer_id, "documents", "pdf", SAMPLE_PDF);
+  await document.update({ file_path: stored.path, file_sha256: stored.sha256, file_size_bytes: SAMPLE_PDF.length });
+  return document;
+};
+
 const terms = (overrides = {}) => ({ start_date: today(), sign_by: inDays(7), ...overrides });
 
 const createContracts = (token, body, opts) => h.api.post("/contracts", token, body, opts);
@@ -58,4 +67,4 @@ const createContracts = (token, body, opts) => h.api.post("/contracts", token, b
 const draftsFor = (ctx, recipientIds, overrides = {}, token) =>
   createContracts(token === undefined ? ctx.token : token, { mode: "DRAFT", templateId: ctx.template.id, recipientIds, ...terms(), ...overrides });
 
-module.exports = { TZ, today, inDays, sig, mergeField, makeTemplate, setupCompany, terms, createContracts, draftsFor };
+module.exports = { TZ, today, inDays, sig, mergeField, makeTemplate, setupCompany, terms, createContracts, draftsFor, attachSampleFile, SAMPLE_PDF };

@@ -1,5 +1,7 @@
 const contractService = require("../services/contract.service");
 const contractSendService = require("../services/contractSend.service");
+const contractQueryService = require("../services/contractQuery.service");
+const { sendPdf } = require("../services/contractFiles.service");
 
 // POST /contracts: drafts, or drafts sent one by one in SEND mode (decision 25).
 const createContracts = async (req, res) => {
@@ -23,4 +25,21 @@ const sendDraft = async (req, res) => {
   res.json({ success: true, data: await contractSendService.sendDraft(req.auth, req.params.id) });
 };
 
-module.exports = { createContracts, editDraft, deleteDraft, sendDraft };
+const listContracts = async (req, res) => {
+  res.json({ success: true, data: await contractQueryService.listContracts(req.auth, req.query) });
+};
+
+const contractStats = async (req, res) => {
+  res.json({ success: true, data: await contractQueryService.contractStats(req.auth) });
+};
+
+const getContract = async (req, res) => {
+  res.json({ success: true, data: await contractQueryService.getContract(req.auth, req.params.id) });
+};
+
+const contractPdf = async (req, res) => {
+  const { bytes, fileName } = await contractQueryService.hrContractPdf(req.auth, req.params.id);
+  sendPdf(res, bytes, { fileName, inline: false });
+};
+
+module.exports = { createContracts, editDraft, deleteDraft, sendDraft, listContracts, contractStats, getContract, contractPdf };
