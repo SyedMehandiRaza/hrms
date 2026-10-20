@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
@@ -21,73 +21,198 @@ import {
   MdKeyboardArrowDown,
   MdOutlineTune,
   MdOutlineWidgets,
+  MdOutlineCalendarToday,
+  MdOutlineShortText,
 } from "react-icons/md";
-import { NC_MERGE_FIELDS } from "./newContractData";
-import { useNcDocuments, ncStore } from "./newContractStore";
+import {
+  listContractDocuments,
+  listContractTypes,
+  listMergeFields,
+  getContractTemplate,
+  createContractTemplate,
+  updateContractTemplate,
+  contractDocumentFile,
+} from "../../api/contracts";
+import useApiQuery from "../../hooks/useApiQuery";
+import { toastApiError } from "../../utils/apiError";
+import { serverErrors } from "../../utils/applyFieldErrors";
+import { ScreenError, ScreenLoader } from "../../components/ScreenState";
 import SignaturePadModal from "./SignaturePadModal";
 import PdfCanvas from "./PdfCanvas";
 
-// Only two record types for now — data-driven, so more can be added later.
-const BUILDER_AUDIENCES = [
-  { id: "employee", label: "Employee", labelKey: "audiences.employee", icon: MdOutlinePerson },
-  { id: "staffing", label: "Staffing Company", labelKey: "audiences.staffing", icon: MdOutlineBusiness },
-  { id: "collaborator", label: "Collaborating Company", labelKey: "audiences.collaborator", icon: MdOutlineBusiness },
-];
+// Template builder (plan decisions 9–16): a saved PDF + placed fields + a contract type.
+// Positions are page-relative boxes (x, y, width, height as decimals, origin top-left);
+// on screen a field's x is its left edge and y its vertical centre, in percent.
 
-// LEFT-side drag tools (exactly the three from the plan).
+// Two record types for now; the third is shown as "Coming soon" (decision 2).
+const BUILDER_AUDIENCES = [
+  { id: "employee", api: "EMPLOYEE", labelKey: "audiences.employee", icon: MdOutlinePerson },
+  { id: "staffing", api: "STAFFING_COMPANY", labelKey: "audiences.staffing", icon: MdOutlineBusiness },
+  { id: "collaborator", api: null, labelKey: "audiences.collaborator", icon: MdOutlineBusiness, comingSoon: true },
+];
+const AUDIENCE_BY_API = { EMPLOYEE: "employee", STAFFING_COMPANY: "staffing" };
+
+// LEFT-side drag tools (Date and Initials are real field types, decision 45).
 const ELEMENTS = [
   { id: "input", labelKey: "builder.elements.input.label", icon: MdOutlineTextFields, hintKey: "builder.elements.input.hint" },
   { id: "checkbox", labelKey: "builder.elements.checkbox.label", icon: MdOutlineCheckBox, hintKey: "builder.elements.checkbox.hint" },
+  { id: "date", labelKey: "builder.elements.date.label", icon: MdOutlineCalendarToday, hintKey: "builder.elements.date.hint" },
+  { id: "initials", labelKey: "builder.elements.initials.label", icon: MdOutlineShortText, hintKey: "builder.elements.initials.hint" },
   { id: "signature", labelKey: "builder.elements.signature.label", icon: MdOutlineDraw, hintKey: "builder.elements.signature.hint" },
 ];
 
 const ELEM_ICON = {
   input: MdOutlineTextFields,
   checkbox: MdOutlineCheckBox,
+  date: MdOutlineCalendarToday,
+  initials: MdOutlineShortText,
   signature: MdOutlineDraw,
   db: MdOutlineDataObject,
 };
 
+// UI type ⇄ API field_type, and each type's default box (fractions of the page).
+const API_TYPE = { input: "INPUT", checkbox: "CHECKBOX", date: "DATE", initials: "INITIALS", signature: "SIGNATURE", db: "DB_COLUMN" };
+const UI_TYPE = Object.fromEntries(Object.entries(API_TYPE).map(([k, v]) => [v, k]));
+const BOX = {
+  input: { w: 0.3, h: 0.03 },
+  db: { w: 0.3, h: 0.03 },
+  checkbox: { w: 0.03, h: 0.02 },
+  date: { w: 0.2, h: 0.03 },
+  initials: { w: 0.1, h: 0.04 },
+  signature: { w: 0.3, h: 0.06 },
+};
+const DEFAULT_LABEL = { input: "Input", checkbox: "Checkbox", date: "Date", initials: "Initials", signature: "Signature" };
+
+// Keep the whole box on the page: x ∈ [0, 100 − w], y (centre) ∈ [h/2, 100 − h/2], in percent.
+const clampX = (x, w) => Math.min(100 - w * 100, Math.max(0, x));
+const clampY = (y, h) => Math.min(100 - h * 50, Math.max(h * 50, y));
+const floor3 = (v) => Math.floor(v * 1000) / 1000;
+
 let seq = 1;
 const newId = () => `fld_${seq++}_${Math.floor(Math.random() * 1e4)}`;
 
+// API template field → builder field.
+const fromApi = (f) => {
+  const type = UI_TYPE[f.field_type] || "input";
+  const w = f.width ?? BOX[type].w;
+  const h = f.height ?? BOX[type].h;
+  return {
+    id: f.id || newId(),
+    page: f.page_no,
+    type,
+    x: f.pos_x * 100,
+    y: (f.pos_y + h / 2) * 100,
+    w,
+    h,
+    required: f.is_required,
+    label: f.label || "",
+    token: f.db_column || undefined,
+    source: f.db_source || undefined,
+    fieldKey: f.field_key || "",
+    checkedValue: f.checked_value || "",
+  };
+};
+
+// Builder field → API template field.
+const toApi = (f) => ({
+  field_type: API_TYPE[f.type],
+  page_no: f.page,
+  pos_x: floor3(Math.min(f.x / 100, 1 - f.w)),
+  pos_y: floor3(Math.max(0, Math.min(f.y / 100 - f.h / 2, 1 - f.h))),
+  width: f.w,
+  height: f.h,
+  label: f.label || "",
+  is_required: !!f.required,
+  ...(f.type === "db" ? { db_source: f.source, db_column: f.token } : {}),
+  ...(f.type === "input" ? { field_key: f.fieldKey || "" } : {}),
+  ...(f.type === "checkbox" ? { checked_value: f.checkedValue || "" } : {}),
+});
+
+const MB = 1024 * 1024;
+
+// Loads the documents, types and (when editing) the template, then renders the builder
+// with its starting state.
 export default function NewTemplateBuilder() {
+  const [params] = useSearchParams();
+  const editingId = params.get("id");
+  const presetDocId = params.get("doc");
+
+  const docsQuery = useApiQuery(() => listContractDocuments({ limit: 100, status: "SAVED" }), []);
+  const typesQuery = useApiQuery(() => listContractTypes({ limit: 100, status: "ACTIVE" }), []);
+  const templateQuery = useApiQuery(() => (editingId ? getContractTemplate(editingId) : Promise.resolve(null)), [editingId]);
+
+  const loadError = docsQuery.error || typesQuery.error || templateQuery.error;
+  if (loadError) {
+    return (
+      <ScreenError
+        error={loadError}
+        onRetry={() => {
+          docsQuery.reload();
+          typesQuery.reload();
+          templateQuery.reload();
+        }}
+      />
+    );
+  }
+  if (!docsQuery.data || !typesQuery.data || (editingId && !templateQuery.data)) return <ScreenLoader />;
+
+  const documents = docsQuery.data.items;
+  let initial = { name: "", docId: null, docName: null, pages: 3, contractTypeId: "", audience: "employee", fields: [] };
+  if (editingId) {
+    const tpl = templateQuery.data;
+    initial = {
+      name: tpl.name,
+      docId: tpl.document?.id || null,
+      docName: tpl.document?.name || null,
+      pages: tpl.document?.page_count || tpl.page_count || 1,
+      contractTypeId: tpl.contract_type?.id || "",
+      audience: AUDIENCE_BY_API[tpl.audience_type] || "employee",
+      fields: (tpl.fields || []).map(fromApi),
+    };
+  } else if (presetDocId) {
+    const doc = documents.find((d) => d.id === presetDocId);
+    if (doc) initial = { ...initial, docId: doc.id, docName: doc.name, pages: doc.page_count || 1, name: `${doc.name} Template` };
+  }
+  return <TemplateBuilder key={editingId || presetDocId || "new"} editingId={editingId} initial={initial} documents={documents} types={typesQuery.data.items} />;
+}
+
+// The private PDF is fetched with the session and shown through a blob URL.
+function DocPreview({ docId, page, onLoaded }) {
+  const [url, setUrl] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    let objectUrl = null;
+    contractDocumentFile(docId)
+      .then((blob) => {
+        if (!alive) return;
+        objectUrl = URL.createObjectURL(blob);
+        setUrl(objectUrl);
+      })
+      .catch((err) => alive && toastApiError(err));
+    return () => {
+      alive = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [docId]);
+  if (!url) return null;
+  return <PdfCanvas src={url} page={page} onLoaded={onLoaded} className="absolute inset-0 w-full h-full pointer-events-none" />;
+}
+
+function TemplateBuilder({ editingId, initial, documents, types }) {
   const { t } = useTranslation("contractStudio");
   const navigate = useNavigate();
-  const documents = useNcDocuments();
-  const [params] = useSearchParams();
 
-  // ── init from ?id (edit) or ?doc (new from a saved document) ──
-  const editingId = params.get("id");
-  const initial = useMemo(() => {
-    if (editingId) {
-      const t = ncStore.getTemplate(editingId);
-      if (t) return t;
-    }
-    const docId = params.get("doc");
-    const doc = docId ? ncStore.getDocument(docId) : null;
-    return {
-      id: null,
-      name: doc ? `${doc.name.replace(/\.[^.]+$/, "")} Template` : "",
-      docId: doc?.id || null,
-      docName: doc?.name || null,
-      audience: "employee",
-      pages: doc?.pages || 3,
-      fields: [],
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const serverId = initial.serverId || null;
   const [name, setName] = useState(initial.name);
   const [docId, setDocId] = useState(initial.docId);
   const [docName, setDocName] = useState(initial.docName);
+  const [contractTypeId, setContractTypeId] = useState(initial.contractTypeId);
   const [audience, setAudience] = useState(initial.audience);
   const [audienceOpen, setAudienceOpen] = useState(false);
   const [pages, setPages] = useState(initial.pages);
   const [fields, setFields] = useState(initial.fields);
   const [activePage, setActivePage] = useState(1);
   const [pageAspect, setPageAspect] = useState(1 / 1.3); // real ratio once the PDF loads
+  const [saving, setSaving] = useState(false);
 
   const [colQuery, setColQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
@@ -98,48 +223,45 @@ export default function NewTemplateBuilder() {
   const dragRef = useRef(null);
   const dndPayload = useRef(null);
 
-  const columns = NC_MERGE_FIELDS[audience] || [];
-  const pageFields = fields.filter((f) => f.page === activePage);
-  const selected = fields.find((f) => f.id === selectedId);
   const audMeta = BUILDER_AUDIENCES.find((a) => a.id === audience);
   const audLabel = audMeta ? t(audMeta.labelKey) : undefined;
-
-  // the actual selected document (for a real preview instead of the mock)
-  const selectedDoc = documents.find((d) => d.id === docId);
-  const previewUrl = selectedDoc?.fileUrl || null;
-  const previewIsPdf = previewUrl && (selectedDoc?.ext || "pdf").toLowerCase() === "pdf";
+  const catalogue = useApiQuery(() => (audMeta?.api ? listMergeFields(audMeta.api) : Promise.resolve([])), [audMeta?.api]);
+  // The audience's own group, then the Contract group (decision 11).
+  const columns = (catalogue.data || []).flatMap((g) => g.fields.map((f) => ({ ...f, source: g.source, group: g.group })));
+  const pageFields = fields.filter((f) => f.page === activePage);
+  const selected = fields.find((f) => f.id === selectedId);
 
   // ── pick a source document (stage A) ──
   const chooseDoc = (d) => {
     setDocId(d.id);
     setDocName(d.name);
-    setPages(d.pages || 3);
-    if (!name) setName(`${d.name.replace(/\.[^.]+$/, "")} Template`);
+    setPages(d.page_count || 1);
+    setActivePage(1);
+    if (!name) setName(`${d.name} Template`);
   };
 
   // ── build a field object from a drag payload ──
   const makeField = (payload, x, y) => {
+    const box = BOX[payload.type];
     const base = {
       id: newId(),
       page: activePage,
       type: payload.type,
-      x: Math.min(94, Math.max(2, x)),
-      y: Math.min(96, Math.max(2, y)),
+      x: clampX(x, box.w),
+      y: clampY(y, box.h),
+      w: box.w,
+      h: box.h,
       required: true,
     };
     if (payload.type === "db") {
       // A record column dropped onto a blank (e.g. Full Name, Email).
       base.token = payload.token;
+      base.source = payload.source;
       base.label = payload.label;
-    } else if (payload.type === "input") {
-      base.label = "Input";
-      base.fieldKey = ""; // the "name of that input" — configured on the right
-      base.placeholder = "";
-    } else if (payload.type === "checkbox") {
-      base.label = "Checkbox";
-      base.checkedValue = "Yes"; // "value associated with that checkbox"
-    } else if (payload.type === "signature") {
-      base.label = "Signature";
+    } else {
+      base.label = DEFAULT_LABEL[payload.type];
+      if (payload.type === "input") base.fieldKey = ""; // the "name of that input" — configured on the right
+      if (payload.type === "checkbox") base.checkedValue = "Yes"; // "value associated with that checkbox"
     }
     return base;
   };
@@ -173,11 +295,7 @@ export default function NewTemplateBuilder() {
       const rect = canvasRef.current.getBoundingClientRect();
       const x = ((ev.clientX - rect.left) / rect.width) * 100;
       const y = ((ev.clientY - rect.top) / rect.height) * 100;
-      setFields((prev) =>
-        prev.map((p) =>
-          p.id === dragRef.current ? { ...p, x: Math.min(94, Math.max(2, x)), y: Math.min(96, Math.max(2, y)) } : p
-        )
-      );
+      setFields((prev) => prev.map((p) => (p.id === dragRef.current ? { ...p, x: clampX(x, p.w), y: clampY(y, p.h) } : p)));
     };
     const up = () => {
       dragRef.current = null;
@@ -194,21 +312,39 @@ export default function NewTemplateBuilder() {
     if (selectedId === id) setSelectedId(null);
   };
 
-  // ── save ──
+  // ── save (decision 12): the same rules as the API, which checks them again ──
   const handleSave = async () => {
+    if (saving) return;
     if (!name.trim()) return toast.error(t("builder.toast.nameRequired"));
     if (!docId) return toast.error(t("builder.toast.docRequired"));
     if (fields.length === 0) return toast.error(t("builder.toast.fieldRequired"));
-    const record = { name: name.trim(), docId, docName, audience, pages, fields };
-    const id = initial.id || editingId;
-    if (id && ncStore.getTemplate(id)) ncStore.updateTemplate(id, record);
-    else ncStore.addTemplate(record);
-    toast.success(serverId || initial.id ? t("builder.toast.updated") : t("builder.toast.saved"));
-    navigate("/admin/new-contracts/templates");
+    if (!fields.some((f) => f.type === "signature" && f.required)) return toast.error(t("builder.toast.signatureRequired"));
+    if (!contractTypeId) return toast.error(t("builder.toast.typeRequired"));
+    const body = {
+      name: name.trim(),
+      audienceType: audMeta?.api,
+      documentId: docId,
+      contractTypeId,
+      fields: fields.map(toApi),
+    };
+    setSaving(true);
+    try {
+      if (editingId) await updateContractTemplate(editingId, body);
+      else await createContractTemplate(body);
+      toast.success(editingId ? t("builder.toast.updated") : t("builder.toast.saved"));
+      navigate("/admin/new-contracts/templates");
+    } catch (err) {
+      const messages = [...new Set(serverErrors(err).map((e) => e.message))];
+      if (messages.length) messages.forEach((m) => toast.error(m));
+      else toastApiError(err);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const changeAudience = (id) => {
-    setAudience(id);
+  const changeAudience = (a) => {
+    if (a.comingSoon) return;
+    setAudience(a.id);
     setAudienceOpen(false);
   };
 
@@ -222,7 +358,7 @@ export default function NewTemplateBuilder() {
               {t("builder.breadcrumb.templates")}
             </Link>
             <MdOutlineChevronRight className="text-gray-300" />
-            <span className="text-cyan-600 font-semibold">{initial.id ? t("builder.breadcrumb.editTemplate") : t("builder.breadcrumb.configureDocument")}</span>
+            <span className="text-cyan-600 font-semibold">{editingId ? t("builder.breadcrumb.editTemplate") : t("builder.breadcrumb.configureDocument")}</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">{name.trim() || t("builder.untitled")}</h1>
         </div>
@@ -236,7 +372,8 @@ export default function NewTemplateBuilder() {
           {docId && (
             <button
               onClick={handleSave}
-              className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#20B2AA] to-cyan-500 hover:from-[#1C9D96] hover:to-cyan-600 rounded-lg shadow-sm shadow-cyan-200 transition-all"
+              disabled={saving}
+              className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#20B2AA] to-cyan-500 hover:from-[#1C9D96] hover:to-cyan-600 rounded-lg shadow-sm shadow-cyan-200 transition-all disabled:opacity-60"
             >
               <MdOutlineSave className="text-lg" /> {t("builder.save")}
             </button>
@@ -273,16 +410,12 @@ export default function NewTemplateBuilder() {
                 >
                   <div className="h-24 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-100 flex items-center justify-center mb-3 relative">
                     <MdOutlineInsertDriveFile className="text-3xl text-gray-300" />
-                    <span
-                      className={`absolute top-2 left-2 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
-                        d.ext === "pdf" ? "bg-rose-100 text-rose-600" : "bg-blue-100 text-blue-600"
-                      }`}
-                    >
-                      {d.ext}
-                    </span>
+                    <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-rose-100 text-rose-600">pdf</span>
                   </div>
                   <p className="text-sm font-semibold text-gray-900 truncate">{d.name}</p>
-                  <p className="text-[11px] text-gray-400">{t("builder.selectDoc.meta", { pages: d.pages, size: d.size })}</p>
+                  <p className="text-[11px] text-gray-400">
+                    {t("builder.selectDoc.meta", { pages: d.page_count, size: ((d.file_size_bytes || 0) / MB).toFixed(1) })}
+                  </p>
                 </button>
               ))}
             </div>
@@ -291,7 +424,7 @@ export default function NewTemplateBuilder() {
       ) : (
         /* ── STAGE B: the configurator ── */
         <>
-          {/* template name + source doc */}
+          {/* template name + contract type + source doc */}
           <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-4 flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex-1">
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{t("builder.templateName")}</label>
@@ -301,6 +434,24 @@ export default function NewTemplateBuilder() {
                 placeholder={t("builder.templateNamePlaceholder")}
                 className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#20B2AA] focus:bg-white transition-colors"
               />
+            </div>
+            <div className="sm:w-56">
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                {t("builder.contractType")} <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={contractTypeId}
+                onChange={(e) => setContractTypeId(e.target.value)}
+                data-testid="contract-type-select"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#20B2AA] focus:bg-white transition-colors"
+              >
+                <option value="">{t("builder.contractTypePlaceholder")}</option>
+                {types.map((ty) => (
+                  <option key={ty.id} value={ty.id}>
+                    {ty.name} ({ty.code})
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{t("builder.sourceDocument")}</label>
@@ -333,6 +484,7 @@ export default function NewTemplateBuilder() {
                     <div
                       key={el.id}
                       draggable
+                      data-testid={`element-${el.id}`}
                       onDragStart={(e) => { dndPayload.current = { type: el.id }; e.dataTransfer.effectAllowed = "copy"; }}
                       onDragEnd={() => { dndPayload.current = null; setDropHint(false); }}
                       className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-white cursor-grab active:cursor-grabbing hover:border-cyan-300 hover:bg-gray-50 transition-all"
@@ -388,6 +540,7 @@ export default function NewTemplateBuilder() {
 
               <div
                 ref={canvasRef}
+                data-testid="builder-canvas"
                 onClick={onCanvasClick}
                 onDragOver={(e) => { e.preventDefault(); if (!dropHint) setDropHint(true); }}
                 onDragLeave={(e) => { if (e.target === canvasRef.current) setDropHint(false); }}
@@ -397,20 +550,16 @@ export default function NewTemplateBuilder() {
                   dropHint ? "ring-2 ring-cyan-400 ring-offset-2" : ""
                 }`}
               >
-                {/* Real uploaded document rendered by PDF.js; mock as a fallback */}
-                {previewIsPdf ? (
-                  <PdfCanvas
-                    src={previewUrl}
-                    page={activePage}
-                    onLoaded={(numPages, aspect) => {
-                      if (numPages) setPages(numPages);
-                      if (aspect) setPageAspect(aspect);
-                    }}
-                    className="absolute inset-0 w-full h-full pointer-events-none"
-                  />
-                ) : (
-                  <MockDoc audience={audience} />
-                )}
+                {/* The real uploaded document rendered by PDF.js */}
+                <DocPreview
+                  key={docId}
+                  docId={docId}
+                  page={activePage}
+                  onLoaded={(numPages, aspect) => {
+                    if (numPages) setPages(numPages);
+                    if (aspect) setPageAspect(aspect);
+                  }}
+                />
 
                 {dropHint && (
                   <div className="absolute inset-0 z-30 bg-cyan-500/5 border-2 border-dashed border-cyan-400 rounded-sm flex items-center justify-center pointer-events-none">
@@ -464,12 +613,18 @@ export default function NewTemplateBuilder() {
                         return (
                           <button
                             key={a.id}
-                            onClick={() => changeAudience(a.id)}
-                            className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left hover:bg-gray-50 ${
-                              audience === a.id ? "text-cyan-600 bg-cyan-50/50" : "text-gray-700"
+                            onClick={() => changeAudience(a)}
+                            disabled={a.comingSoon}
+                            className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left ${
+                              a.comingSoon ? "text-gray-300 cursor-not-allowed" : audience === a.id ? "text-cyan-600 bg-cyan-50/50 hover:bg-gray-50" : "text-gray-700 hover:bg-gray-50"
                             }`}
                           >
                             <Icon className="text-lg" /> {t(a.labelKey)}
+                            {a.comingSoon && (
+                              <span className="ms-auto px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 text-[9px] font-bold uppercase tracking-wider">
+                                {t("audiences.comingSoon")}
+                              </span>
+                            )}
                           </button>
                         );
                       })}
@@ -501,9 +656,10 @@ export default function NewTemplateBuilder() {
                     .filter((c) => !colQuery || c.label.toLowerCase().includes(colQuery.toLowerCase()) || c.token.includes(colQuery.toLowerCase()))
                     .map((c) => (
                       <div
-                        key={c.token}
+                        key={`${c.source}.${c.token}`}
                         draggable
-                        onDragStart={(e) => { dndPayload.current = { type: "db", token: c.token, label: c.label }; e.dataTransfer.effectAllowed = "copy"; }}
+                        data-testid={`column-${c.token}`}
+                        onDragStart={(e) => { dndPayload.current = { type: "db", token: c.token, source: c.source, label: c.label }; e.dataTransfer.effectAllowed = "copy"; }}
                         onDragEnd={() => { dndPayload.current = null; setDropHint(false); }}
                         className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-200 cursor-grab active:cursor-grabbing hover:border-cyan-300 hover:bg-gray-50 transition-all"
                       >
@@ -512,7 +668,7 @@ export default function NewTemplateBuilder() {
                           <p className="text-xs font-semibold text-gray-800 truncate">{c.label}</p>
                           {/* the "name with blank" look */}
                           <p className="text-[10px] text-gray-400 truncate">
-                            <span className="font-mono">{`{{${c.token}}}`}</span> · <span className="italic">{t("builder.blank")}</span>
+                            <span className="font-mono">{`{{${c.token}}}`}</span> · <span className="italic">{c.group}</span>
                           </p>
                         </div>
                       </div>
@@ -545,7 +701,7 @@ export default function NewTemplateBuilder() {
         </>
       )}
 
-      {/* digital signature capture popup (demo of the recipient's first-time sign) */}
+      {/* signature capture preview (nothing is stored; signatures live on contracts only) */}
       {signOpen && (
         <SignaturePadModal
           onClose={() => setSignOpen(false)}
@@ -623,6 +779,20 @@ function FieldConfig({ field, onPatch, onRemove, onTestSignature }) {
         </div>
       )}
 
+      {/* DATE / INITIALS: a label only */}
+      {(field.type === "date" || field.type === "initials") && (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">{t("builder.config.label")}</label>
+            <input
+              value={field.label || ""}
+              onChange={(e) => onPatch({ label: e.target.value })}
+              className="w-full text-xs px-2.5 py-2 bg-white border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            />
+          </div>
+        </div>
+      )}
+
       {/* SIGNATURE */}
       {field.type === "signature" && (
         <div className="space-y-3">
@@ -683,7 +853,7 @@ function PlacedField({ f, selected, onSelect, onDragStart, onRemove }) {
         {f.label}
       </span>
     );
-  } else if (f.type === "signature") {
+  } else if (f.type === "signature" || f.type === "initials") {
     body = <span className="whitespace-nowrap italic">✎ {f.label}</span>;
   } else {
     body = <span className="whitespace-nowrap">{f.label || t("builder.inputFallback")}: <span className="opacity-60">______</span></span>;
@@ -691,7 +861,7 @@ function PlacedField({ f, selected, onSelect, onDragStart, onRemove }) {
 
   const style = isDb
     ? "bg-cyan-100 text-cyan-700 border-cyan-300"
-    : f.type === "signature"
+    : f.type === "signature" || f.type === "initials"
     ? "bg-violet-50 text-violet-700 border-violet-300 border-dashed"
     : "bg-white text-gray-700 border-gray-400 border-dashed";
 
@@ -699,6 +869,8 @@ function PlacedField({ f, selected, onSelect, onDragStart, onRemove }) {
     <div
       onMouseDown={onDragStart}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
+      data-testid="placed-field"
+      data-type={f.type}
       style={{ left: `${f.x}%`, top: `${f.y}%` }}
       className={`absolute -translate-y-1/2 group flex items-center gap-1.5 px-2 py-1.5 rounded-md border-2 text-[11px] font-semibold cursor-grab active:cursor-grabbing shadow-sm ${style} ${
         selected ? "ring-2 ring-offset-1 ring-gray-900/40 z-20" : "z-10"
@@ -714,46 +886,6 @@ function PlacedField({ f, selected, onSelect, onDragStart, onRemove }) {
       >
         <MdClose className="text-sm" />
       </button>
-    </div>
-  );
-}
-
-// ── plain document (no prefilled data; you attach fields to the blanks) ──
-function MockDoc({ audience }) {
-  const isEmp = audience === "employee";
-  const title = isEmp ? "EMPLOYMENT AGREEMENT" : "MASTER SERVICE AGREEMENT";
-  const party = isEmp ? "the Employee" : "the Service Provider";
-  const blank = "________________________";
-  return (
-    <div className="p-8 sm:p-10 text-gray-800 pointer-events-none">
-      <div className="w-16 h-6 bg-gray-200 rounded mb-8" />
-      <h2 className="text-lg font-bold tracking-tight mb-4">{title}</h2>
-      <p className="text-[11px] leading-relaxed text-gray-600 mb-3">
-        This Agreement is made and entered into by and between{" "}
-        <span className="font-semibold text-cyan-700">LegalFlow Enterprise Solutions</span> (the "Company") and {party}.
-      </p>
-      <p className="text-[11px] leading-relaxed text-gray-600 mb-1">Name: <span className="text-gray-400">{blank}</span></p>
-      <p className="text-[11px] leading-relaxed text-gray-600 mb-1">Email: <span className="text-gray-400">{blank}</span></p>
-      <p className="text-[11px] leading-relaxed text-gray-600 mb-4">Phone: <span className="text-gray-400">{blank}</span></p>
-      <h3 className="text-xs font-bold mb-2">1. TERM</h3>
-      <p className="text-[11px] leading-relaxed text-gray-600 mb-4">
-        The engagement shall commence on the effective date and continue until terminated by either party as provided in Section 8.
-      </p>
-      <h3 className="text-xs font-bold mb-2">2. TERMS &amp; CONDITIONS</h3>
-      <p className="text-[11px] leading-relaxed text-gray-600 mb-2">
-        {party} agrees to the terms set out in this Agreement and the attached schedules.
-      </p>
-      <p className="text-[11px] leading-relaxed text-gray-600 mb-8">Accept terms: <span className="text-gray-400">☐</span></p>
-      <div className="grid grid-cols-2 gap-6 mt-8 pt-6 border-t border-gray-200">
-        <div>
-          <div className="h-8 border-b border-gray-300 mb-1" />
-          <p className="text-[10px] text-gray-400 uppercase tracking-wide">Recipient Signature</p>
-        </div>
-        <div>
-          <div className="h-8 border-b border-gray-300 mb-1" />
-          <p className="text-[10px] text-gray-400 uppercase tracking-wide">Company Representative</p>
-        </div>
-      </div>
     </div>
   );
 }

@@ -39,7 +39,8 @@
     "staffing": "Staffing Company",
     "vendor": "Vendor",
     "client": "Client",
-    "collaborator": "Collaborating Company"
+    "collaborator": "Collaborating Company",
+    "comingSoon": "Coming soon"
   },
   "modules": {
     "Contracts": "Contracts",
@@ -50,7 +51,9 @@
     "input": "Input",
     "checkbox": "Checkbox",
     "signature": "Signature",
-    "db": "DB Column"
+    "db": "DB Column",
+    "date": "Date",
+    "initials": "Initials"
   },
   "table": {
     "sno": "S.No",
@@ -250,6 +253,14 @@
       "signature": {
         "label": "Signature",
         "hint": "Digital signature slot"
+      },
+      "date": {
+        "label": "Date",
+        "hint": "Recipient picks a date"
+      },
+      "initials": {
+        "label": "Initials",
+        "hint": "Recipient initials"
       }
     },
     "pages": "Pages",
@@ -272,7 +283,9 @@
         "db": "Column",
         "input": "input",
         "checkbox": "checkbox",
-        "signature": "signature"
+        "signature": "signature",
+        "date": "date",
+        "initials": "initials"
       },
       "removeField": "Remove field",
       "labelShownOnDoc": "Label (shown on doc)",
@@ -298,8 +311,12 @@
       "fieldRequired": "Add at least one field or column.",
       "updated": "Template updated",
       "saved": "Template saved",
-      "signatureCaptured": "Signature captured — it will be reused from the record next time"
-    }
+      "signatureCaptured": "Signature captured",
+      "signatureRequired": "Add at least one signature field.",
+      "typeRequired": "Choose a contract type"
+    },
+    "contractType": "Contract type",
+    "contractTypePlaceholder": "Select a contract type"
   },
   "templates": {
     "title": "Templates",
@@ -318,7 +335,9 @@
     "toast": {
       "duplicated": "Template duplicated",
       "deleted": "Template deleted"
-    }
+    },
+    "archive": "Archive",
+    "unarchive": "Unarchive"
   },
   "documents": {
     "title": "Documents",

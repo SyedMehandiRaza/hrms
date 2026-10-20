@@ -83,7 +83,7 @@ workforce branch (`hrms-project-moduleA`) being merged into main (plan section 7
 |---|---|---|---|
 | 15 | [Contract Types screen](contract-studio/15-ui-contract-types.md) | done | 03 |
 | 16 | [Documents screen](contract-studio/16-ui-documents.md) | done | 04 |
-| 17 | [Templates list and builder](contract-studio/17-ui-templates-builder.md) | ready-for-agent | 05, 16 |
+| 17 | [Templates list and builder](contract-studio/17-ui-templates-builder.md) | done | 05, 16 |
 | 18 | [Send wizard](contract-studio/18-ui-send-wizard.md) | ready-for-agent | 08, 17 |
 | 19 | [Contracts dashboard, list and HR viewer](contract-studio/19-ui-contracts-list-viewer.md) | ready-for-agent | 12, 18, 23 |
 | 20 | [My Contracts (Employee panel and admin My Requests)](contract-studio/20-ui-my-contracts-employee.md) | ready-for-agent | 10, 12, 24 |

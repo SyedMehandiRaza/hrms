@@ -98,6 +98,8 @@ const templateFieldSchema = Joi.object({
   is_required: Joi.boolean().default(true).messages({ "boolean.base": INVALID }),
   db_source: Joi.string().trim().allow("", null).messages({ "string.base": INVALID }),
   db_column: Joi.string().trim().allow("", null).messages({ "string.base": INVALID }),
+  field_key: Joi.string().trim().max(120).allow("", null).messages({ "string.base": INVALID, "string.max": INVALID }),
+  checked_value: Joi.string().trim().max(160).allow("", null).messages({ "string.base": INVALID, "string.max": INVALID }),
 });
 
 const templateSchema = Joi.object({

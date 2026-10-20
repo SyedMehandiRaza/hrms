@@ -39,7 +39,8 @@
     "staffing": "شركة توظيف",
     "vendor": "مورِّد",
     "client": "عميل",
-    "collaborator": "شركة متعاونة"
+    "collaborator": "شركة متعاونة",
+    "comingSoon": "قريبًا"
   },
   "modules": {
     "Contracts": "العقود",
@@ -50,7 +51,9 @@
     "input": "حقل إدخال",
     "checkbox": "خانة اختيار",
     "signature": "توقيع",
-    "db": "عمود بيانات"
+    "db": "عمود بيانات",
+    "date": "التاريخ",
+    "initials": "الأحرف الأولى"
   },
   "table": {
     "sno": "م",
@@ -254,6 +257,14 @@
       "signature": {
         "label": "توقيع",
         "hint": "خانة توقيع إلكتروني"
+      },
+      "date": {
+        "label": "التاريخ",
+        "hint": "يختار المستلم تاريخًا"
+      },
+      "initials": {
+        "label": "الأحرف الأولى",
+        "hint": "الأحرف الأولى للمستلم"
       }
     },
     "pages": "الصفحات",
@@ -276,7 +287,9 @@
         "db": "عمود",
         "input": "إدخال",
         "checkbox": "خانة اختيار",
-        "signature": "توقيع"
+        "signature": "توقيع",
+        "date": "تاريخ",
+        "initials": "أحرف أولى"
       },
       "removeField": "إزالة الحقل",
       "labelShownOnDoc": "التسمية (تظهر على المستند)",
@@ -302,8 +315,12 @@
       "fieldRequired": "أضف حقلًا أو عمودًا واحدًا على الأقل.",
       "updated": "تم تحديث القالب",
       "saved": "تم حفظ القالب",
-      "signatureCaptured": "تم التقاط التوقيع — سيُعاد استخدامه من السجل في المرة القادمة"
-    }
+      "signatureCaptured": "تم التقاط التوقيع",
+      "signatureRequired": "أضف حقل توقيع واحدًا على الأقل.",
+      "typeRequired": "اختر نوع العقد"
+    },
+    "contractType": "نوع العقد",
+    "contractTypePlaceholder": "اختر نوع العقد"
   },
   "templates": {
     "title": "القوالب",
@@ -322,7 +339,9 @@
     "toast": {
       "duplicated": "تم تكرار القالب",
       "deleted": "تم حذف القالب"
-    }
+    },
+    "archive": "أرشفة",
+    "unarchive": "إلغاء الأرشفة"
   },
   "documents": {
     "title": "المستندات",

@@ -27,6 +27,8 @@ const fieldItem = (f) => ({
   is_required: f.is_required,
   db_source: f.db_source ?? null,
   db_column: f.db_column ?? null,
+  field_key: f.field_key ?? null,
+  checked_value: f.checked_value ?? null,
   sort_order: f.sort_order,
 });
 
@@ -145,6 +147,8 @@ const fieldRows = (employerId, templateId, fields, audience) =>
     is_required: f.is_required,
     db_source: f.field_type === "DB_COLUMN" ? f.db_source : null,
     db_column: f.field_type === "DB_COLUMN" ? f.db_column : null,
+    field_key: f.field_key || null,
+    checked_value: f.field_type === "CHECKBOX" ? f.checked_value || null : null,
     assigned_role: "PRIMARY_SIGNER",
     sort_order: i,
   }));

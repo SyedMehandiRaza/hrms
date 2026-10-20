@@ -94,6 +94,15 @@ describe("create and validate", () => {
     expect(reloaded.body.data.fields).toEqual(t.fields);
   });
 
+  it("keeps the input name and the checkbox's checked value", async () => {
+    const res = await create(token, body({ fields: [input({ field_key: "iban" }), input({ field_type: "CHECKBOX", label: "Accept", checked_value: "Yes" }), sig()] }));
+    expect(res.status).toBe(201);
+    expect(res.body.data.fields[0]).toMatchObject({ field_key: "iban", checked_value: null });
+    expect(res.body.data.fields[1]).toMatchObject({ field_type: "CHECKBOX", checked_value: "Yes" });
+    const tooLong = await create(token, body({ fields: [input({ field_key: "k".repeat(121) }), sig()] }));
+    expect(tooLong.status).toBe(400);
+  });
+
   it("uses the type name for an empty label of a non-merge field", async () => {
     const res = await create(token, body({ fields: [sig({ label: "" }), input({ field_type: "DATE", label: null })] }));
     expect(res.body.data.fields.map((f) => f.label)).toEqual(["Signature", "Date"]);
