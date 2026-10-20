@@ -1,5 +1,6 @@
 const Joi = require("joi");
 const { required, INVALID } = require("./department.validation");
+const { isRealDate } = require("./dates");
 
 // Projects (standards §7.2 "Project", workforce D7–D12, countries D7). Same rules as the UI's
 // hrms/src/utils/projectRules.js.
@@ -13,7 +14,7 @@ const date = (key) =>
   Joi.string()
     .trim()
     .pattern(DATE)
-    .custom((value, helpers) => (Number.isNaN(Date.parse(`${value}T00:00:00Z`)) ? helpers.error("date.invalid") : value))
+    .custom((value, helpers) => (isRealDate(value) ? value : helpers.error("date.invalid")))
     .required()
     .messages({ ...required(key), "string.pattern.base": key, "date.invalid": key });
 

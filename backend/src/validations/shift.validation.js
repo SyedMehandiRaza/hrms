@@ -1,5 +1,6 @@
 const Joi = require("joi");
 const { required, INVALID } = require("./department.validation");
+const { isRealDate } = require("./dates");
 
 // Shifts (standards §7.2 "Shift", workforce D35–D37). The field keys are the form's
 // (start_time, end_time, effective_from). Times are "HH:MM" (or "HH:MM:SS"); an end before the
@@ -24,7 +25,7 @@ const shiftSchema = Joi.object({
   effective_from: Joi.string()
     .trim()
     .pattern(DATE)
-    .custom((value, helpers) => (Number.isNaN(Date.parse(`${value}T00:00:00Z`)) ? helpers.error("date.invalid") : value))
+    .custom((value, helpers) => (isRealDate(value) ? value : helpers.error("date.invalid")))
     .allow("", null)
     .messages({
       "string.base": "shiftEffectiveFromInvalid",

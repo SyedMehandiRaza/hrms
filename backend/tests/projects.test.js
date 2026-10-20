@@ -175,6 +175,7 @@ describe("POST /api/projects", () => {
     ["name", { name: "Park <script>" }, "invalidCharsUsed"],
     ["endDate", { startDate: `${YEAR}-06-01`, endDate: `${YEAR}-05-31` }, "endAfterStart"],
     ["startDate", { startDate: `${YEAR}-13-01` }, "startDateRequired"],
+    ["startDate", { startDate: `${YEAR}-02-30` }, "startDateRequired"],
     ["radius", { radius: 49 }, "radiusMin"],
     ["radius", { radius: 100001 }, "radiusMax"],
     ["radius", { radius: "far" }, "radiusRequired"],
