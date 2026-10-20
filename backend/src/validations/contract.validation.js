@@ -78,12 +78,60 @@ const documentUpdateSchema = Joi.object({
   status: Joi.string().valid("SAVED", "ARCHIVED").messages({ "string.base": INVALID, "string.empty": INVALID, "any.only": INVALID }),
 });
 
+// ---------- templates (decisions 9–14; standards §7.3 "Template") ----------
+const FIELD_TYPES = ["INPUT", "CHECKBOX", "DATE", "INITIALS", "SIGNATURE", "DB_COLUMN"];
+const invalidNumber = { "number.base": INVALID, "number.unsafe": INVALID, "any.required": INVALID };
+
+// One placed field. Positions are page-relative decimals; bounds, page count, merge tokens
+// and the signature rules are checked by the service (they need the document/audience).
+const templateFieldSchema = Joi.object({
+  field_type: Joi.string()
+    .valid(...FIELD_TYPES)
+    .required()
+    .messages({ "string.base": INVALID, "any.only": INVALID, "any.required": INVALID, "string.empty": INVALID }),
+  page_no: Joi.number().integer().required().messages({ ...invalidNumber, "number.integer": INVALID }),
+  pos_x: Joi.number().required().messages(invalidNumber),
+  pos_y: Joi.number().required().messages(invalidNumber),
+  width: Joi.number().required().messages(invalidNumber),
+  height: Joi.number().required().messages(invalidNumber),
+  label: Joi.string().trim().max(160).allow("", null).messages({ "string.base": INVALID, "string.max": "templateLabelMax" }),
+  is_required: Joi.boolean().default(true).messages({ "boolean.base": INVALID }),
+  db_source: Joi.string().trim().allow("", null).messages({ "string.base": INVALID }),
+  db_column: Joi.string().trim().allow("", null).messages({ "string.base": INVALID }),
+});
+
+const templateSchema = Joi.object({
+  name: Joi.string().trim().max(255).required().messages({ ...required("templateNameRequired"), "string.max": "templateNameMax" }),
+  description: Joi.string().trim().max(2000).allow("", null).messages({ "string.base": INVALID, "string.max": INVALID }),
+  audienceType: Joi.string().trim().allow("", null).messages({ "string.base": INVALID }),
+  documentId: Joi.string().trim().allow("", null).messages({ "string.base": "templateDocumentRequired" }),
+  contractTypeId: Joi.string().trim().allow("", null).messages({ "string.base": "contractTypeRequired" }),
+  fields: Joi.array().items(templateFieldSchema).default([]).messages({ "array.base": "templateFieldsRequired" }),
+});
+
+const templateStatusSchema = Joi.object({
+  status: Joi.string().valid("ACTIVE", "ARCHIVED").required().messages({ "string.base": INVALID, "string.empty": INVALID, "any.only": INVALID, "any.required": INVALID }),
+});
+
+const listTemplatesSchema = Joi.object({
+  ...pagination,
+  search,
+  status: Joi.string().valid("ACTIVE", "ARCHIVED").allow("").default("").messages({ "string.base": INVALID, "any.only": INVALID }),
+  audience: Joi.string().valid("EMPLOYEE", "STAFFING_COMPANY").allow("").default("").messages({ "string.base": INVALID, "any.only": INVALID }),
+});
+
+const mergeFieldsQuerySchema = Joi.object({ audience: Joi.string().trim().allow("").messages({ "string.base": INVALID }) });
+
 module.exports = {
   recipientLookupSchema,
   contractTypeSchema,
   listContractTypesSchema,
   listDocumentsSchema,
   documentUpdateSchema,
+  templateSchema,
+  templateStatusSchema,
+  listTemplatesSchema,
+  mergeFieldsQuerySchema,
   pagination,
   search,
   optionalId,
