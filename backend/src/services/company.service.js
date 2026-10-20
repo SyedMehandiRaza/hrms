@@ -1,4 +1,4 @@
-const { Employer, IndustryType, CompanyTimeSetting } = require("../models");
+const { Employer, IndustryType, CompanyTimeSetting, Country } = require("../models");
 const ErrorHandler = require("../utils/ErrorHandler");
 const storage = require("./storage.service");
 
@@ -18,6 +18,7 @@ const PROFILE_FIELDS = {
   industryTypeId: "industry_type_id",
   email: "company_email",
   phone: "company_phone_number",
+  phoneCountry: "phone_country",
   address: "address",
 };
 
@@ -26,6 +27,7 @@ const findCompany = async (employerId) => {
     include: [
       { model: IndustryType, as: "industryType", attributes: ["id", "industry_name"] },
       { model: CompanyTimeSetting, as: "companyTimeSetting", attributes: ["timezone"] },
+      { model: Country, as: "country", attributes: ["id", "iso2", "name", "calling_code"] },
     ],
   });
   // requireAuth already checked the company is active; this only guards a race.
@@ -39,12 +41,18 @@ const toResponse = (employer) => ({
   industry_type_id: employer.industry_type_id,
   industry_name: employer.industryType ? employer.industryType.industry_name : null,
   company_email: employer.company_email,
+  // E.164 with its phone country (countries-cities-phones D15–D19).
   company_phone_number: employer.company_phone_number,
+  phone_country: employer.phone_country || null,
   address: employer.address,
   company_logo: employer.company_logo || null,
   created_at: employer.createdAt,
   timezone: employer.companyTimeSetting ? employer.companyTimeSetting.timezone : null,
   currency: "SAR",
+  // The company country (D11), not editable yet.
+  country: employer.country
+    ? { id: employer.country.id, iso2: employer.country.iso2, name: employer.country.name, callingCode: employer.country.calling_code }
+    : null,
 });
 
 // GET /company (any login).

@@ -1,4 +1,5 @@
 const Joi = require("joi");
+const { phoneFields } = require("../utils/phone");
 
 // Message keys for "missing": absent, blank after trimming, or not a string.
 const required = (key) => ({ "any.required": key, "string.empty": key, "string.base": key });
@@ -21,11 +22,8 @@ const updateCompanySchema = Joi.object({
     .max(255)
     .required()
     .messages({ ...required("emailRequired"), "string.email": "emailEnterValid", "string.max": "emailEnterValid" }),
-  phone: Joi.string()
-    .trim()
-    .pattern(/^\d{6,15}$/)
-    .required()
-    .messages({ ...required("phoneRequired"), "string.pattern.base": "phoneDigits" }),
+  // A valid number of the chosen phone country, stored as E.164 (countries-cities-phones D15–D19).
+  ...phoneFields({ required: true, requiredKey: "phoneRequired" }),
   address: Joi.string()
     .trim()
     .max(500)

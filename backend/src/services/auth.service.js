@@ -240,7 +240,7 @@ const assertEmailReusable = async (user, password) => {
 // POST /auth/signup. One transaction creates (or reuses) the person, then the company,
 // its time settings, the current financial year (OPEN) and the owner's ADMIN account,
 // and logs in with a session exactly like login. No roles are created (D6).
-const signup = async ({ companyName, name, email, phone, password, ip, userAgent }) => {
+const signup = async ({ companyName, name, email, phone, phoneCountry, password, ip, userAgent }) => {
   const existing = await User.scope("withPassword").findOne({ where: { email }, paranoid: false });
   if (existing) await assertEmailReusable(existing, password);
   const passwordHash = existing ? null : await bcrypt.hash(password, BCRYPT_COST);
@@ -261,6 +261,7 @@ const signup = async ({ companyName, name, email, phone, password, ip, userAgent
           user_id: user.id,
           company_name: companyName,
           company_phone_number: phone || null,
+          phone_country: phone ? phoneCountry : null,
           employer_status: ACTIVE,
           country_id: country.id,
         },
@@ -417,6 +418,10 @@ const resolveAccessToken = async (claims) => {
   };
 };
 
+// The company country (countries-cities-phones D11): the default for pickers and phone codes.
+const toCountry = (country) =>
+  country ? { id: country.id, iso2: country.iso2, name: country.name, callingCode: country.calling_code } : null;
+
 // GET /auth/me (D23).
 const getMe = async (auth) => {
   const account = await HrmsAccount.findOne({
@@ -427,7 +432,10 @@ const getMe = async (auth) => {
         model: Employer,
         as: "employer",
         attributes: ["id", "company_name", "company_logo"],
-        include: [{ model: CompanyTimeSetting, as: "companyTimeSetting", attributes: ["timezone"] }],
+        include: [
+          { model: CompanyTimeSetting, as: "companyTimeSetting", attributes: ["timezone"] },
+          { model: Country, as: "country", attributes: ["id", "iso2", "name", "calling_code"] },
+        ],
       },
     ],
   });
@@ -443,6 +451,7 @@ const getMe = async (auth) => {
       logo: employer.company_logo,
       timezone: employer.companyTimeSetting ? employer.companyTimeSetting.timezone : null,
       currency: "SAR",
+      country: toCountry(employer.country),
     },
     mustChangePassword: account.password_setup_required,
     permissions: auth.permissions,

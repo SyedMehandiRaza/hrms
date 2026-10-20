@@ -159,18 +159,17 @@ Auth + Company codes added 2026-10-19. Every module appends its codes here.
 | Form | Field → messages |
 |---|---|
 | Login | email: "Email is required", "Invalid email address" · password: "Password is required" |
-| Sign up | companyName: "Company name is required", "Company name must be at least 2 characters", **"Company name cannot exceed 100 characters"** · name: "Your name is required", "Name must be at least 2 characters", **"Name cannot exceed 100 characters"** · email: as Login · phone: "Invalid phone number" (replaced by the Countries, cities, phones rules in geo 04) · password: `AUTH_PASSWORD_WEAK` text · confirmPassword: "Please confirm your password", "Passwords do not match" |
+| Sign up | companyName: "Company name is required", "Company name must be at least 2 characters", **"Company name cannot exceed 100 characters"** · name: "Your name is required", "Name must be at least 2 characters", **"Name cannot exceed 100 characters"** · email: as Login · phone / phoneCountry: as in Countries, cities, phones · password: `AUTH_PASSWORD_WEAK` text · confirmPassword: "Please confirm your password", "Passwords do not match" |
 | Forgot | email: as Login |
 | Verify OTP | otp: "Please enter complete OTP" |
 | Reset / Set / Change password | newPassword: "Password is required", `AUTH_PASSWORD_WEAK` text, `AUTH_PASSWORD_SAME` text · confirmPassword: "Please confirm your password", "Passwords do not match" · currentPassword: "Password is required" |
-| Company profile | companyName: "Company name is required", "Company name must be at least 2 characters", **"Company name cannot exceed 100 characters"** · industry: "Please select an industry" · phone: "Phone is required", "Enter a valid phone number (6–15 digits)" (replaced by the Countries, cities, phones rules in geo 04) · email: "Email is required", "Enter a valid email" · address: "Address is required", **"Address cannot exceed 500 characters"** |
+| Company profile | companyName: "Company name is required", "Company name must be at least 2 characters", **"Company name cannot exceed 100 characters"** · industry: "Please select an industry" · phone: "Phone is required", otherwise as in Countries, cities, phones · phoneCountry: as in Countries, cities, phones · email: "Email is required", "Enter a valid email" · address: "Address is required", **"Address cannot exceed 500 characters"** |
 | Time settings | timezone: "Choose a valid timezone" · fy_start_month: "Choose a month from 1 to 12" |
 | Department | name: "Department Name is required", "Department Name must be at least 2 characters", "Department Name cannot exceed 150 characters", "Department Name cannot contain emojis" · code: "Dept. Code is required", "Dept. Code cannot exceed 50 characters", "Dept. Code cannot contain emojis" · description: "Description cannot exceed 2000 characters", "Description cannot contain emojis" · deptHeadId: **"Select an active employee of this company."** |
 | Designation | name: "Designation Name is required", "Designation Name must be at least 2 characters", "Designation Name cannot exceed 150 characters", "Designation Name cannot contain emojis" · code: "Designation Code cannot exceed 50 characters", "Designation Code cannot contain emojis" · description: as Department |
 
 #### Countries, cities, phones (added 2026-10-20, `docs/plans/countries-cities-phones.md`)
-These apply to every form with these fields and **replace** the older phone texts ("Invalid phone number",
-"Enter a valid phone number (6–15 digits)").
+These apply to every form with these fields and replace the older digit-count phone rules (geo 04).
 
 | Field | Messages |
 |---|---|

@@ -1,4 +1,5 @@
 const Joi = require("joi");
+const { phoneFields } = require("../utils/phone");
 
 // Password rule wherever a password is set (standards §1): 8–72 characters with an
 // uppercase letter, a lowercase letter, a digit and a special character (anything
@@ -24,8 +25,9 @@ const loginSchema = Joi.object({
   }),
 });
 
-// POST /auth/signup (standards §7.2 "Sign up"). Phone is optional, digits only, 6–15
-// (same rule as the company profile, D28); an empty phone counts as not given.
+// POST /auth/signup (standards §7.2 "Sign up"). Phone is optional: when given it needs its phone
+// country and must be a valid number of that country, stored as E.164 (countries-cities-phones
+// D15–D19); an empty phone counts as not given.
 // A missing password gets the password-rule text: the form has no separate "required" message.
 const signupSchema = Joi.object({
   companyName: Joi.string().trim().min(2).max(100).required().messages({
@@ -43,11 +45,7 @@ const signupSchema = Joi.object({
     "string.max": "nameMax",
   }),
   email: email(),
-  phone: Joi.string()
-    .trim()
-    .empty(["", null])
-    .pattern(/^\d{6,15}$/)
-    .messages({ "string.base": "phoneInvalid", "string.pattern.base": "phoneInvalid" }),
+  ...phoneFields({ required: false }),
   password: Joi.string().pattern(PASSWORD_RULE).required().messages({
     "any.required": "AUTH_PASSWORD_WEAK",
     "string.empty": "AUTH_PASSWORD_WEAK",

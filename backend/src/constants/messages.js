@@ -427,7 +427,6 @@ const FIELD_MESSAGES = Object.freeze({
     en: "Name cannot exceed 100 characters",
     ar: "لا يمكن أن يتجاوز الاسم 100 حرف", // AR: needs native review
   },
-  phoneInvalid: { en: "Invalid phone number", ar: "رقم الهاتف غير صالح" },
 
   // Verify OTP
   otpIncomplete: { en: "Please enter complete OTP", ar: "يرجى إدخال رمز التحقق كاملاً" },
@@ -435,10 +434,6 @@ const FIELD_MESSAGES = Object.freeze({
   // Company profile
   industryRequired: { en: "Please select an industry", ar: "يرجى اختيار القطاع" },
   phoneRequired: { en: "Phone is required", ar: "الهاتف مطلوب" },
-  phoneDigits: {
-    en: "Enter a valid phone number (6–15 digits)",
-    ar: "أدخل رقم هاتف صالحًا (من 6 إلى 15 رقمًا)",
-  },
   emailEnterValid: { en: "Enter a valid email", ar: "أدخل بريدًا إلكترونيًا صالحًا" },
   addressRequired: { en: "Address is required", ar: "العنوان مطلوب" },
   addressMax: {

@@ -9,6 +9,7 @@ process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "test-access-se
 
 const app = require("../src/app");
 const db = require("../src/models");
+const { seedId } = require("../src/utils/seed");
 const { build } = require("./helpers/factory");
 const language = require("../src/middlewares/language");
 const errorHandler = require("../src/middlewares/errorHandler");
@@ -48,6 +49,7 @@ const validBody = (overrides = {}) => ({
   name: "Fatima Al-Qahtani",
   email: uniqueEmail("owner"),
   phone: "0501234567",
+  phoneCountry: "SA",
   password: NEW_PASSWORD,
   confirmPassword: NEW_PASSWORD,
   ...overrides,
@@ -127,7 +129,14 @@ describe("POST /api/auth/signup", () => {
       expect(res.body.data.me).toMatchObject({
         user: { id: user.id, name: "Fatima Al-Qahtani", email: body.email, lang_key: "EN" },
         account: { id: account.id, access_level: "ADMIN", panel: "admin" },
-        company: { id: employer.id, name: "Desert Rose Trading", logo: null, timezone: "Asia/Riyadh", currency: "SAR" },
+        company: {
+          id: employer.id,
+          name: "Desert Rose Trading",
+          logo: null,
+          timezone: "Asia/Riyadh",
+          currency: "SAR",
+          country: { id: seedId("country:SA"), iso2: "SA", name: "Saudi Arabia", callingCode: "+966" },
+        },
         mustChangePassword: false,
       });
       expect(res.body.data.me.permissions.department).toEqual({ read: true, create: true, update: true, delete: true });
@@ -173,7 +182,9 @@ describe("POST /api/auth/signup", () => {
       const employer = await db.Employer.findOne({ where: { user_id: user.id } });
       expect(employer.company_name).toBe("Desert Rose Trading");
       expect(employer.employer_status).toBe("ACTIVE");
-      expect(employer.company_phone_number).toBe("0501234567");
+      expect(employer.company_phone_number).toBe("+966501234567");
+      expect(employer.phone_country).toBe("SA");
+      expect(employer.country_id).toBe(seedId("country:SA"));
       expect(employer.company_email).toBeNull();
 
       const settings = await db.CompanyTimeSetting.findAll({ where: { employer_id: employer.id } });
@@ -241,18 +252,32 @@ describe("POST /api/auth/signup", () => {
     const res = await signup(withoutPhone);
     expect(res.status).toBe(201);
 
-    const res2 = await signup(validBody({ phone: "" }));
+    const res2 = await signup(validBody({ phone: "", phoneCountry: "" }));
     expect(res2.status).toBe(201);
 
-    for (const r of [res, res2]) {
+    const res3 = await signup(validBody({ phone: null, phoneCountry: null }));
+    expect(res3.status).toBe(201);
+
+    for (const r of [res, res2, res3]) {
       const employer = await db.Employer.findByPk(jwt.decode(r.body.data.accessToken).emp);
       expect(employer.company_phone_number).toBeNull();
+      expect(employer.phone_country).toBeNull();
     }
   });
 
-  it("accepts phones of 6 and 15 digits", async () => {
-    expect((await signup(validBody({ phone: "123456" }))).status).toBe(201);
-    expect((await signup(validBody({ phone: "123456789012345" }))).status).toBe(201);
+  it("stores any valid number of the chosen phone country as E.164 (local, international, landline, other country)", async () => {
+    const cases = [
+      [{ phone: "50 123 4567", phoneCountry: "SA" }, "+966501234567", "SA"],
+      [{ phone: "+966 50 123 4567", phoneCountry: "sa" }, "+966501234567", "SA"],
+      [{ phone: "011 234 5678", phoneCountry: "SA" }, "+966112345678", "SA"],
+      [{ phone: "98765 43210", phoneCountry: "IN" }, "+919876543210", "IN"],
+    ];
+    for (const [phone, e164, country] of cases) {
+      const res = await signup(validBody(phone));
+      expect(res.status).toBe(201);
+      const employer = await db.Employer.findByPk(jwt.decode(res.body.data.accessToken).emp);
+      expect([employer.company_phone_number, employer.phone_country]).toEqual([e164, country]);
+    }
   });
 
   it("accepts names and company names of exactly 2 and 100 characters", async () => {
@@ -324,10 +349,16 @@ describe("POST /api/auth/signup", () => {
       await expectFieldErrors(validBody({ email: "not-an-email" }), { email: "Invalid email address" });
     });
 
-    it("phone: digits only, 6 to 15", async () => {
-      for (const phone of ["12345", "1234567890123456", "+966500000001", "050 123 4567", "abcdefg"]) {
-        await expectFieldErrors(validBody({ phone }), { phone: "Invalid phone number" });
+    it("phone: a valid number of its phone country", async () => {
+      for (const phone of ["12345", "1234567890123456", "+919876543210", "abcdefg"]) {
+        await expectFieldErrors(validBody({ phone }), { phone: "Enter a valid phone number for the selected country." });
       }
+    });
+
+    it("phoneCountry: required with a phone, and a known country", async () => {
+      await expectFieldErrors(validBody({ phoneCountry: undefined }), { phoneCountry: "Select the phone number's country." });
+      await expectFieldErrors(validBody({ phoneCountry: "" }), { phoneCountry: "Select the phone number's country." });
+      await expectFieldErrors(validBody({ phoneCountry: "ZZ" }), { phoneCountry: "Select the phone number's country." });
     });
 
     it("password: 8–72 characters with upper, lower, digit and special character", async () => {
@@ -358,7 +389,8 @@ describe("POST /api/auth/signup", () => {
           companyName: "Company name is required",
           name: "Your name is required",
           email: "Email is required",
-          phone: "Invalid phone number",
+          phone: "Enter a valid phone number for the selected country.",
+          phoneCountry: "Select the phone number's country.",
           password: WEAK,
           confirmPassword: "Please confirm your password",
         }

@@ -12,6 +12,7 @@ process.env.UPLOAD_DIR = UPLOAD_DIR;
 
 const app = require("../src/app");
 const db = require("../src/models");
+const { seedId } = require("../src/utils/seed");
 const { MESSAGES, FIELD_MESSAGES } = require("../src/constants/messages");
 
 // Company profile and logo API (ticket auth-company#10; D27–D29).
@@ -66,7 +67,8 @@ const createCompany = async ({ name = "Al Noor Construction", timezone = "Asia/R
     industry_type_id: industry.id,
     company_name: name,
     company_email: "info@alnoor.test",
-    company_phone_number: "966501234567",
+    company_phone_number: "+966501234567",
+    phone_country: "SA",
     address: "King Fahd Road, Riyadh",
     employer_status: "ACTIVE",
   });
@@ -145,7 +147,8 @@ const validBody = (overrides = {}) => ({
   companyName: "Al Noor Contracting",
   industryTypeId: company.industry.id,
   email: "Contact@AlNoor.test",
-  phone: "966551112222",
+  phone: "0551112222",
+  phoneCountry: "SA",
   address: "Olaya Street, Riyadh",
   ...overrides,
 });
@@ -168,12 +171,14 @@ describe("GET /api/company", () => {
         industry_type_id: industry.id,
         industry_name: industry.industry_name,
         company_email: "info@alnoor.test",
-        company_phone_number: "966501234567",
+        company_phone_number: "+966501234567",
+        phone_country: "SA",
         address: "King Fahd Road, Riyadh",
         company_logo: null,
         created_at: expect.any(String),
         timezone: "Asia/Riyadh",
         currency: "SAR",
+        country: { id: seedId("country:SA"), iso2: "SA", name: "Saudi Arabia", callingCode: "+966" },
       },
     });
     expect(new Date(res.body.data.created_at).getTime()).toBe((await employer.reload()).createdAt.getTime());
@@ -292,7 +297,8 @@ describe("PUT /api/company", () => {
         companyName: "  Al Noor Contracting  ",
         industryTypeId: industry.id,
         email: "  Contact@AlNoor.TEST ",
-        phone: " 966551112222 ",
+        phone: " 055 111 2222 ",
+        phoneCountry: " sa ",
         address: "  Olaya Street, Riyadh  ",
       })
     );
@@ -305,10 +311,12 @@ describe("PUT /api/company", () => {
       industry_type_id: industry.id,
       industry_name: industry.industry_name,
       company_email: "contact@alnoor.test",
-      company_phone_number: "966551112222",
+      company_phone_number: "+966551112222",
+      phone_country: "SA",
       address: "Olaya Street, Riyadh",
       timezone: "Asia/Riyadh",
       currency: "SAR",
+      country: { id: seedId("country:SA"), iso2: "SA", name: "Saudi Arabia", callingCode: "+966" },
     });
 
     const again = await getCompany(ownerToken);
@@ -320,12 +328,12 @@ describe("PUT /api/company", () => {
     await putCompany(ownerToken, validBody());
     console.info.mockClear();
 
-    await putCompany(ownerToken, validBody({ companyName: "Renamed Company", phone: "12345678" }));
+    await putCompany(ownerToken, validBody({ companyName: "Renamed Company", phone: "+919876543210", phoneCountry: "IN" }));
 
     expect(console.info).toHaveBeenCalledWith("[company] profile updated", {
       employerId: employer.id,
       userId: owner.id,
-      fields: ["companyName", "phone"],
+      fields: ["companyName", "phone", "phoneCountry"],
     });
   });
 
@@ -360,14 +368,15 @@ describe("PUT /api/company", () => {
     expect((await db.Employer.findByPk(other.employer.id)).company_name).toBe("Other Renamed");
   });
 
-  it("accepts the boundaries: name 2 and 100, address 500, phone 6 and 15 digits", async () => {
+  it("accepts the boundaries: name 2 and 100, address 500, and any valid number of the phone country", async () => {
     await setup();
     for (const overrides of [
       { companyName: "AB" },
       { companyName: "N".repeat(100) },
       { address: "A".repeat(500) },
-      { phone: "123456" },
-      { phone: "123456789012345" },
+      { phone: "011 234 5678" },
+      { phone: "+966551112222" },
+      { phone: "98765 43210", phoneCountry: "IN" },
     ]) {
       const res = await putCompany(ownerToken, validBody(overrides));
       expect(res.status).toBe(200);
@@ -385,6 +394,7 @@ describe("PUT /api/company", () => {
         industryTypeId: "Please select an industry",
         email: "Email is required",
         phone: "Phone is required",
+        phoneCountry: "Select the phone number's country.",
         address: "Address is required",
       })
     );
@@ -392,7 +402,7 @@ describe("PUT /api/company", () => {
 
   it("treats blank strings as missing", async () => {
     await setup();
-    const res = await putCompany(ownerToken, { companyName: "   ", industryTypeId: "", email: " ", phone: "", address: "  " });
+    const res = await putCompany(ownerToken, { companyName: "   ", industryTypeId: "", email: " ", phone: "", phoneCountry: " ", address: "  " });
 
     expect(res.status).toBe(400);
     expect(res.body.errors).toEqual({
@@ -400,6 +410,7 @@ describe("PUT /api/company", () => {
       industryTypeId: "Please select an industry",
       email: "Email is required",
       phone: "Phone is required",
+      phoneCountry: "Select the phone number's country.",
       address: "Address is required",
     });
   });
@@ -408,10 +419,12 @@ describe("PUT /api/company", () => {
     ["companyName", { companyName: "A" }, "Company name must be at least 2 characters"],
     ["companyName", { companyName: "  A  " }, "Company name must be at least 2 characters"],
     ["companyName", { companyName: "N".repeat(101) }, "Company name cannot exceed 100 characters"],
-    ["phone", { phone: "12345" }, "Enter a valid phone number (6–15 digits)"],
-    ["phone", { phone: "1234567890123456" }, "Enter a valid phone number (6–15 digits)"],
-    ["phone", { phone: "+966551112222" }, "Enter a valid phone number (6–15 digits)"],
-    ["phone", { phone: "96655 111222" }, "Enter a valid phone number (6–15 digits)"],
+    ["phone", { phone: "12345" }, "Enter a valid phone number for the selected country."],
+    ["phone", { phone: "1234567890123456" }, "Enter a valid phone number for the selected country."],
+    ["phone", { phone: "+919876543210" }, "Enter a valid phone number for the selected country."],
+    ["phone", { phone: "0551112222", phoneCountry: "IN" }, "Enter a valid phone number for the selected country."],
+    ["phoneCountry", { phoneCountry: undefined }, "Select the phone number's country."],
+    ["phoneCountry", { phoneCountry: "ZZ" }, "Select the phone number's country."],
     ["email", { email: "not-an-email" }, "Enter a valid email"],
     ["email", { email: "a@b" }, "Enter a valid email"],
     ["address", { address: "A".repeat(501) }, "Address cannot exceed 500 characters"],
@@ -453,7 +466,7 @@ describe("PUT /api/company", () => {
 
   it("answers field errors in Arabic", async () => {
     await setup();
-    const res = await putCompany(ownerToken, { companyName: "A", phone: "12", email: "bad", address: "A".repeat(501) }, "ar");
+    const res = await putCompany(ownerToken, { companyName: "A", phone: "12", phoneCountry: "SA", email: "bad", address: "A".repeat(501) }, "ar");
 
     expect(res.status).toBe(400);
     expect(res.body).toEqual(
@@ -462,7 +475,7 @@ describe("PUT /api/company", () => {
           companyName: fieldText("companyNameMin", "ar"),
           industryTypeId: fieldText("industryRequired", "ar"),
           email: fieldText("emailEnterValid", "ar"),
-          phone: fieldText("phoneDigits", "ar"),
+          phone: fieldText("phoneInvalidForCountry", "ar"),
           address: fieldText("addressMax", "ar"),
         },
         "ar"

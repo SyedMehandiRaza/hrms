@@ -8,6 +8,7 @@ process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "test-access-se
 
 const app = require("../src/app");
 const db = require("../src/models");
+const { seedId } = require("../src/utils/seed");
 const { build } = require("./helpers/factory");
 const requireAuth = require("../src/middlewares/requireAuth");
 const requirePermission = require("../src/middlewares/requirePermission");
@@ -393,6 +394,8 @@ describe("GET /api/auth/me", () => {
       logo: "/uploads/logos/logo.png",
       timezone: "Asia/Riyadh",
       currency: "SAR",
+      // countries-cities-phones D11: every company is in Saudi Arabia for now.
+      country: { id: seedId("country:SA"), iso2: "SA", name: "Saudi Arabia", callingCode: "+966" },
     });
     expect(data.mustChangePassword).toBe(false);
 
