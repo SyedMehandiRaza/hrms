@@ -57,7 +57,7 @@ workforce branch (`hrms-project-moduleA`) being merged into main (plan section 7
 
 | # | Ticket | Status | Blocked by |
 |---|---|---|---|
-| 01 | [Contract schema changes](contract-studio/01-schema-changes.md) | ready-for-agent | — |
+| 01 | [Contract schema changes](contract-studio/01-schema-changes.md) | done | — |
 | 02 | [Contract Studio messages](contract-studio/02-error-catalog.md) | ready-for-agent | — |
 | 03 | [Contract types API](contract-studio/03-contract-types-api.md) | ready-for-agent | 01, 02 |
 | 04 | [Contract documents API](contract-studio/04-documents-api.md) | ready-for-agent | 01, 02 |

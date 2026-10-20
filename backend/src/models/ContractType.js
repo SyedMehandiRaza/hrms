@@ -22,6 +22,7 @@ module.exports = (sequelize, DataTypes) => {
     ContractType.belongsTo(models.Employer, { as: "employer", foreignKey: "employer_id" });
     ContractType.belongsTo(models.User, { as: "createdBy", foreignKey: "created_by" });
     ContractType.hasMany(models.Contract, { as: "contracts", foreignKey: "contract_type_id" });
+    ContractType.hasMany(models.ContractTemplate, { as: "contractTemplates", foreignKey: "contract_type_id" });
   };
 
   return ContractType;

@@ -17,6 +17,7 @@ module.exports = (sequelize, DataTypes) => {
       status: { type: DataTypes.ENUM("SAVED", "ARCHIVED"), allowNull: false, defaultValue: "SAVED" },
       uploaded_by: { type: DataTypes.UUID, references: { model: "users", key: "id" } },
       meta: { type: DataTypes.JSON },
+      file_sha256: { type: DataTypes.CHAR(64) },
     },
     {
       tableName: "hrms_contract_documents",

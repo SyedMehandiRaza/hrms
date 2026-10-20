@@ -14,6 +14,7 @@ module.exports = (sequelize, DataTypes) => {
       status: { type: DataTypes.ENUM("DRAFT", "ACTIVE", "ARCHIVED"), allowNull: false, defaultValue: "ACTIVE" },
       created_by: { type: DataTypes.UUID, references: { model: "users", key: "id" } },
       meta: { type: DataTypes.JSON },
+      contract_type_id: { type: DataTypes.UUID, references: { model: "hrms_contract_types", key: "id" } },
     },
     {
       tableName: "hrms_contract_templates",
@@ -26,6 +27,7 @@ module.exports = (sequelize, DataTypes) => {
     ContractTemplate.belongsTo(models.Employer, { as: "employer", foreignKey: "employer_id" });
     ContractTemplate.belongsTo(models.ContractDocument, { as: "document", foreignKey: "document_id" });
     ContractTemplate.belongsTo(models.User, { as: "createdBy", foreignKey: "created_by" });
+    ContractTemplate.belongsTo(models.ContractType, { as: "contractType", foreignKey: "contract_type_id" });
     ContractTemplate.hasMany(models.ContractTemplateField, { as: "contractTemplateFields", foreignKey: "template_id" });
     ContractTemplate.hasMany(models.Contract, { as: "contracts", foreignKey: "template_id" });
   };

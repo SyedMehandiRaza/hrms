@@ -8,7 +8,7 @@ module.exports = (sequelize, DataTypes) => {
       employer_id: { type: DataTypes.UUID, allowNull: false, references: { model: "employers", key: "id" } },
       contract_id: { type: DataTypes.UUID, references: { model: "hrms_contracts", key: "id" } },
       recipient_id: { type: DataTypes.UUID, references: { model: "hrms_contract_recipients", key: "id" } },
-      action: { type: DataTypes.ENUM("CREATED", "UPDATED", "SENT", "VIEWED", "SIGNED", "SUBMITTED", "APPROVED", "DECLINED", "REJECTED", "COMPLETED", "REMINDED", "EXPIRED"), allowNull: false },
+      action: { type: DataTypes.ENUM("CREATED", "UPDATED", "SENT", "VIEWED", "SIGNED", "SUBMITTED", "APPROVED", "DECLINED", "REJECTED", "COMPLETED", "REMINDED", "EXPIRED", "REVOKED"), allowNull: false },
       actor_user_id: { type: DataTypes.UUID, references: { model: "users", key: "id" } },
       description: { type: DataTypes.STRING(255) },
       meta: { type: DataTypes.JSON },

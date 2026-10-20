@@ -23,7 +23,10 @@ module.exports = (sequelize, DataTypes) => {
       viewed_at: { type: DataTypes.DATE },
       signed_at: { type: DataTypes.DATE },
       submitted_at: { type: DataTypes.DATE },
-      reject_reason: { type: DataTypes.STRING(255) },
+      reject_reason: { type: DataTypes.STRING(500) },
+      signed_ip: { type: DataTypes.STRING(64) },
+      signed_user_agent: { type: DataTypes.STRING(255) },
+      evidence: { type: DataTypes.JSON },
     },
     {
       tableName: "hrms_contract_recipients",
