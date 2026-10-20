@@ -272,7 +272,7 @@ export default function ContractViewer({ contractId, onClose, onChanged }) {
             <div className="p-4 flex-1 overflow-auto space-y-4">
               <div>
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">{t("viewer.signBy")}</p>
-                <p className="text-sm text-gray-700">{c?.expires_at ? fmtDate(c.expires_at) : "—"}</p>
+                <p className="text-sm text-gray-700">{c?.sign_by ? fmtDate(c.sign_by) : "—"}</p>
               </div>
               {signing && signerFields.length > 0 && (
                 <ul className="space-y-1.5">
