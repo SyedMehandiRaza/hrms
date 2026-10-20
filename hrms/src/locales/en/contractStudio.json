@@ -193,7 +193,11 @@
       "noneSelected": "No recipients yet. Tick people or use “Select all”.",
       "signingLogic": "Signing Logic",
       "signInOrder": "Sign in order",
-      "signInOrderHint": "When on, each recipient can only sign after the previous one completes."
+      "signInOrderHint": "When on, each recipient can only sign after the previous one completes.",
+      "staffingCompany": "Staffing company",
+      "allProjects": "All projects",
+      "allStaffing": "All staffing companies",
+      "inactive": "Inactive"
     },
     "review": {
       "title": "Review & Confirm",
@@ -210,7 +214,9 @@
       "deliveryValue": "PORTAL + EMAIL",
       "sending": "Sending...",
       "sendToPortal": "Send to Portal",
-      "deliveryNote": "Each recipient gets a secure signing link in their portal; collaborating companies also receive an email that deep-links back into the app."
+      "deliveryNote": "Each recipient gets a secure signing link in their portal; collaborating companies also receive an email that deep-links back into the app.",
+      "saveDraft": "Save as draft",
+      "savingDraft": "Saving…"
     },
     "toast": {
       "pickTemplate": "Pick a template to continue.",
@@ -218,6 +224,38 @@
       "sent_one": "Sent to {{count}} recipient 🎉",
       "sent_other": "Sent to {{count}} recipients 🎉",
       "sendFailed": "Failed to send the contract"
+    },
+    "audience": {
+      "title": "Who is it for?"
+    },
+    "terms": {
+      "title": "Contract terms",
+      "signBy": "Sign by",
+      "rate": "Rate",
+      "rateUnit": "Rate unit",
+      "rateUnitPlaceholder": "Select…",
+      "currency": "Currency",
+      "noticePeriod": "Notice period (days)",
+      "units": {
+        "HOURLY": "Hourly",
+        "DAILY": "Daily",
+        "MONTHLY": "Monthly",
+        "ANNUAL": "Annual"
+      },
+      "validation": {
+        "startDateRequired": "Start date is required",
+        "dateInvalid": "Enter a valid date (YYYY-MM-DD)",
+        "endBeforeStart": "End date must be on or after the start date",
+        "rateInvalid": "Rate must be a positive amount with up to 2 decimals",
+        "rateUnitRequired": "Choose how the rate is paid",
+        "currencyInvalid": "Choose a valid currency",
+        "noticePeriodRange": "Notice period must be 0–365 days"
+      }
+    },
+    "result": {
+      "summary": "{{sent}} sent, {{drafts}} saved as draft",
+      "failed": ", {{failed}} failed",
+      "goToContracts": "Go to contracts"
     }
   },
   "builder": {

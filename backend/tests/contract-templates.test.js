@@ -303,6 +303,7 @@ describe("edit, duplicate, archive and delete", () => {
     expect((await list(otherToken, { status: "ARCHIVED" })).body.data.items.map((i) => i.id)).toEqual([b.id]);
     expect((await list(otherToken, { audience: "STAFFING_COMPANY" })).body.data.items.map((i) => i.id)).toEqual([b.id]);
     expect((await list(otherToken, {})).body.data.items[0]).toMatchObject({ field_count: 1 });
+    expect((await list(otherToken, {})).body.data.items[0].field_counts).toEqual({ SIGNATURE: 1 });
   });
 
   it.each(["get", "update", "remove", "duplicate", "setStatus"])("404 for another company's template (%s)", async (action) => {

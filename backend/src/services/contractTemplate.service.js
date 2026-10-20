@@ -46,6 +46,7 @@ const toItem = (t, { withFields = true } = {}) => {
       ? { id: t.contractType.id, name: t.contractType.name, code: t.contractType.code, is_active: t.contractType.is_active }
       : null,
     field_count: fields.length,
+    field_counts: fields.reduce((acc, f) => ({ ...acc, [f.field_type]: (acc[f.field_type] || 0) + 1 }), {}),
     created_at: t.createdAt,
     updated_at: t.updatedAt,
   };
