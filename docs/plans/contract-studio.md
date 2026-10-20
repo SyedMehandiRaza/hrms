@@ -98,7 +98,7 @@ eight contract tables, plus one foreign-key change on `hrms_contracts.contract_t
     for an EMPLOYEE template and staffing-company ids for a STAFFING_COMPANY template. A template whose audience is
     unsupported (only possible by direct database insert) → `CONTRACT_AUDIENCE_UNSUPPORTED`. The role
     dropdown and signing-order toggle are shown disabled ("Primary Signer", "Parallel").
-20. **Main project** (used for `hrms_contracts.project_id`, the `project` merge field and the lookup's project
+20. *(Source changes after the geo + workforce merge, section 7.)* **Main project** (used for `hrms_contracts.project_id`, the `project` merge field and the lookup's project
     column) = the employee's `employee_projects` row with `main_project = 1` and `is_active = 1`; if several, the
     latest `main_project_date_start`, then latest `created_at`; one shared function. None → `project_id` NULL,
     `project` merge value empty (blocked by `CONTRACT_FIELD_MISSING` only when that field is required), blank in the
@@ -343,7 +343,8 @@ eight contract tables, plus one foreign-key change on `hrms_contracts.contract_t
     `expires_at` − `sent_at` > 48 h (short-deadline contracts get no reminder).
 
 ### Merge-field catalogue (fixed in code)
-44. Values are frozen **once, in English formats**, whatever the sender's or signer's language; free text (names,
+44. *(Nationality, residence, phones, `employee_code` and staffing `city` change after the geo + workforce merge,
+    section 7.)* Values are frozen **once, in English formats**, whatever the sender's or signer's language; free text (names,
     addresses, nationality) is used **as stored** (Arabic included). Empty → missing.
     - Dates `DD MMM YYYY`, English month abbreviations (e.g. "16 Jan 2023").
     - Enums: fixed English label map; each word capitalised, `_` → space (`IN_NOTICE` → "In Notice",
@@ -517,3 +518,58 @@ Every module test suite adds a second company to prove isolation (standards §3)
 - Arabic certificate page.
 - Arabic merge-value formats per template (dates, enums, rate in Arabic).
 - Retire or redirect the legacy `/admin/contracts/*` pages.
+
+---
+
+## 7. After geo merge
+
+The **geo + workforce** branch (`hrms-project-moduleA`, not merged yet) changes employee, staffing-company and company
+data that Contract Studio reads. Its plans: `docs/plans/countries-cities-phones.md` and
+`docs/plans/workforce-and-lifecycle.md` (employee fields D45, D55). Its ADRs will be numbered **0010–0012**; ours
+stay 0005–0009. Until the merge, everything above applies unchanged. After the merge, ticket 26 applies this
+section, which **overrides** decisions 20 (main project) and 44 (free-text nationality) and the catalogue table
+for the tokens below. Contract Studio still only **reads** these tables (ADR 0008) and adds no schema changes.
+
+### What changes in the other branch
+- `employees.nationality` (text) → `nationality_country_id` → `countries` (text column kept until dropped).
+- New `employees.residence_country_id` (required) and `residence_city_id` (optional).
+- Every phone stored as **E.164** (`+966501234567`) plus a phone country (`iso2`): `users.phone_number`,
+  `employees.phone`, `hrms_staffing_companies.phone` and `contact_person_phone`, `employers.company_phone_number`.
+  Legacy values that couldn't be parsed stay as they were, with phone country NULL.
+- `employers.country_id` (Saudi Arabia for every company).
+- `countries` and `cities` have English and Arabic names (Arabic falls back to English when missing).
+- `hrms_staffing_companies` gets `country_id`, `city_id`; the text `city` is migrated where it matches and kept.
+- `employees.employee_code` is new and server-generated (`EMP-0001`); `country_emp_id` is the Iqama / national ID.
+- Main project history moves to `hrms_employee_main_project_periods` (`date_from`, `date_to`).
+
+### Contract Studio parts that use these fields
+| Part | Uses today | After the merge |
+|---|---|---|
+| Merge field `nationality` (Employee) | `employees.nationality` text, as stored | Country name from `nationality_country_id`, EN or AR (rule below) |
+| Merge field `employee_phone` (Employee) | `users.phone_number` as stored | Formatted from E.164 (rule below) |
+| Merge fields `residence_country`, `residence_city` (Employee) | — | **New** tokens, names EN or AR (rule below) |
+| Merge field `employee_code` (Employee) | `employees.country_emp_id` | `employees.employee_code` (EMP-0001) |
+| Merge field `id_number` (Employee) | — | **New** token, `employees.country_emp_id` (Iqama / national ID) |
+| Merge field `project` + `hrms_contracts.project_id` (decision 20) | `employee_projects.main_project` flag | Main-project period covering today |
+| Merge fields `company_phone`, `contact_person_phone` (Staffing Company) | stored text | Formatted from E.164 (rule below) |
+| Merge field `city` (Staffing Company) | text `city` | City name from `city_id`, EN or AR; falls back to the text column when `city_id` is empty |
+| Recipient lookup (decision 20, ticket 06) | code = `country_emp_id`; staffing city not shown | Shows and searches `employee_code` **and** `id_number`; shows nationality, residence country and residence city; staffing shows city. Names in the request language (geo D10) |
+| PDF values (decision 40, ticket 11) | mostly Latin | Country and city names may be Arabic in an English template; phones in international format contain `+` and spaces. Both go through the same reshaper + bidi path; covered by tests |
+| Seeds (section 5, tickets 01, 25) | seeded templates use `employee_name`, `designation` | No change needed; the geo branch migrates seeded employees. Demo contracts (ticket 25) are re-created by re-seeding |
+| Tests (tickets 06, 08, 11, 22) | employee fixtures with text nationality, 6–15 digit phones, flag-based main project | Fixtures use country ids, E.164 phones with phone country, main-project periods; assertions updated to the rules below |
+
+Addresses (`address` tokens), names, designation, department, shift and the Contract group are not affected.
+
+### Rules after the merge
+- **Language of country and city names:** the **signer's `users.lang_key` at send** (`ar` → Arabic name, falling
+  back to English when it has none; anything else → English). The name is frozen at send like every other value.
+  Dates, enums and rate keep the English formats of decision 44 (Arabic formats stay parked). The draft preview uses
+  the same rule with the signer's current `lang_key`.
+- **Phone format:** parsed from E.164 with `libphonenumber-js`. Phone country = the company's country
+  (`employers.country_id`) → **national** format (`050 123 4567`); any other phone country → **international**
+  format (`+91 98765 43210`). A legacy value with phone country NULL is used as stored. Empty → missing.
+- **Main project:** the employee's `hrms_employee_main_project_periods` row with `date_from` ≤ today (company tz)
+  and `date_to` empty or ≥ today. None → as decision 20 (no project). Replaces the flag rule of decision 20.
+- **`employee_code` / `id_number`:** on the merge, existing **template fields and draft contract fields** whose
+  `db_column` is `employee_code` are rewritten to `id_number` (one data migration on contract tables), so a
+  template keeps showing the Iqama / ID it was built with. Sent contracts are frozen and never change.

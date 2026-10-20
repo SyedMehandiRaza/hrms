@@ -50,7 +50,8 @@ Frontier = every ready-for-agent ticket whose blockers are all done.
 Plan: `docs/plans/contract-studio.md`. Only reads Employees/Staffing data (ADR 0008); safe to build in parallel
 with the Employees/Termination module. Frontier = every ready-for-agent ticket whose blockers are all done.
 Tickets 22–25 were split out of 01, 07, 08 and 10 during review, so number order isn't strict dependency order here:
-the **Blocked by** column is the source of truth.
+the **Blocked by** column is the source of truth. Ticket 26 also waits on an **external** blocker: the geo +
+workforce branch (`hrms-project-moduleA`) being merged into main (plan section 7).
 
 ### Backend + tests
 
@@ -74,6 +75,7 @@ the **Blocked by** column is the source of truth.
 | 13 | [Expiry, reminder and inactive-recipient job](contract-studio/13-expiry-job.md) | ready-for-agent | 08 |
 | 14 | [Contract notifications](contract-studio/14-notifications.md) | ready-for-agent | 12, 13, 24 |
 | 25 | [Demo contracts seed](contract-studio/25-demo-contracts-seed.md) | ready-for-agent | 12 |
+| 26 | [Adapt to the geo + workforce data](contract-studio/26-adapt-to-geo.md) | ready-for-agent | geo + workforce branch merged into main, 06, 11, 22 |
 
 ### UI (one ticket per screen)
 
