@@ -5,10 +5,11 @@ import { useTranslation } from "react-i18next";
 // Digital-signature capture popup (UI demo, no backend).
 // The recipient either DRAWS on the canvas or TYPES their name; on save the
 // signature would be stored on their record and reused on future contracts.
-export default function SignaturePadModal({ onClose, onSave }) {
+// initialText pre-fills the typed signature (the signer's profile name, plan decision 29).
+export default function SignaturePadModal({ onClose, onSave, initialText = "" }) {
   const { t } = useTranslation("contractStudio");
   const [mode, setMode] = useState("draw"); // 'draw' | 'type'
-  const [typed, setTyped] = useState("");
+  const [typed, setTyped] = useState(initialText);
   const [hasDrawing, setHasDrawing] = useState(false);
   const canvasRef = useRef(null);
   const drawing = useRef(false);

@@ -5,7 +5,7 @@ const { ACCESS_LEVELS } = require("../constants/accessLevels");
 const { likePattern, UUID } = require("./department.service");
 const { contractItem } = require("./contract.service");
 const { expireDue } = require("./contractExpiry.service");
-const { fieldsOf } = require("./contractQuery.service");
+const { fieldsOf, withFieldCounts } = require("./contractQuery.service");
 const { contractPdf } = require("./contractRender.service");
 const { readVerified } = require("./contractFiles.service");
 
@@ -71,7 +71,7 @@ const listMine = async (auth, { page, limit, q }) => {
   ];
   const total = await Contract.count({ where, include: [include[0]], distinct: true, col: "id" });
   const rows = await Contract.findAll({ where, include, order: ORDER, limit, offset: (page - 1) * limit, subQuery: false });
-  return { items: rows.map(contractItem), total, page, limit };
+  return { items: await withFieldCounts(rows), total, page, limit };
 };
 
 // First open of a SENT contract by its signer → VIEWED (decision 28). Conditional, so two

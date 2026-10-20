@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   MdOutlineSearch,
   MdOutlineDescription,
@@ -10,12 +10,13 @@ import {
 } from "react-icons/md";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useNcMyContracts, ncStore } from "./newContractStore";
-import { getStaticUser } from "../../data/session";
-import { matches, paginate } from "../../data/common";
-import { NC_STATUS_STYLES } from "./newContractData";
+import { NC_STATUS_STYLES, NC_STATUS_KEY } from "./newContractData";
 import ContractViewer from "./ContractViewer";
 import Pagination from "../../components/Pagination";
+import { ScreenError, ScreenLoader } from "../../components/ScreenState";
+import { listMyContracts } from "../../api/contracts";
+import useApiQuery from "../../hooks/useApiQuery";
+import { useFormat } from "../../hooks/useFormat";
 
 // Known English title/subtitle defaults (passed from routes) → translation keys.
 const TITLE_KEYS = { "My Contracts": "myContracts.title", Contracts: "myContracts.titleCompany" };
@@ -25,45 +26,41 @@ const SUBTITLE_KEYS = {
   "Contracts your employer has sent you to review and sign.": "myContracts.subtitleEmployee",
 };
 
-// Recipient-side inbox: shows ONLY the contracts sent to the logged-in
-// recipient (employee / staffing company), scoped by the /contracts/mine API.
+// Signer inbox (plan decisions 26–27): only the caller's own contracts (GET /my/contracts),
+// pending first. The open contract lives in the URL (?contract=<id>, also the emails' link).
+const SIGNABLE = ["SENT", "VIEWED"];
+const DONE = ["SUBMITTED", "COMPLETED"];
 export default function MyContracts({
   title = "My Contracts",
   subtitle = "Contracts sent to you for review and signature.",
 }) {
   const { t } = useTranslation("contractStudio");
-  // the staffing-company portal has its own inbox; everyone else sees the employee one
-  const items = useNcMyContracts(getStaticUser().role === "STAFFING_COMPANY" ? "staffing" : "employee");
-  const loaded = true;
+  const { fmtDate } = useFormat();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [viewing, setViewing] = useState(null); // { contract, canSign }
   const [page, setPage] = useState(1);
   const limit = 10;
 
   const [searchParams, setSearchParams] = useSearchParams();
+  const viewing = searchParams.get("contract");
+  const setViewing = (id) =>
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (id) next.set("contract", id);
+        else next.delete("contract");
+        return next;
+      },
+      { replace: true },
+    );
+  const closeViewer = () => setViewing(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedQuery(query);
+      setDebouncedQuery(query.trim());
     }, 400);
     return () => clearTimeout(timer);
   }, [query]);
-
-  // Email deep-link: open a specific contract when ?contract=<id> is present.
-  useEffect(() => {
-    const cid = searchParams.get("contract");
-    if (!cid) return;
-    const c = items.find((x) => String(x.id) === cid || String(x.serverId) === cid);
-    if (c) {
-      const done = ["Signed", "Submitted", "Completed", "Approved"].includes(c.status);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setViewing({ contract: c, canSign: !done });
-    }
-    searchParams.delete("contract");
-    setSearchParams(searchParams, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // back to page 1 whenever the search changes
   const [pageKey, setPageKey] = useState(debouncedQuery);
@@ -72,15 +69,14 @@ export default function MyContracts({
     setPage(1);
   }
 
-  const { rows, total, totalPages } = useMemo(
-    () => paginate(items.filter((c) => matches(c, debouncedQuery.trim(), ["name", "id", "module"])), page, limit),
-    [items, debouncedQuery, page]
-  );
+  const listQuery = useApiQuery(() => listMyContracts({ page, limit, q: debouncedQuery }), [page, debouncedQuery]);
+  const rows = listQuery.data?.items || [];
+  const total = listQuery.data?.total || 0;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const openViewer = (c) => setViewing(c.id);
 
-  const openViewer = (c, canSign) => {
-    if (!canSign) ncStore.markViewed(c.id); // opening marks it viewed
-    setViewing({ contract: c, canSign });
-  };
+  if (listQuery.error && !listQuery.data) return <ScreenError error={listQuery.error} onRetry={listQuery.reload} />;
+  if (!listQuery.data) return <ScreenLoader />;
 
   return (
     <div className="space-y-6 pb-10">
@@ -120,7 +116,7 @@ export default function MyContracts({
           <div className="w-14 h-14 rounded-2xl bg-gray-50 border border-gray-200 flex items-center justify-center mb-4">
             <MdOutlineInbox className="text-3xl text-gray-300" />
           </div>
-          <h3 className="text-base font-bold text-gray-900 mb-1">{loaded ? t("myContracts.empty.title") : t("common.loading")}</h3>
+          <h3 className="text-base font-bold text-gray-900 mb-1">{t("myContracts.empty.title")}</h3>
           <p className="text-sm text-gray-500 max-w-sm">
             {t("myContracts.empty.description")}
           </p>
@@ -141,8 +137,10 @@ export default function MyContracts({
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {rows.map((c, idx) => {
-                  const st = NC_STATUS_STYLES[c.status] || NC_STATUS_STYLES.Draft;
-                  const done = ["Signed", "Submitted", "Completed", "Approved"].includes(c.status);
+                  const statusKey = NC_STATUS_KEY[c.status];
+                  const st = NC_STATUS_STYLES[statusKey] || NC_STATUS_STYLES.Draft;
+                  const done = DONE.includes(c.status);
+                  const signable = SIGNABLE.includes(c.status);
                   return (
                     <tr key={c.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-5 py-4 text-sm font-medium text-gray-500">
@@ -155,7 +153,7 @@ export default function MyContracts({
                           </div>
                           <div>
                             <p className="font-bold text-gray-900 text-sm">{c.name}</p>
-                            <p className="text-[11px] text-gray-400">{t("common.idLabel", { id: c.id })}</p>
+                            <p className="text-[11px] text-gray-400">{t("common.idLabel", { id: c.number || "—" })}</p>
                           </div>
                         </div>
                       </td>
@@ -164,12 +162,12 @@ export default function MyContracts({
                           {t(`modules.${c.module || "Company"}`, { defaultValue: c.module || "Company" })}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-sm text-gray-700">{c.sentDate || "—"}</td>
-                      <td className="px-5 py-4 text-sm text-gray-700">{c.fields ?? 0}</td>
+                      <td className="px-5 py-4 text-sm text-gray-700">{c.sent_at ? fmtDate(c.sent_at) : "—"}</td>
+                      <td className="px-5 py-4 text-sm text-gray-700">{c.field_count ?? 0}</td>
                       <td className="px-5 py-4">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${st.chip}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
-                          {t(`status.${c.status}`, { defaultValue: c.status })}
+                          {t(`status.${statusKey}`, { defaultValue: c.status })}
                         </span>
                       </td>
                       <td className="px-5 py-4">
@@ -179,7 +177,7 @@ export default function MyContracts({
                               <MdCheckCircle className="text-sm" /> {t("myContracts.submitted")}
                             </span>
                             <button
-                              onClick={() => openViewer(c, false)}
+                              onClick={() => openViewer(c)}
                               className="flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-cyan-600 transition-colors"
                               title={t("myContracts.viewDocument")}
                             >
@@ -189,18 +187,20 @@ export default function MyContracts({
                         ) : (
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => openViewer(c, false)}
+                              onClick={() => openViewer(c)}
                               className="flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-cyan-600 transition-colors"
                               title={t("actions.open")}
                             >
                               <MdOutlineVisibility className="text-base" /> {t("actions.open")}
                             </button>
-                            <button
-                              onClick={() => openViewer(c, true)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#20B2AA] hover:bg-[#1C9D96] rounded-lg transition-colors"
-                            >
-                              <MdOutlineDraw className="text-sm" /> {t("myContracts.reviewSign")}
-                            </button>
+                            {signable && (
+                              <button
+                                onClick={() => openViewer(c)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#20B2AA] hover:bg-[#1C9D96] rounded-lg transition-colors"
+                              >
+                                <MdOutlineDraw className="text-sm" /> {t("myContracts.reviewSign")}
+                              </button>
+                            )}
                           </div>
                         )}
                       </td>
@@ -214,8 +214,10 @@ export default function MyContracts({
           {/* Mobile Cards */}
           <div className="md:hidden divide-y divide-gray-100">
             {rows.map((c, index) => {
-              const st = NC_STATUS_STYLES[c.status] || NC_STATUS_STYLES.Draft;
-              const done = ["Signed", "Submitted", "Completed", "Approved"].includes(c.status);
+              const statusKey = NC_STATUS_KEY[c.status];
+              const st = NC_STATUS_STYLES[statusKey] || NC_STATUS_STYLES.Draft;
+              const done = DONE.includes(c.status);
+              const signable = SIGNABLE.includes(c.status);
               return (
                 <div key={c.id} className="px-4 py-4 space-y-3 hover:bg-gray-50 transition-colors">
                   <div className="flex items-start justify-between gap-3">
@@ -229,19 +231,19 @@ export default function MyContracts({
                         </div>
                         <div>
                           <p className="text-sm font-bold text-gray-900">{c.name}</p>
-                          <p className="text-[11px] text-gray-400">{t("common.idLabel", { id: c.id })}</p>
+                          <p className="text-[11px] text-gray-400">{t("common.idLabel", { id: c.number || "—" })}</p>
                         </div>
                       </div>
                     </div>
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold flex-shrink-0 ${st.chip}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />{t(`status.${c.status}`, { defaultValue: c.status })}
+                      <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />{t(`status.${statusKey}`, { defaultValue: c.status })}
                     </span>
                   </div>
                   
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 pb-2">
                     <span>{t("table.from")} <strong className="text-gray-800">{t(`modules.${c.module || "Company"}`, { defaultValue: c.module || "Company" })}</strong></span>
-                    <span>{t("table.sent")} <strong className="text-gray-800">{c.sentDate || "—"}</strong></span>
-                    <span>{t("table.fields")} <strong className="text-gray-800">{c.fields ?? 0}</strong></span>
+                    <span>{t("table.sent")} <strong className="text-gray-800">{c.sent_at ? fmtDate(c.sent_at) : "—"}</strong></span>
+                    <span>{t("table.fields")} <strong className="text-gray-800">{c.field_count ?? 0}</strong></span>
                   </div>
 
                   <div className="pt-2 border-t border-gray-100 flex justify-end">
@@ -251,7 +253,7 @@ export default function MyContracts({
                           <MdCheckCircle className="text-sm" /> {t("myContracts.submitted")}
                         </span>
                         <button
-                          onClick={() => openViewer(c, false)}
+                          onClick={() => openViewer(c)}
                           className="flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-cyan-600 transition-colors bg-gray-100 px-3 py-1.5 rounded-lg"
                         >
                           <MdOutlineVisibility className="text-base" /> {t("actions.view")}
@@ -260,17 +262,19 @@ export default function MyContracts({
                     ) : (
                       <div className="flex items-center gap-2 w-full justify-end">
                         <button
-                          onClick={() => openViewer(c, false)}
+                          onClick={() => openViewer(c)}
                           className="flex-1 flex justify-center items-center gap-1 text-xs font-semibold text-gray-600 hover:text-cyan-600 transition-colors bg-gray-100 px-3 py-1.5 rounded-lg"
                         >
                           <MdOutlineVisibility className="text-base" /> {t("actions.open")}
                         </button>
-                        <button
-                          onClick={() => openViewer(c, true)}
-                          className="flex-[2] flex justify-center items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#20B2AA] hover:bg-[#1C9D96] rounded-lg transition-colors"
-                        >
-                          <MdOutlineDraw className="text-sm" /> {t("myContracts.reviewSign")}
-                        </button>
+                        {signable && (
+                          <button
+                            onClick={() => openViewer(c)}
+                            className="flex-[2] flex justify-center items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#20B2AA] hover:bg-[#1C9D96] rounded-lg transition-colors"
+                          >
+                            <MdOutlineDraw className="text-sm" /> {t("myContracts.reviewSign")}
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -295,13 +299,7 @@ export default function MyContracts({
         </div>
       )}
 
-      {viewing && (
-        <ContractViewer
-          contract={viewing.contract}
-          canSign={viewing.canSign}
-          onClose={() => setViewing(null)}
-        />
-      )}
+      {viewing && <ContractViewer key={viewing} contractId={viewing} onClose={closeViewer} onChanged={listQuery.reload} />}
     </div>
   );
 }

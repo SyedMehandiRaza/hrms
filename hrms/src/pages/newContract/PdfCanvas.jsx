@@ -67,5 +67,6 @@ export default function PdfCanvas({ src, page = 1, onLoaded, onError, className 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src, page]);
 
-  return <canvas ref={canvasRef} className={className} />;
+  // dir="ltr": a canvas inherits the page direction, and RTL garbles PDF.js text in Arabic
+  return <canvas ref={canvasRef} dir="ltr" className={className} />;
 }

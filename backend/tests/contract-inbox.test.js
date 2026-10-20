@@ -69,7 +69,7 @@ describe("list", () => {
     expect(res.status).toBe(200);
     expect(ids(res)).toEqual([mine.older, mine.newer, mine.done]);
     expect(res.body.data).toMatchObject({ total: 3, page: 1 });
-    expect(res.body.data.items[0]).toMatchObject({ name: "Older Pending", status: "SENT", contract_type: { name: "Employment Contract" } });
+    expect(res.body.data.items[0]).toMatchObject({ name: "Older Pending", status: "SENT", contract_type: { name: "Employment Contract" }, field_count: 2 });
   });
 
   it("searches by name or number and paginates", async () => {
