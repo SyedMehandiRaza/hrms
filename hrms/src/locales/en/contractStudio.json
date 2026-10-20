@@ -323,7 +323,7 @@
   "documents": {
     "title": "Documents",
     "subtitle": "Step 1 — upload & save the source documents you'll later turn into templates.",
-    "dropTitle": "Drop PDF or DOCX files to upload",
+    "dropTitle": "Drop PDF files to upload",
     "dropSubtitle": "They're saved to your library instantly — click to browse",
     "chips": {
       "multiple": "MULTIPLE",
@@ -333,7 +333,7 @@
     "savedCount": "saved",
     "empty": {
       "title": "No documents yet",
-      "description": "Upload a PDF or Word file above to get started."
+      "description": "Upload a PDF file above to get started."
     },
     "meta": "{{pages}} pages · {{size}} MB · {{date}}",
     "makeTemplate": "Make Template",
@@ -341,6 +341,14 @@
       "savedMany": "{{count}} documents saved",
       "savedOne": "Document saved",
       "deleted": "Document deleted"
+    },
+    "rename": "Rename",
+    "archive": "Archive",
+    "unarchive": "Unarchive",
+    "saveName": "Save",
+    "validation": {
+      "nameRequired": "Document name is required",
+      "nameMax": "Document name cannot exceed 255 characters"
     }
   },
   "viewer": {

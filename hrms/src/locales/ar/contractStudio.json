@@ -327,7 +327,7 @@
   "documents": {
     "title": "المستندات",
     "subtitle": "الخطوة 1 — ارفع واحفظ المستندات المصدر التي ستحوِّلها لاحقًا إلى قوالب.",
-    "dropTitle": "أفلِت ملفات PDF أو DOCX لرفعها",
+    "dropTitle": "أفلِت ملفات PDF لرفعها",
     "dropSubtitle": "تُحفَظ في مكتبتك فورًا — انقر للتصفح",
     "chips": {
       "multiple": "ملفات متعددة",
@@ -337,7 +337,7 @@
     "savedCount": "محفوظ",
     "empty": {
       "title": "لا توجد مستندات بعد",
-      "description": "ارفع ملف PDF أو Word أعلاه للبدء."
+      "description": "ارفع ملف PDF أعلاه للبدء."
     },
     "meta": "{{pages}} صفحات · {{size}} ميجابايت · {{date}}",
     "makeTemplate": "إنشاء قالب",
@@ -345,6 +345,14 @@
       "savedMany": "تم حفظ {{count}} مستندات",
       "savedOne": "تم حفظ المستند",
       "deleted": "تم حذف المستند"
+    },
+    "rename": "إعادة تسمية",
+    "archive": "أرشفة",
+    "unarchive": "إلغاء الأرشفة",
+    "saveName": "حفظ",
+    "validation": {
+      "nameRequired": "اسم المستند مطلوب",
+      "nameMax": "لا يمكن أن يتجاوز اسم المستند 255 حرفًا"
     }
   },
   "viewer": {
