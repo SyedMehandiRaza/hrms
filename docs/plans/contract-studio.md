@@ -405,6 +405,11 @@ eight contract tables, plus one foreign-key change on `hrms_contracts.contract_t
     - `hrms_contract_activities`: `action` **+ REVOKED**.
     - `hrms_contract_types`: + unique `(employer_id, name)`.
     - No changes to any non-contract table. Models: add the new attributes; generated `active_key` is never written.
+47. **Recipient status follows a final contract** (decided 2026-10-21). `hrms_contract_recipients.status`
+    **+ COMPLETED, EXPIRED, REVOKED**. Approve sets the recipient COMPLETED, expiry (lazy and job) EXPIRED, HR revoke
+    and auto-revoke REVOKED — in the same transaction as the contract; reject already sets DECLINED. So the HR
+    viewer's recipient chip always matches the contract. The migration backfills existing rows from their contract;
+    undoing maps them back to the last step reached (SUBMITTED / VIEWED / SENT).
 
 ### Endpoints
 | Method & path | Who |

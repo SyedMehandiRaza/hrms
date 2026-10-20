@@ -109,4 +109,6 @@ reviewed it. (Backend catalog strings carry their own `// AR: needs native revie
 - `viewer.consent`
 - `viewer.reject`
 - `viewer.rejectTitle`
-- `viewer.rejecting`
+- `viewer.rejecting`- `recipientStatus.COMPLETED`
+- `recipientStatus.EXPIRED`
+- `recipientStatus.REVOKED`

@@ -16,7 +16,12 @@ module.exports = (sequelize, DataTypes) => {
       recipient_phone: { type: DataTypes.STRING(40) },
       role: { type: DataTypes.ENUM("PRIMARY_SIGNER", "APPROVER", "VIEWER", "WITNESS"), allowNull: false, defaultValue: "PRIMARY_SIGNER" },
       signing_sequence: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
-      status: { type: DataTypes.ENUM("PENDING", "SENT", "VIEWED", "SIGNED", "SUBMITTED", "DECLINED"), allowNull: false, defaultValue: "PENDING" },
+      // COMPLETED / EXPIRED / REVOKED follow the contract (plan decision 47).
+      status: {
+        type: DataTypes.ENUM("PENDING", "SENT", "VIEWED", "SIGNED", "SUBMITTED", "DECLINED", "COMPLETED", "EXPIRED", "REVOKED"),
+        allowNull: false,
+        defaultValue: "PENDING",
+      },
       access_token_hash: { type: DataTypes.STRING(128) },
       color_index: { type: DataTypes.INTEGER },
       sent_at: { type: DataTypes.DATE },

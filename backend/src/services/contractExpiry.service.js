@@ -1,5 +1,5 @@
 const { Op } = require("sequelize");
-const { sequelize, Contract, ContractActivity } = require("../models");
+const { sequelize, Contract, ContractActivity, ContractRecipient } = require("../models");
 const { emitContractEvent } = require("./contractEvents");
 
 // Expiry (plan decision 36). One shared function expires due SENT/VIEWED contracts with a
@@ -24,6 +24,7 @@ const expireDue = async ({ employerId, contractId, now = new Date() } = {}) => {
         { where: { id, status: { [Op.in]: PENDING }, expires_at: { [Op.lte]: now } }, transaction }
       );
       if (count !== 1) return false;
+      await ContractRecipient.update({ status: "EXPIRED" }, { where: { contract_id: id }, transaction });
       await ContractActivity.create({ employer_id: emp, contract_id: id, action: "EXPIRED", actor_user_id: null }, { transaction });
       return true;
     });

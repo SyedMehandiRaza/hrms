@@ -201,6 +201,57 @@ describe("hrms_contract_recipients", () => {
   });
 });
 
+describe("recipient status follows a final contract (plan decision 47)", () => {
+  const migration = require("../src/migrations/20261021000204-contract-recipient-final-statuses");
+  const qi = db.sequelize.getQueryInterface();
+  const statusOf = async (id) => (await db.ContractRecipient.findByPk(id)).status;
+
+  // A contract in `status` whose recipient still has the status it had before (`was`).
+  const pair = async (ctx, status, was, times = {}) => {
+    const c = await contract(ctx, { status });
+    const r = await build(db, "ContractRecipient", {
+      contract_id: c.id,
+      employer_id: ctx.employer.id,
+      recipient_type: "EMPLOYEE",
+      employee_id: ctx.employee.id,
+      status: was,
+      ...times,
+    });
+    return r.id;
+  };
+
+  it("stores COMPLETED, EXPIRED and REVOKED, backfills them from the contract, and maps them back when undone", async () => {
+    const ctx = await setup();
+    const at = new Date();
+    const ids = {
+      completed: await pair(ctx, "COMPLETED", "SUBMITTED", { viewed_at: at, submitted_at: at }),
+      expiredSent: await pair(ctx, "EXPIRED", "SENT"),
+      expiredViewed: await pair(ctx, "EXPIRED", "VIEWED", { viewed_at: at }),
+      revokedSubmitted: await pair(ctx, "REVOKED", "SUBMITTED", { viewed_at: at, submitted_at: at }),
+      rejected: await pair(ctx, "REJECTED", "DECLINED", { viewed_at: at }),
+      open: await pair(ctx, "VIEWED", "VIEWED", { viewed_at: at }),
+    };
+
+    await migration.up(qi, db.Sequelize); // backfill (idempotent on an up-to-date table)
+    expect(await statusOf(ids.completed)).toBe("COMPLETED");
+    expect(await statusOf(ids.expiredSent)).toBe("EXPIRED");
+    expect(await statusOf(ids.expiredViewed)).toBe("EXPIRED");
+    expect(await statusOf(ids.revokedSubmitted)).toBe("REVOKED");
+    expect(await statusOf(ids.rejected)).toBe("DECLINED");
+    expect(await statusOf(ids.open)).toBe("VIEWED");
+
+    await migration.down(qi, db.Sequelize);
+    expect(await statusOf(ids.completed)).toBe("SUBMITTED");
+    expect(await statusOf(ids.expiredSent)).toBe("SENT");
+    expect(await statusOf(ids.expiredViewed)).toBe("VIEWED");
+    expect(await statusOf(ids.revokedSubmitted)).toBe("SUBMITTED");
+    expect(await statusOf(ids.rejected)).toBe("DECLINED");
+
+    await migration.up(qi, db.Sequelize);
+    expect(await statusOf(ids.revokedSubmitted)).toBe("REVOKED");
+  });
+});
+
 describe("hrms_contract_activities", () => {
   it("stores the REVOKED action", async () => {
     const row = await build(db, "ContractActivity", { action: "REVOKED" });

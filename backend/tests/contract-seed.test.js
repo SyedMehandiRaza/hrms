@@ -24,6 +24,7 @@ const CONTRACT_MIGRATIONS = [
   "20261020000201-contract-studio-hrms-contracts.js",
   "20261020000202-contract-studio-columns.js",
   "20261020000203-contract-studio-template-type.js",
+  "20261021000204-contract-recipient-final-statuses.js",
 ].map((file) => require(path.join(MIGRATIONS_DIR, file)));
 const SEEDERS = fs
   .readdirSync(SEEDERS_DIR)

@@ -18,6 +18,8 @@ const sendStaffing = async (ctx, ids) =>
 const newEmp = async (ctx, overrides = {}, opts) => (await createEmployee(ctx.employer, overrides, opts)).employee;
 const activities = (id, action) => db.ContractActivity.findAll({ where: { contract_id: id, action } });
 const reload = (id) => db.Contract.findByPk(id);
+const recipientStatus = async (id) => (await db.ContractRecipient.findOne({ where: { contract_id: id } })).status;
+
 
 describe("expiry", () => {
   let ctx;
@@ -32,6 +34,7 @@ describe("expiry", () => {
     await runContractJob({ now: after });
     for (const id of [a, b]) {
       expect((await reload(id)).status).toBe("EXPIRED");
+      expect(await recipientStatus(id)).toBe("EXPIRED");
       const acts = await activities(id, "EXPIRED");
       expect(acts).toHaveLength(1);
       expect(acts[0].actor_user_id).toBeNull();
@@ -125,6 +128,7 @@ describe("recipients who left", () => {
   const expectRevoked = async (id) => {
     const c = await reload(id);
     expect(c).toMatchObject({ status: "REVOKED", revoke_reason: "Recipient is no longer active.", revoked_by: null });
+    expect(await recipientStatus(id)).toBe("REVOKED");
     expect(c.revoked_at).toBeInstanceOf(Date);
     const acts = await activities(id, "REVOKED");
     expect(acts).toHaveLength(1);

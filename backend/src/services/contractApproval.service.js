@@ -78,6 +78,7 @@ const approveContract = async (auth, id) => {
         { status: "COMPLETED", approved_by: auth.userId, approved_at: approvedAt, completed_at: approvedAt, signed_pdf_path: written.path, signed_pdf_sha256: written.sha256 },
         { transaction }
       );
+      await ContractRecipient.update({ status: "COMPLETED" }, { where: { contract_id: contract.id }, transaction });
       await ContractActivity.create(
         { employer_id: auth.employerId, contract_id: contract.id, action: "COMPLETED", actor_user_id: auth.userId, meta: { signed_pdf_sha256: written.sha256 } },
         { transaction }
@@ -104,6 +105,7 @@ const revokeContract = async (auth, id, body) => {
     const locked = await Contract.findOne({ where: { id: contract.id }, transaction, lock: transaction.LOCK.UPDATE });
     if (!REVOCABLE.includes(locked.status)) throw new ErrorHandler("CONTRACT_STATUS_INVALID");
     await locked.update({ status: "REVOKED", revoke_reason: reason, revoked_at: new Date(), revoked_by: auth.userId }, { transaction });
+    await ContractRecipient.update({ status: "REVOKED" }, { where: { contract_id: contract.id }, transaction });
     await ContractActivity.create(
       { employer_id: auth.employerId, contract_id: contract.id, action: "REVOKED", actor_user_id: auth.userId, meta: { reason } },
       { transaction }

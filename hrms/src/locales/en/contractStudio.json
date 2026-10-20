@@ -20,7 +20,10 @@
     "VIEWED": "VIEWED",
     "SIGNED": "SIGNED",
     "SUBMITTED": "SUBMITTED",
-    "DECLINED": "DECLINED"
+    "DECLINED": "DECLINED",
+    "COMPLETED": "COMPLETED",
+    "EXPIRED": "EXPIRED",
+    "REVOKED": "REVOKED"
   },
   "roles": {
     "primarySigner": "Primary Signer",

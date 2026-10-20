@@ -61,6 +61,9 @@ describe("approve", () => {
     expect(res.body.data).toMatchObject({ id: c0.id, status: "COMPLETED" });
     const c = await db.Contract.findByPk(c0.id);
     expect(c).toMatchObject({ status: "COMPLETED", approved_by: ctx.owner.id });
+    // the recipient's status follows the contract (plan decision 47)
+    expect(res.body.data.recipient.status).toBe("COMPLETED");
+    expect(await recipientStatus(c0.id)).toBe("COMPLETED");
     expect(c.approved_at).toBeInstanceOf(Date);
     expect(c.completed_at).toBeInstanceOf(Date);
     expect(c.signed_pdf_path).toMatch(new RegExp(`^${ctx.employer.id}/signed/[0-9a-f-]{36}\\.pdf$`));
@@ -161,13 +164,16 @@ describe("approve", () => {
   });
 });
 
+const recipientStatus = async (id) => (await db.ContractRecipient.findOne({ where: { contract_id: id } })).status;
+
 describe("revoke", () => {
   it.each(["SENT", "VIEWED", "SUBMITTED"])("revokes a %s contract with reason, time and revoker, and a REVOKED activity", async (status) => {
     const c0 = await fresh();
     await db.Contract.update({ status }, { where: { id: c0.id } });
     const res = await revoke(ctx.token, c0.id, { reason: `  ${REASON} ` });
     expect(res.status).toBe(200);
-    expect(res.body.data).toMatchObject({ status: "REVOKED", revoke_reason: REASON });
+    expect(res.body.data).toMatchObject({ status: "REVOKED", revoke_reason: REASON, recipient: { status: "REVOKED" } });
+    expect(await recipientStatus(c0.id)).toBe("REVOKED");
     const c = await db.Contract.findByPk(c0.id);
     expect(c).toMatchObject({ status: "REVOKED", revoke_reason: REASON, revoked_by: ctx.owner.id });
     expect(c.revoked_at).toBeInstanceOf(Date);
@@ -190,6 +196,7 @@ describe("revoke", () => {
     const res = await revoke(ctx.token, c0.id, { reason: REASON });
     expect(res.body).toEqual(errorBody("CONTRACT_STATUS_INVALID"));
     expect((await db.Contract.findByPk(c0.id)).status).toBe("EXPIRED");
+    expect(await recipientStatus(c0.id)).toBe("EXPIRED");
   });
 
   it.each([

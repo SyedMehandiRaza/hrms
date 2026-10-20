@@ -57,6 +57,7 @@ const revokeInactiveRecipients = async (now) => {
         { where: { id: c.id, status: { [Op.in]: ["SENT", "VIEWED", "SUBMITTED"] } }, transaction }
       );
       if (count !== 1) return false;
+      await ContractRecipient.update({ status: "REVOKED" }, { where: { contract_id: c.id }, transaction });
       await ContractActivity.create(
         { employer_id: c.employer_id, contract_id: c.id, action: "REVOKED", actor_user_id: null, meta: { reason: AUTO_REVOKE_REASON, auto: true } },
         { transaction }

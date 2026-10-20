@@ -20,7 +20,10 @@
     "VIEWED": "تمت المشاهدة",
     "SIGNED": "موقَّع",
     "SUBMITTED": "مُقدَّم",
-    "DECLINED": "مرفوض"
+    "DECLINED": "مرفوض",
+    "COMPLETED": "مكتمل",
+    "EXPIRED": "منتهي الصلاحية",
+    "REVOKED": "ملغى"
   },
   "roles": {
     "primarySigner": "الموقِّع الرئيسي",

@@ -37,6 +37,9 @@ const RECIP_STATUS = {
   SIGNED: { chip: "bg-emerald-50 text-emerald-600", dot: "bg-emerald-500" },
   SUBMITTED: { chip: "bg-emerald-50 text-emerald-600", dot: "bg-emerald-500" },
   DECLINED: { chip: "bg-rose-50 text-rose-600", dot: "bg-rose-500" },
+  COMPLETED: { chip: "bg-emerald-50 text-emerald-600", dot: "bg-emerald-500" },
+  EXPIRED: { chip: "bg-rose-50 text-rose-500", dot: "bg-rose-400" },
+  REVOKED: { chip: "bg-orange-50 text-orange-600", dot: "bg-orange-500" },
 };
 const REVOCABLE = ["SENT", "VIEWED", "SUBMITTED"];
 
