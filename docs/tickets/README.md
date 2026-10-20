@@ -44,3 +44,73 @@ Frontier = every ready-for-agent ticket whose blockers are all done.
 | 26 | [Departments list screen](auth-company/26-ui-departments-list.md) | done | 14, 12 |
 | 27 | [Department detail + designations screen](auth-company/27-ui-department-detail.md) | done | 26, 13 |
 | 28 | [Real email delivery over SMTP](auth-company/28-smtp-mailer.md) | done | 03 |
+
+## Countries, cities, phones (`geo/`)
+
+Plan: `docs/plans/countries-cities-phones.md`. ADR 0012 (phones stored as E.164). Builds on Auth + Company (done).
+Workforce tickets 03, 04, 13a, 20, 21, 28a are also blocked by geo tickets (shown as `geo NN`). Frontier now: **geo 01**.
+
+| # | Ticket | Status | Blocked by |
+|---|---|---|---|
+| 01 | [Schema + country and city reference data](geo/01-schema-reference-data.md) | ready-for-agent | — |
+| 02 | [Phone service + data migration](geo/02-phone-service-migration.md) | ready-for-agent | 01 |
+| 03 | [Countries and cities API](geo/03-countries-cities-api.md) | ready-for-agent | 01 |
+| 04 | [Sign-up and company profile use the new phone rule](geo/04-auth-company-phones.md) | ready-for-agent | 02, 03 |
+| 05 | [UI shared Country, City and Phone inputs](geo/05-ui-shared-pickers.md) | ready-for-agent | 03, 04 |
+
+## Workforce structure + Employee lifecycle (`workforce/`)
+
+Plan: `docs/plans/workforce-and-lifecycle.md`. ADRs 0010 (1:1 head office ↔ project), 0011 (one approval group per
+employee). Builds on Auth + Company (all done). Senior review 2026-10-20 applied (plan §8). Frontier now: **01**.
+
+### Backend + tests
+
+| # | Ticket | Status | Blocked by |
+|---|---|---|---|
+| 01 | [Schema changes](workforce/01-schema-changes.md) | ready-for-agent | — |
+| 02 | [Starter salary components](workforce/02-starter-salary-components.md) | ready-for-agent | 01 |
+| 03 | [Head offices API](workforce/03-head-offices-api.md) | ready-for-agent | 01, geo 02, geo 03 |
+| 04 | [Projects API](workforce/04-projects-api.md) | ready-for-agent | 03, geo 03 |
+| 05 | [Project assign / remove API](workforce/05-project-assign-remove-api.md) | ready-for-agent | 04 |
+| 06 | [Shifts API + timing history](workforce/06-shifts-api.md) | ready-for-agent | 01 |
+| 07 | [Week-offs + copy to next year API](workforce/07-week-offs-copy-api.md) | ready-for-agent | 06 |
+| 08 | [Leave types / policies API](workforce/08-leave-types-api.md) | ready-for-agent | 01 |
+| 09 | [Salary components API](workforce/09-salary-components-api.md) | ready-for-agent | 02 |
+| 10 | [Approval groups API](workforce/10-approval-groups-api.md) | ready-for-agent | 01 |
+| 11a | [Approval engine core](workforce/11a-approval-engine-core.md) | ready-for-agent | 10 |
+| 11b | [Approval edge rules](workforce/11b-approval-edge-rules.md) | ready-for-agent | 11a |
+| 12 | [Employee drafts API](workforce/12-employee-drafts-api.md) | ready-for-agent | 01 |
+| 12b | [Roles and staffing-company lookups API](workforce/12b-roles-staffing-lookups-api.md) | ready-for-agent | 01 |
+| 13a | [Create employee core](workforce/13a-create-employee-core.md) | ready-for-agent | 04, 10, 12, 12b, geo 02, geo 03 |
+| 13b | [At-create setup: leave, shift, salary](workforce/13b-at-create-setup.md) | ready-for-agent | 13a, 06, 08, 09 |
+| 14a | [Employee list, detail, bulk (de)activate, resend login API](workforce/14a-employee-list-detail-bulk-api.md) | ready-for-agent | 13b |
+| 14b | [Employee edit API](workforce/14b-employee-edit-api.md) | ready-for-agent | 14a |
+| 15 | [Main project change API](workforce/15-main-project-change-api.md) | ready-for-agent | 14b |
+| 16a | [Raise exit + exit list/detail + exit settings API](workforce/16a-raise-exit-settings-api.md) | ready-for-agent | 11b, 13a |
+| 16b | [Exit approval outcomes, withdraw, emails](workforce/16b-exit-approval-outcomes-api.md) | ready-for-agent | 16a |
+| 18 | [Last-working-day daily job (+ shared "process exit" service)](workforce/18-lwd-daily-job.md) | ready-for-agent | 16b |
+| 17 | [Exit edit terms, cancel, confirm immediate API](workforce/17-exit-terms-cancel-confirm-api.md) | ready-for-agent | 16b, 18 |
+| 19 | [Rehire API](workforce/19-rehire-api.md) | ready-for-agent | 18, 13b |
+
+### UI (one ticket per screen, verified by `ui-tester`)
+
+| # | Ticket | Status | Blocked by |
+|---|---|---|---|
+| 20 | [Head offices screens](workforce/20-ui-head-offices.md) | ready-for-agent | 03, geo 05 |
+| 21 | [Projects page, full list, create/edit](workforce/21-ui-projects-list-create.md) | ready-for-agent | 04, geo 05 |
+| 22 | [Project detail + assign / remove](workforce/22-ui-project-detail.md) | ready-for-agent | 21, 05 |
+| 23 | [Shift list + add/edit, week-offs, copy](workforce/23-ui-shifts.md) | ready-for-agent | 06, 07 |
+| 24 | [Leave policy screen](workforce/24-ui-leave-policy.md) | ready-for-agent | 08 |
+| 25 | [Salary components screen](workforce/25-ui-salary-components.md) | ready-for-agent | 09 |
+| 26 | [Approval groups list, create/edit, view](workforce/26-ui-approval-groups.md) | ready-for-agent | 10 |
+| 27 | [Approvals inbox](workforce/27-ui-approvals-inbox.md) | ready-for-agent | 11a, 16b |
+| 28a | [Add employee: Basic, Job, Salary + draft](workforce/28a-ui-add-employee-steps.md) | ready-for-agent | 12, 12b, 13b, geo 05 |
+| 28b | [Add employee: Review, approval group, create](workforce/28b-ui-add-employee-review-submit.md) | ready-for-agent | 28a, 31 |
+| 29 | [Employee drafts tab](workforce/29-ui-employee-drafts.md) | ready-for-agent | 28a |
+| 30 | [Employees list](workforce/30-ui-employees-list.md) | ready-for-agent | 14a |
+| 31 | [Employee detail, Projects tab, Edit modal, resend login](workforce/31-ui-employee-detail-edit.md) | ready-for-agent | 30, 15 |
+| 32 | [Raise exit wizard](workforce/32-ui-raise-exit-wizard.md) | ready-for-agent | 31, 16a |
+| 33 | [Exit list](workforce/33-ui-exit-list.md) | ready-for-agent | 16b |
+| 34 | [Exit detail](workforce/34-ui-exit-detail.md) | ready-for-agent | 33, 17, 19 |
+| 35 | [Settings → Exit settings tab](workforce/35-ui-exit-settings.md) | ready-for-agent | 16a |
+| 36 | [End-to-end workforce lifecycle](workforce/36-e2e-workforce-lifecycle.md) | ready-for-agent | all other workforce tickets |
