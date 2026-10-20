@@ -228,6 +228,7 @@ describe("GET /api/approvals/inbox", () => {
           current_level: 1,
           total_levels: 2,
           owner_only: false,
+          blocked: false,
         },
       ],
       total: 1,

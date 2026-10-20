@@ -85,7 +85,8 @@ Out of scope: salary calculation, payroll runs, attendance screens, employee doc
 25. Any rejection → request `REJECTED` with a required reason (5–500).
 26. Unavailable approvers: the **requester / subject employee** never acts on their own request, and **EXITED**
     approvers drop out (IN_NOTICE approvers can still act). If a level has nobody left who can act: **can_skip**
-    → auto-`SKIPPED` (logged); otherwise it blocks.
+    → auto-`SKIPPED` (logged); otherwise it blocks. A level is skippable only when **every** approver on it (active members and members who
+    exited) is marked Can skip (decided 2026-10-21).
 27. **Owner override**: the ADMIN can approve or reject the current level on anyone's behalf, logged with a
     required reason (5–500). This also unblocks blocked levels. No delegation for leave yet. The owner has **no
     employee record**, so requests record the raiser as a user (`requested_by_user_id`; `requested_by` employee is

@@ -61,7 +61,7 @@ Workforce tickets 03, 04, 13a, 20, 21, 28a are also blocked by geo tickets (show
 ## Workforce structure + Employee lifecycle (`workforce/`)
 
 Plan: `docs/plans/workforce-and-lifecycle.md`. ADRs 0010 (1:1 head office ↔ project), 0011 (one approval group per
-employee). Builds on Auth + Company (all done). Senior review 2026-10-20 applied (plan §8). Frontier now: **11b, 12, 12b**.
+employee). Builds on Auth + Company (all done). Senior review 2026-10-20 applied (plan §8). Frontier now: **12, 12b**.
 
 ### Backend + tests
 
@@ -78,7 +78,7 @@ employee). Builds on Auth + Company (all done). Senior review 2026-10-20 applied
 | 09 | [Salary components API](workforce/09-salary-components-api.md) | done | 02 |
 | 10 | [Approval groups API](workforce/10-approval-groups-api.md) | done | 01 |
 | 11a | [Approval engine core](workforce/11a-approval-engine-core.md) | done | 10 |
-| 11b | [Approval edge rules](workforce/11b-approval-edge-rules.md) | ready-for-agent | 11a |
+| 11b | [Approval edge rules](workforce/11b-approval-edge-rules.md) | done | 11a |
 | 12 | [Employee drafts API](workforce/12-employee-drafts-api.md) | ready-for-agent | 01 |
 | 12b | [Roles and staffing-company lookups API](workforce/12b-roles-staffing-lookups-api.md) | ready-for-agent | 01 |
 | 13a | [Create employee core](workforce/13a-create-employee-core.md) | ready-for-agent | 04, 10, 12, 12b, geo 02, geo 03 |
