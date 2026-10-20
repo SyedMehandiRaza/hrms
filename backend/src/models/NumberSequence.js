@@ -6,8 +6,9 @@ module.exports = (sequelize, DataTypes) => {
     {
       id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
       employer_id: { type: DataTypes.UUID, allowNull: false, references: { model: "employers", key: "id" } },
-      doc_type: { type: DataTypes.ENUM("STAFFING_BILL", "LOAN", "CONTRACT", "PAYROLL_RUN"), allowNull: false },
-      financial_year_id: { type: DataTypes.UUID, allowNull: false, references: { model: "hrms_financial_years", key: "id" } },
+      doc_type: { type: DataTypes.ENUM("STAFFING_BILL", "LOAN", "CONTRACT", "PAYROLL_RUN", "PROJECT", "EMPLOYEE"), allowNull: false },
+      // NULL for EMPLOYEE (one sequence per company, never reset).
+      financial_year_id: { type: DataTypes.UUID, references: { model: "hrms_financial_years", key: "id" } },
       last_no: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
     },
     {

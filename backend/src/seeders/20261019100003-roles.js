@@ -73,7 +73,8 @@ module.exports = {
         is_system: true,
       }))
     );
-    await queryInterface.bulkInsert("role_permissions", permissionRows());
+    // Sub Admin's exit permission may already be there (migration 20261020600005).
+    await queryInterface.bulkInsert("role_permissions", permissionRows(), { ignoreDuplicates: true });
   },
 
   async down(queryInterface) {

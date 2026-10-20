@@ -15,7 +15,7 @@ module.exports = (sequelize, DataTypes) => {
       office_location: { type: DataTypes.STRING(255) },
       lat: { type: DataTypes.DECIMAL(10, 7) },
       lng: { type: DataTypes.DECIMAL(10, 7) },
-      status: { type: DataTypes.ENUM("ACTIVE", "INACTIVE"), allowNull: false, defaultValue: "ACTIVE" },
+      // No stored status: Active = has a project, Unassigned = none (workforce D3, ADR 0010).
       office_image: { type: DataTypes.STRING(500) },
     },
     {
@@ -29,7 +29,10 @@ module.exports = (sequelize, DataTypes) => {
     Office.belongsTo(models.Employer, { as: "employer", foreignKey: "employer_id" });
     Office.belongsTo(models.Country, { as: "country", foreignKey: "country_id" });
     Office.belongsTo(models.City, { as: "city", foreignKey: "city_id" });
+    // At most one (unique projects.office_id, ADR 0010).
     Office.hasMany(models.Project, { as: "projects", foreignKey: "office_id" });
+    Office.hasOne(models.Project, { as: "project", foreignKey: "office_id" });
+    // Deprecated link (employees.office_id is not read or written; workforce §3).
     Office.hasMany(models.Employee, { as: "employees", foreignKey: "office_id" });
   };
 

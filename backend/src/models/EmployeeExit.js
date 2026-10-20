@@ -25,7 +25,13 @@ module.exports = (sequelize, DataTypes) => {
       rehire_eligible: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
       cooling_period_days: { type: DataTypes.INTEGER },
       rehire_allowed_from: { type: DataTypes.DATEONLY },
-      status: { type: DataTypes.ENUM("IN_NOTICE", "EXITED", "COMPLETED", "CANCELLED"), allowNull: false, defaultValue: "IN_NOTICE" },
+      status: {
+        type: DataTypes.ENUM("PENDING_APPROVAL", "IN_NOTICE", "EXITED", "COMPLETED", "CANCELLED", "REJECTED"),
+        allowNull: false,
+        defaultValue: "PENDING_APPROVAL",
+      },
+      approval_request_id: { type: DataTypes.UUID, references: { model: "hrms_approval_requests", key: "id" } },
+      reject_reason: { type: DataTypes.STRING(500) },
       raised_by: { type: DataTypes.UUID, references: { model: "users", key: "id" } },
       exited_at: { type: DataTypes.DATE },
       completed_at: { type: DataTypes.DATE },
@@ -52,6 +58,7 @@ module.exports = (sequelize, DataTypes) => {
 
   EmployeeExit.associate = (models) => {
     EmployeeExit.belongsTo(models.Employer, { as: "employer", foreignKey: "employer_id" });
+    EmployeeExit.belongsTo(models.ApprovalRequest, { as: "approvalRequest", foreignKey: "approval_request_id" });
     EmployeeExit.belongsTo(models.Employee, { as: "employee", foreignKey: "employee_id" });
     EmployeeExit.belongsTo(models.Project, { as: "settlementScopeProject", foreignKey: "settlement_scope_project_id" });
     EmployeeExit.belongsTo(models.User, { as: "raisedBy", foreignKey: "raised_by" });

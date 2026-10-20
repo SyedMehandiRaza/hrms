@@ -9,9 +9,11 @@ const DEPARTMENTS = {
   hr: ["HR & Administration", "HRA", ["HR Officer", "Admin Assistant"]],
   finance: ["Finance", "FIN", ["Accountant", "Payroll Specialist"]],
 };
+// Each project has its own head office (ADR 0010).
+const OFFICE_BY_PROJECT = { ksp: "riyadh", jwt: "jeddah" };
 const PROJECTS = [
-  ["ksp", "King Salman Park - Phase 2", "KSP-02", "Riyadh", "Al Malaz, Riyadh", 24.6877, 46.7219, "2025-03-01", "2027-06-30"],
-  ["jwt", "Jeddah Waterfront Towers", "JWT-01", "Jeddah", "Corniche Road, Jeddah", 21.5433, 39.1728, "2026-01-15", "2028-12-31"],
+  ["ksp", "King Salman Park - Phase 2", "PRJ-FY26-0001", "Riyadh", "Al Malaz, Riyadh", 24.6877, 46.7219, "2025-03-01", "2027-06-30"],
+  ["jwt", "Jeddah Waterfront Towers", "PRJ-FY26-0002", "Jeddah", "Corniche Road, Jeddah", 21.5433, 39.1728, "2026-01-15", "2028-12-31"],
 ];
 const SHIFTS = [
   ["general", "GENERAL", "08:00:00", "17:00:00"],
@@ -87,7 +89,19 @@ module.exports = {
         city_id: seedId("city:Riyadh"),
         lat: 24.7136,
         lng: 46.6753,
-        status: "ACTIVE",
+      },
+      {
+        id: seedId("office:jeddah"),
+        employer_id: EMPLOYER,
+        office_name: "Jeddah Head Office",
+        office_email: "jeddah@alnoor.test",
+        office_phone: "+966122345678",
+        phone_country: "SA",
+        office_location: "Prince Sultan Road, Al Rawdah, Jeddah",
+        country_id: seedId("country:SA"),
+        city_id: seedId("city:Jeddah"),
+        lat: 21.5627,
+        lng: 39.1531,
       },
     ]);
     await queryInterface.bulkInsert(
@@ -95,7 +109,7 @@ module.exports = {
       PROJECTS.map(([key, project_name, project_code, city, project_location, lat, lng, start_date, end_date]) => ({
         id: seedId(`project:${key}`),
         employer_id: EMPLOYER,
-        office_id: seedId("office:riyadh"),
+        office_id: seedId(`office:${OFFICE_BY_PROJECT[key]}`),
         country_id: seedId("country:SA"),
         city_id: seedId(`city:${city}`),
         project_name,
@@ -109,6 +123,10 @@ module.exports = {
         status: "ACTIVE",
       }))
     );
+    // The seeded codes PRJ-FY26-0001/0002 are taken: the next project of FY 2026 gets 0003.
+    await queryInterface.bulkInsert("hrms_number_sequences", [
+      { id: seedId("sequence:PROJECT:2026"), employer_id: EMPLOYER, doc_type: "PROJECT", financial_year_id: seedId("fy:2026"), last_no: PROJECTS.length },
+    ]);
     await queryInterface.bulkInsert(
       "company_shifts",
       SHIFTS.map(([key, name, start_time, end_time]) => ({
@@ -152,7 +170,8 @@ module.exports = {
       ["hrms_shift_time_history", SHIFTS.map(([key]) => seedId(`shift-time:${key}`))],
       ["company_shifts", SHIFTS.map(([key]) => seedId(`shift:${key}`))],
       ["projects", PROJECTS.map(([key]) => seedId(`project:${key}`))],
-      ["offices", [seedId("office:riyadh")]],
+      ["hrms_number_sequences", [seedId("sequence:PROJECT:2026")]],
+      ["offices", [seedId("office:riyadh"), seedId("office:jeddah")]],
       ["hrms_designations", designationRows().map((row) => row.id)],
       ["hrms_departments", Object.keys(DEPARTMENTS).map((key) => seedId(`department:${key}`))],
     ]);

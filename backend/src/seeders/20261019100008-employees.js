@@ -65,7 +65,6 @@ const rows = () => {
     staffing_company_id: e[10] ? GMS : null,
     is_billable: e[10],
     shift_id: seedId("shift:general"),
-    office_id: seedId("office:riyadh"),
     date_of_joining: e[13],
     employment_status: "ACTIVE",
     accommodation: e[10] ? "GMS Labour Camp, Al Kharj Road" : null,
@@ -88,11 +87,21 @@ const rows = () => {
     employee_id: ep.employee_id,
     project_id: ep.project_id,
     action: "ASSIGNED",
+    effective_date: ep.start_date,
     actioned_by: seedId("user:admin"),
     actioned_at: new Date(`${ep.start_date}T06:00:00Z`),
   }));
+  const mainPeriods = EMPLOYEES.map((e) => ({
+    id: seedId(`main-period:${e[0]}`),
+    employer_id: EMPLOYER,
+    employee_id: seedId(`employee:${e[0]}`),
+    project_id: seedId(`project:${e[11]}`),
+    date_from: e[13],
+    date_to: null,
+  }));
   const shiftHistory = EMPLOYEES.map((e) => ({
     id: seedId(`shift-history:${e[0]}`),
+    employer_id: EMPLOYER,
     employee_id: seedId(`employee:${e[0]}`),
     shift_id: seedId("shift:general"),
     effective_from: e[13],
@@ -184,7 +193,20 @@ const rows = () => {
       };
     })
   );
-  return { users, employees, employeeProjects, projectHistory, shiftHistory, salaries, salaryComponents, documents, dependents, leavePolicies, balances };
+  return {
+    users,
+    employees,
+    employeeProjects,
+    projectHistory,
+    mainPeriods,
+    shiftHistory,
+    salaries,
+    salaryComponents,
+    documents,
+    dependents,
+    leavePolicies,
+    balances,
+  };
 };
 
 module.exports = {
@@ -201,6 +223,11 @@ module.exports = {
     }
     await queryInterface.bulkInsert("employee_projects", r.employeeProjects);
     await queryInterface.bulkInsert("hrms_employee_project_history", r.projectHistory);
+    await queryInterface.bulkInsert("hrms_employee_main_project_periods", r.mainPeriods);
+    // Employee IDs continue after the seeded EMP-0001…EMP-0008 (workforce D45).
+    await queryInterface.bulkInsert("hrms_number_sequences", [
+      { id: seedId("sequence:EMPLOYEE"), employer_id: EMPLOYER, doc_type: "EMPLOYEE", financial_year_id: null, last_no: EMPLOYEES.length },
+    ]);
     await queryInterface.bulkInsert("hrms_employee_shift_history", r.shiftHistory);
     await queryInterface.bulkInsert("hrms_employee_salary", r.salaries);
     await queryInterface.bulkInsert("hrms_employee_salary_components", r.salaryComponents);
@@ -225,6 +252,8 @@ module.exports = {
       ["hrms_employee_salary_components", r.salaryComponents.map((x) => x.id)],
       ["hrms_employee_salary", r.salaries.map((x) => x.id)],
       ["hrms_employee_shift_history", r.shiftHistory.map((x) => x.id)],
+      ["hrms_number_sequences", [seedId("sequence:EMPLOYEE")]],
+      ["hrms_employee_main_project_periods", r.mainPeriods.map((x) => x.id)],
       ["hrms_employee_project_history", r.projectHistory.map((x) => x.id)],
       ["employee_projects", r.employeeProjects.map((x) => x.id)],
       ["employees", r.employees.map((x) => x.id)],

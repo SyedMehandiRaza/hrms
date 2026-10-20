@@ -10,6 +10,8 @@ module.exports = (sequelize, DataTypes) => {
       project_id: { type: DataTypes.UUID, allowNull: false, references: { model: "projects", key: "id" } },
       previous_project_id: { type: DataTypes.UUID, references: { model: "projects", key: "id" } },
       action: { type: DataTypes.ENUM("ASSIGNED", "REMOVED", "MOVED_IN", "MOVED_OUT"), allowNull: false },
+      // The day the change takes effect (may differ from when it was recorded).
+      effective_date: { type: DataTypes.DATEONLY },
       actioned_by: { type: DataTypes.UUID, references: { model: "users", key: "id" } },
       notes: { type: DataTypes.TEXT },
       actioned_at: { type: DataTypes.DATE, allowNull: false },

@@ -6,7 +6,7 @@ module.exports = (sequelize, DataTypes) => {
     {
       id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
       employer_id: { type: DataTypes.UUID, allowNull: false, references: { model: "employers", key: "id" } },
-      office_id: { type: DataTypes.UUID, references: { model: "offices", key: "id" } },
+      office_id: { type: DataTypes.UUID, allowNull: false, references: { model: "offices", key: "id" } },
       country_id: { type: DataTypes.UUID, references: { model: "countries", key: "id" } },
       city_id: { type: DataTypes.UUID, references: { model: "cities", key: "id" } },
       project_name: { type: DataTypes.STRING(255), allowNull: false },
@@ -15,7 +15,7 @@ module.exports = (sequelize, DataTypes) => {
       project_location: { type: DataTypes.STRING(255) },
       start_date: { type: DataTypes.DATEONLY },
       end_date: { type: DataTypes.DATEONLY },
-      status: { type: DataTypes.ENUM("ACTIVE", "INACTIVE", "COMPLETED", "ON_HOLD"), allowNull: false, defaultValue: "ACTIVE" },
+      status: { type: DataTypes.ENUM("ACTIVE", "ON_HOLD", "COMPLETED"), allowNull: false, defaultValue: "ACTIVE" },
       lat: { type: DataTypes.DECIMAL(10, 7) },
       lng: { type: DataTypes.DECIMAL(10, 7) },
       radius_meters: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 100 },

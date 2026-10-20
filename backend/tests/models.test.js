@@ -41,6 +41,7 @@ const EXPECTED_MODELS = [
   "Employee",
   "EmployeeProject",
   "EmployeeProjectHistory",
+  "EmployeeMainProjectPeriod",
   "EmployeeShiftHistory",
   "EmployeeDraft",
   "EmployeeDependent",

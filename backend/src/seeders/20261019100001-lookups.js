@@ -31,6 +31,7 @@ const MODULES = [
   ["financial_year", "Financial Year"],
   ["role", "Roles & Permissions"],
   ["module", "Modules"],
+  ["exit", "Exits"],
 ];
 
 module.exports = {
@@ -43,7 +44,9 @@ module.exports = {
     );
     await queryInterface.bulkInsert(
       "modules",
-      MODULES.map(([module_key, name], i) => ({ id: seedId(`module:${module_key}`), module_key, name, sort_order: i + 1 }))
+      MODULES.map(([module_key, name], i) => ({ id: seedId(`module:${module_key}`), module_key, name, sort_order: i + 1 })),
+      // The exit module may already be there (migration 20261020600005).
+      { ignoreDuplicates: true }
     );
   },
 

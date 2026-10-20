@@ -11,6 +11,8 @@ module.exports = (sequelize, DataTypes) => {
       type: { type: DataTypes.ENUM("EARNING", "DEDUCTION"), allowNull: false },
       description: { type: DataTypes.STRING(255) },
       is_system: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+      // Basic, Housing, Transport: the wizard's locked first rows (workforce D42).
+      is_default: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
       is_active: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     },
     {

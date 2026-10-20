@@ -11,7 +11,9 @@ module.exports = (sequelize, DataTypes) => {
       entity_type: { type: DataTypes.STRING(100), allowNull: false },
       entity_id: { type: DataTypes.CHAR(36), allowNull: false },
       request_code: { type: DataTypes.STRING(100), allowNull: false },
-      requested_by: { type: DataTypes.UUID, allowNull: false, references: { model: "employees", key: "id" } },
+      // The raiser's employee record, when they have one (the owner has none, workforce D27).
+      requested_by: { type: DataTypes.UUID, references: { model: "employees", key: "id" } },
+      requested_by_user_id: { type: DataTypes.UUID, allowNull: false, references: { model: "users", key: "id" } },
       current_level: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
       total_levels: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
       final_status: { type: DataTypes.ENUM("PENDING", "IN_PROGRESS", "APPROVED", "REJECTED", "CANCELLED"), allowNull: false, defaultValue: "PENDING" },
@@ -30,6 +32,7 @@ module.exports = (sequelize, DataTypes) => {
     ApprovalRequest.belongsTo(models.Employer, { as: "employer", foreignKey: "employer_id" });
     ApprovalRequest.belongsTo(models.ApprovalGroup, { as: "approvalGroup", foreignKey: "approval_group_id" });
     ApprovalRequest.belongsTo(models.Employee, { as: "requestedBy", foreignKey: "requested_by" });
+    ApprovalRequest.belongsTo(models.User, { as: "requestedByUser", foreignKey: "requested_by_user_id" });
     ApprovalRequest.hasMany(models.ApprovalRequestLog, { as: "approvalRequestLogs", foreignKey: "approval_request_id" });
     ApprovalRequest.hasMany(models.AttendanceCorrectionRequest, { as: "attendanceCorrectionRequests", foreignKey: "approval_request_id" });
     ApprovalRequest.hasMany(models.OvertimeRequest, { as: "overtimeRequests", foreignKey: "approval_request_id" });

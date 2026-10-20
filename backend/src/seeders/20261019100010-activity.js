@@ -7,6 +7,11 @@ const EMPLOYER = seedId("employer:alnoor");
 const FY2026 = seedId("fy:2026");
 const ADMIN = seedId("user:admin");
 const emp = (key) => seedId(`employee:${key}`);
+// The employee's login user (same rule as the employees seeder).
+const userOf = (key) => {
+  const e = EMPLOYEES.find((row) => row[0] === key);
+  return e[1].user ? seedId(`user:${e[1].user}`) : seedId(`user:${key}`);
+};
 const round2 = (n) => Math.round(n * 100) / 100;
 
 // Riyadh is UTC+3: 08:00 local = 05:00Z.
@@ -44,8 +49,8 @@ const attendanceRows = () =>
 const APPROVALS = [
   ["leave-sara", "sara", "LEAVE", 2, "PENDING", 1, "LV-2026-0002"],
   ["leave-ali", "ali", "LEAVE", 2, "APPROVED", 2, "LV-2026-0001"],
-  ["ot-sara", "sara", "OVERTIME", 1, "PENDING", 1, "OT-2026-0001"],
-  ["corr-ali", "ali", "CORRECTION", 1, "PENDING", 1, "CR-2026-0001"],
+  ["ot-sara", "sara", "OVERTIME", 2, "PENDING", 1, "OT-2026-0001"],
+  ["corr-ali", "ali", "CORRECTION", 2, "PENDING", 1, "CR-2026-0001"],
 ];
 const ENTITY = {
   "leave-sara": ["leave_request", seedId("leave:sara:annual")],
@@ -58,12 +63,14 @@ const approvalRows = () =>
   APPROVALS.map(([key, employeeKey, moduleKey, levels, status, level, code]) => ({
     id: seedId(`approval-request:${key}`),
     employer_id: EMPLOYER,
-    approval_group_id: seedId(`approval-group:${moduleKey}`),
+    // One group approves every request (ADR 0011).
+    approval_group_id: seedId("approval-group:ALL"),
     module_key: moduleKey,
     entity_type: ENTITY[key][0],
     entity_id: ENTITY[key][1],
     request_code: code,
     requested_by: emp(employeeKey),
+    requested_by_user_id: userOf(employeeKey),
     current_level: level,
     total_levels: levels,
     final_status: status,
@@ -72,14 +79,15 @@ const approvalRows = () =>
   }));
 
 const approvalLogRows = () =>
-  APPROVALS.flatMap(([key, , moduleKey, levels, status]) => {
-    const approverByLevel = { LEAVE: ["omar", "fatima"], OVERTIME: ["omar"], CORRECTION: ["omar"] }[moduleKey];
+  APPROVALS.flatMap(([key, , , levels, status]) => {
+    const approverByLevel = ["omar", "fatima"];
     const doneLevels = status === "APPROVED" ? levels : 0;
     return approverByLevel.slice(0, Math.max(doneLevels, 1)).map((approver, i) => ({
       id: seedId(`approval-log:${key}:${i + 1}`),
       approval_request_id: seedId(`approval-request:${key}`),
-      approval_group_member_id: seedId(`approval-member:${moduleKey}:${i + 1}`),
+      approval_group_member_id: seedId(`approval-member:ALL:${i + 1}`),
       employee_id: emp(approver),
+      actor_user_id: status === "APPROVED" ? userOf(approver) : null,
       level_no: i + 1,
       status: status === "APPROVED" ? "APPROVED" : "PENDING",
       acted_at: status === "APPROVED" ? new Date("2026-09-07T09:00:00Z") : null,
