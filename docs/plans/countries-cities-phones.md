@@ -94,6 +94,8 @@ Builds on Auth + Company (done) and changes some Workforce tickets (§7).
 | `GET /countries` (all active; `id, iso2, name, callingCode, flag, hasCities`) | public |
 | `GET /countries/:id/cities?search=&page=&limit=20` | public |
 
+Both: per-IP 60 requests/min per route (`RATE_LIMIT_LOOKUP_MAX`, decided 2026-10-20), `Cache-Control: public, max-age=3600`.
+
 ## 5. Messages
 New codes and texts: `docs/standards.md` §7.
 

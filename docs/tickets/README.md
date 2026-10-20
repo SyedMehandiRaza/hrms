@@ -48,13 +48,13 @@ Frontier = every ready-for-agent ticket whose blockers are all done.
 ## Countries, cities, phones (`geo/`)
 
 Plan: `docs/plans/countries-cities-phones.md`. ADR 0012 (phones stored as E.164). Builds on Auth + Company (done).
-Workforce tickets 03, 04, 13a, 20, 21, 28a are also blocked by geo tickets (shown as `geo NN`). Frontier now: **geo 03**.
+Workforce tickets 03, 04, 13a, 20, 21, 28a are also blocked by geo tickets (shown as `geo NN`). Frontier now: **geo 04**.
 
 | # | Ticket | Status | Blocked by |
 |---|---|---|---|
 | 01 | [Schema + country and city reference data](geo/01-schema-reference-data.md) | done | — |
 | 02 | [Phone service + data migration](geo/02-phone-service-migration.md) | done | 01 |
-| 03 | [Countries and cities API](geo/03-countries-cities-api.md) | ready-for-agent | 01 |
+| 03 | [Countries and cities API](geo/03-countries-cities-api.md) | done | 01 |
 | 04 | [Sign-up and company profile use the new phone rule](geo/04-auth-company-phones.md) | ready-for-agent | 02, 03 |
 | 05 | [UI shared Country, City and Phone inputs](geo/05-ui-shared-pickers.md) | ready-for-agent | 03, 04 |
 

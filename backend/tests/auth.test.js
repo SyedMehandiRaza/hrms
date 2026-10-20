@@ -1184,7 +1184,7 @@ describe("rate limits", () => {
   });
 
   describe("configuration", () => {
-    const KEYS = ["NODE_ENV", "RATE_LIMIT_WINDOW_MS", "RATE_LIMIT_AUTH_MAX", "RATE_LIMIT_REFRESH_MAX"];
+    const KEYS = ["NODE_ENV", "RATE_LIMIT_WINDOW_MS", "RATE_LIMIT_AUTH_MAX", "RATE_LIMIT_REFRESH_MAX", "RATE_LIMIT_LOOKUP_MAX"];
     let saved;
     beforeEach(() => {
       saved = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
@@ -1197,9 +1197,9 @@ describe("rate limits", () => {
       });
     });
 
-    it("defaults to 10 per minute on the auth routes and 60 per minute on refresh", () => {
+    it("defaults to 10 per minute on the auth routes and 60 per minute on refresh and the lookups", () => {
       process.env.NODE_ENV = "production";
-      expect(getRateLimitConfig()).toEqual({ windowMs: 60 * 1000, authMax: 10, refreshMax: 60 });
+      expect(getRateLimitConfig()).toEqual({ windowMs: 60 * 1000, authMax: 10, refreshMax: 60, lookupMax: 60 });
     });
 
     it("reads the limits from the environment", () => {
@@ -1207,7 +1207,8 @@ describe("rate limits", () => {
       process.env.RATE_LIMIT_WINDOW_MS = "1000";
       process.env.RATE_LIMIT_AUTH_MAX = "3";
       process.env.RATE_LIMIT_REFRESH_MAX = "4";
-      expect(getRateLimitConfig()).toEqual({ windowMs: 1000, authMax: 3, refreshMax: 4 });
+      process.env.RATE_LIMIT_LOOKUP_MAX = "5";
+      expect(getRateLimitConfig()).toEqual({ windowMs: 1000, authMax: 3, refreshMax: 4, lookupMax: 5 });
     });
 
     it("uses generous limits under test so the rest of the suite isn't throttled", () => {
@@ -1215,6 +1216,7 @@ describe("rate limits", () => {
       const config = getRateLimitConfig();
       expect(config.authMax).toBeGreaterThanOrEqual(1000);
       expect(config.refreshMax).toBeGreaterThanOrEqual(1000);
+      expect(config.lookupMax).toBeGreaterThanOrEqual(1000);
     });
   });
 });

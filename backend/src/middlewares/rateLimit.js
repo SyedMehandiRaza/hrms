@@ -21,4 +21,8 @@ const authRateLimiter = (limits = getRateLimitConfig()) =>
 const refreshRateLimiter = (limits = getRateLimitConfig()) =>
   createRateLimiter({ limit: limits.refreshMax, windowMs: limits.windowMs });
 
-module.exports = { createRateLimiter, authRateLimiter, refreshRateLimiter };
+// 60/min: the public country and city lookups (countries-cities-phones §4).
+const lookupRateLimiter = (limits = getRateLimitConfig()) =>
+  createRateLimiter({ limit: limits.lookupMax, windowMs: limits.windowMs });
+
+module.exports = { createRateLimiter, authRateLimiter, refreshRateLimiter, lookupRateLimiter };
