@@ -7,7 +7,6 @@ const {
   uniqueEmail,
   errorBody,
   validationBody,
-  ownerCompany,
   loginFor,
   createEmployee,
   createProject,
@@ -17,12 +16,12 @@ const {
 const { clock } = require("../src/utils/clock");
 const { seedId } = require("../src/utils/seed");
 const mailer = require("../src/services/mailer");
+const { IN, employeeSetup, createEmployeeVia, createdEmployee } = require("./helpers/employees");
 
 // Create employee core (ticket workforce#13a; workforce D18, D45–D51, D53, ADRs 0002, 0003;
 // countries-cities-phones D12–D19). Leave, shift and salary at create are 13b.
 
 const TODAY = "2026-10-21";
-const IN = seedId("country:IN");
 const AE = seedId("country:AE");
 const RIYADH = seedId("city:Riyadh");
 
@@ -37,33 +36,9 @@ afterAll(async () => {
 
 const CREATOR = { employee: { can_create: true } };
 
-// A company (owner logged in) with one ACTIVE project.
-const setup = async () => {
-  const ctx = await ownerCompany();
-  const project = await createProject(ctx.employer, { start_date: "2026-01-01" });
-  return { ...ctx, project };
-};
-
-const body = (ctx, overrides = {}) => ({
-  name: "Ahmed Ali",
-  country_emp_id: `ID${short()}`.slice(0, 10).toUpperCase(),
-  email: uniqueEmail("new"),
-  phone: "0501234567",
-  phoneCountry: "SA",
-  nationalityCountryId: IN,
-  employmentType: "FULL_TIME",
-  accessLevel: "EMPLOYEE",
-  projectIds: [ctx.project.id],
-  mainProjectId: ctx.project.id,
-  ...overrides,
-});
-
-const create = (ctx, overrides, token = ctx.token) => api.post("/api/employees", token, body(ctx, overrides));
-const created = async (ctx, overrides, token) => {
-  const res = await create(ctx, overrides, token);
-  if (res.status !== 201) throw new Error(JSON.stringify(res.body));
-  return res.body.data;
-};
+const setup = employeeSetup;
+const create = createEmployeeVia;
+const created = createdEmployee;
 
 const approvalGroup = (employer, overrides = {}) =>
   db.ApprovalGroup.create({
@@ -198,7 +173,7 @@ describe("POST /api/employees — success", () => {
     const department = await db.Department.create({ employer_id: ctx.employer.id, name: `Dept ${short()}`, code: `C${short()}`.toUpperCase() });
     const designation = await db.Designation.create({ employer_id: ctx.employer.id, department_id: department.id, name: `Desig ${short()}` });
     const staffing = await db.StaffingCompany.create({ employer_id: ctx.employer.id, name: "Gulf Manpower", code: `GM-${short()}` });
-    const data = await created(ctx, { employmentType: "CONTRACT", departmentId: department.id, designationId: designation.id, staffingCompanyId: staffing.id });
+    const data = await created(ctx, { employmentType: "CONTRACT", departmentId: department.id, designationId: designation.id, staffingCompanyId: staffing.id, salaryMode: "HOURLY", hourlyRate: 20, components: [] });
     expect(await db.Employee.findByPk(data.id)).toMatchObject({
       employment_type: "CONTRACT",
       department_id: department.id,
@@ -394,7 +369,7 @@ describe("POST /api/employees — field rules (standards §7.2)", () => {
     const res = await api.post("/api/employees", ctx.token, {});
     expect(res.status).toBe(400);
     expect(Object.keys(res.body.errors).sort()).toEqual(
-      ["accessLevel", "country_emp_id", "email", "employmentType", "mainProjectId", "name", "nationalityCountryId", "phone", "phoneCountry", "projectIds"].sort()
+      ["accessLevel", "country_emp_id", "email", "employmentType", "leavePolicyIds", "mainProjectId", "name", "nationalityCountryId", "phone", "phoneCountry", "projectIds", "salaryMode"].sort()
     );
   });
 

@@ -17,6 +17,16 @@ const {
   Designation,
   StaffingCompany,
   ApprovalGroup,
+  LeavePolicy,
+  LeaveType,
+  EmployeeLeavePolicy,
+  LeaveBalance,
+  LeaveBalanceTransaction,
+  CompanyShift,
+  EmployeeShiftHistory,
+  SalaryComponent,
+  EmployeeSalary,
+  EmployeeSalaryComponent,
 } = require("../models");
 const ErrorHandler = require("../utils/ErrorHandler");
 const { saveOrClash } = require("../utils/uniqueClash");
@@ -25,11 +35,11 @@ const { translate } = require("../utils/i18n");
 const { COMPANY_COUNTRY_ID } = require("../utils/geoReference");
 const { ACCESS_LEVELS } = require("../constants/accessLevels");
 const { UUID } = require("./department.service");
-const { companyToday } = require("./companyTime.service");
+const { companyToday, financialYearOn } = require("./companyTime.service");
 const { assertCountry, assertCityInCountry } = require("./geo.service");
 const { assertEmailFreeForNewAccount, issueLoginCredentials } = require("./credentials.service");
 
-// Creating employees (docs/plans/workforce-and-lifecycle.md D18, D45–D51, D53; ADRs 0002, 0003).
+// Creating employees (docs/plans/workforce-and-lifecycle.md D18, D33, D34, D40, D45–D53; ADRs 0002, 0003).
 // Always the caller's own company; one transaction, the welcome email after commit.
 
 const MODULE_ALL = "ALL";
@@ -217,6 +227,148 @@ const checkApprovalGroup = async (employerId, body, mainProjectId, transaction) 
   return group;
 };
 
+// ---------- Leave, shift, salary at create (13b) ----------
+
+// Leave policies (D33): at least one (Joi), all of the company, active (policy and type), one per type.
+const checkLeave = async (employerId, policyIds, transaction) => {
+  if (!policyIds.every((id) => UUID.test(id))) throw new ErrorHandler("NOT_FOUND");
+  const policies = await LeavePolicy.findAll({
+    where: { id: policyIds, employer_id: employerId },
+    include: [{ model: LeaveType, as: "leaveType", attributes: ["id", "is_active"] }],
+    transaction,
+  });
+  if (policies.length !== policyIds.length) throw new ErrorHandler("NOT_FOUND");
+  if (policies.some((p) => !p.is_active || !p.leaveType || !p.leaveType.is_active)) throw fieldError("leavePolicyIds", "leavePoliciesActive");
+  if (new Set(policies.map((p) => p.leave_type_id)).size !== policies.length) throw fieldError("leavePolicyIds", "leavePolicyPerType");
+  return policies;
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const daysBetween = (from, to) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS) + 1;
+
+// UPFRONT credit (D34): the quota, prorated for joiners as quota × days left in the FY ÷ days in
+// the FY, rounded down to 0.5.
+const upfrontCredit = (policy, fy, from) => {
+  const quota = Number(policy.yearly_quota);
+  if (!policy.prorate_joiners || from <= fy.start_date) return quota;
+  return Math.floor(((quota * daysBetween(from, fy.end_date)) / daysBetween(fy.start_date, fy.end_date)) * 2) / 2;
+};
+
+// Assignments from the joining date and one balance per policy (D33, D34): the current FY's, or
+// for a future joining date the FY that contains it (none yet → no balance for now). Proration
+// counts from the joining date, or the FY start for an earlier joining date.
+const assignLeave = async ({ employerId, userId, employee, policies, joiningDate, today }, transaction) => {
+  const fy = await financialYearOn(employerId, joiningDate > today ? joiningDate : today, { transaction });
+  for (const policy of policies) {
+    await EmployeeLeavePolicy.create(
+      { employer_id: employerId, employee_id: employee.id, leave_policy_id: policy.id, effective_from: joiningDate, is_active: true },
+      { transaction }
+    );
+    if (!fy) continue;
+    const from = joiningDate > fy.start_date ? joiningDate : fy.start_date;
+    const credit = policy.accrual_method === "UPFRONT" ? upfrontCredit(policy, fy, from) : 0;
+    const balance = await LeaveBalance.create(
+      {
+        employer_id: employerId,
+        employee_id: employee.id,
+        leave_type_id: policy.leave_type_id,
+        leave_policy_id: policy.id,
+        financial_year_id: fy.id,
+        balance_year: fy.year_key,
+        accrued_balance: credit,
+        total_allocated: credit,
+        available_balance: credit,
+        status: "OPEN",
+      },
+      { transaction }
+    );
+    if (credit > 0) {
+      await LeaveBalanceTransaction.create(
+        {
+          employer_id: employerId,
+          employee_id: employee.id,
+          leave_balance_id: balance.id,
+          leave_type_id: policy.leave_type_id,
+          transaction_type: "CREDIT",
+          leave_source: "SYSTEM",
+          transaction_date: from,
+          days: credit,
+          balance_before: 0,
+          balance_after: credit,
+          reference_type: "EMPLOYEE",
+          reference_id: employee.id,
+          leave_year: fy.year_key,
+          created_by: userId,
+        },
+        { transaction }
+      );
+    }
+  }
+};
+
+// Salary mode matrix (D52): Full-time → monthly modes; Contract → MONTHLY_HOURLY | HOURLY;
+// Contract with a staffing company → HOURLY.
+const allowedModes = (body) => {
+  if (body.employmentType === "FULL_TIME") return ["MONTHLY_FIXED", "MONTHLY_HOURLY"];
+  return body.staffingCompanyId ? ["HOURLY"] : ["MONTHLY_HOURLY", "HOURLY"];
+};
+const DEFAULT_CODES = ["BASIC", "HOUSING", "TRANSPORT"];
+
+// Component rows (D42, D52): the company's active components. Monthly modes need Basic (> 0, a
+// fixed amount), Housing and Transport; percentages are of Basic, at most 100. The Hourly
+// component belongs to HOURLY mode only, where it carries the hourly rate.
+const checkSalary = async (employerId, body, transaction) => {
+  if (!allowedModes(body).includes(body.salaryMode)) throw fieldError("salaryMode", "salaryModeInvalid");
+  const rows = body.components;
+  const monthly = body.salaryMode !== "HOURLY";
+  if (monthly && !rows.length) throw fieldError("components", "componentRequired");
+  if (!rows.every((r) => UUID.test(r.componentId))) throw new ErrorHandler("NOT_FOUND");
+  const found = await SalaryComponent.findAll({ where: { id: rows.map((r) => r.componentId), employer_id: employerId }, transaction });
+  if (found.length !== rows.length) throw new ErrorHandler("NOT_FOUND");
+  const byId = Object.fromEntries(found.map((c) => [c.id, c]));
+  if (found.some((c) => !c.is_active || c.code === "HOURLY")) throw fieldError("components", "componentsActive");
+  if (monthly) {
+    const codes = new Set(found.map((c) => c.code));
+    if (!DEFAULT_CODES.every((code) => codes.has(code))) throw fieldError("components", "defaultComponentsRequired");
+    const basic = rows.find((r) => byId[r.componentId].code === "BASIC");
+    if (basic.calculationType !== "FIXED" || !(basic.amount > 0)) throw fieldError("components", "basicPositive");
+  }
+  if (rows.some((r) => r.calculationType === "PERCENTAGE" && r.amount > 100)) throw fieldError("components", "percentMax");
+  let hourly = null;
+  if (!monthly) {
+    hourly = await SalaryComponent.findOne({ where: { employer_id: employerId, code: "HOURLY", is_active: true }, transaction });
+    if (!hourly) throw new Error(`company ${employerId} has no active HOURLY salary component`);
+  }
+  return { rows, hourly };
+};
+
+// The only active salary, from the joining date (D52).
+const saveSalary = async ({ employerId, employee, body, salary, joiningDate }, transaction) => {
+  const row = await EmployeeSalary.create(
+    {
+      employer_id: employerId,
+      employee_id: employee.id,
+      currency: body.currency,
+      salary_calc_mode: body.salaryMode,
+      working_hours: body.salaryMode === "MONTHLY_HOURLY" ? body.workingHours : null,
+      min_hours: body.minHours ?? null,
+      effective_from: joiningDate,
+      is_active: true,
+    },
+    { transaction }
+  );
+  const parts = salary.rows.map((r) => ({
+    salary_component_id: r.componentId,
+    calculation_type: r.calculationType,
+    amount: r.amount,
+    percent_base: r.calculationType === "PERCENTAGE" ? ["BASIC"] : null,
+  }));
+  if (salary.hourly) parts.push({ salary_component_id: salary.hourly.id, calculation_type: "FIXED", amount: body.hourlyRate, percent_base: null });
+  for (const part of parts) {
+    await EmployeeSalaryComponent.create({ employee_salary_id: row.id, ...part }, { transaction });
+  }
+};
+
 // ---------- POST /employees ----------
 
 const toCreated = ({ employee, user, account, main, group }) => ({
@@ -256,6 +408,9 @@ const createEmployee = async (auth, body) => {
     const { projects, main, joiningDate } = await checkProjects(employerId, body, today, transaction);
     const places = await checkPlaces(body, transaction);
     await checkJob(employerId, body, transaction);
+    const policies = await checkLeave(employerId, body.leavePolicyIds, transaction);
+    const shift = body.shiftId ? await findOwn(CompanyShift, employerId, body.shiftId, transaction) : null;
+    const salary = await checkSalary(employerId, body, transaction);
     const group = await checkApprovalGroup(employerId, body, main.id, transaction);
     const draft = body.draft_id ? await findOwn(EmployeeDraft, employerId, body.draft_id, transaction) : null;
     await assertUnique(employerId, { countryEmpId: body.country_emp_id, email: body.email, phone: body.phone }, transaction);
@@ -298,6 +453,9 @@ const createEmployee = async (auth, body) => {
             department_id: body.departmentId || null,
             designation_id: body.designationId || null,
             staffing_company_id: body.staffingCompanyId || null,
+            shift_id: shift ? shift.id : null,
+            // D52: 1.5 by default, 1 for a staffing-company worker.
+            overtime_rate: body.overtimeRate ?? (body.staffingCompanyId ? 1 : 1.5),
           },
           { transaction }
         ),
@@ -336,6 +494,11 @@ const createEmployee = async (auth, body) => {
       { employer_id: employerId, employee_id: employee.id, project_id: main.id, date_from: joiningDate },
       { transaction }
     );
+    await assignLeave({ employerId, userId, employee, policies, joiningDate, today }, transaction);
+    if (shift) {
+      await EmployeeShiftHistory.create({ employer_id: employerId, employee_id: employee.id, shift_id: shift.id, effective_from: joiningDate }, { transaction });
+    }
+    await saveSalary({ employerId, employee, body, salary, joiningDate }, transaction);
     if (group) {
       await EmployeeApprovalRouting.create(
         { employer_id: employerId, employee_id: employee.id, module_key: MODULE_ALL, approval_group_id: group.id },

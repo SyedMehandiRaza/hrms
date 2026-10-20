@@ -61,7 +61,7 @@ Workforce tickets 03, 04, 13a, 20, 21, 28a are also blocked by geo tickets (show
 ## Workforce structure + Employee lifecycle (`workforce/`)
 
 Plan: `docs/plans/workforce-and-lifecycle.md`. ADRs 0010 (1:1 head office ↔ project), 0011 (one approval group per
-employee). Builds on Auth + Company (all done). Senior review 2026-10-20 applied (plan §8). Frontier now: **13b, 16a, 20, 21, 23, 24, 25, 26**.
+employee). Builds on Auth + Company (all done). Senior review 2026-10-20 applied (plan §8). Frontier now: **14a, 16a, 20, 21, 23, 24, 25, 26**.
 
 ### Backend + tests
 
@@ -82,7 +82,7 @@ employee). Builds on Auth + Company (all done). Senior review 2026-10-20 applied
 | 12 | [Employee drafts API](workforce/12-employee-drafts-api.md) | done | 01 |
 | 12b | [Roles and staffing-company lookups API](workforce/12b-roles-staffing-lookups-api.md) | done | 01 |
 | 13a | [Create employee core](workforce/13a-create-employee-core.md) | done | 04, 10, 12, 12b, geo 02, geo 03 |
-| 13b | [At-create setup: leave, shift, salary](workforce/13b-at-create-setup.md) | ready-for-agent | 13a, 06, 08, 09 |
+| 13b | [At-create setup: leave, shift, salary](workforce/13b-at-create-setup.md) | done | 13a, 06, 08, 09 |
 | 14a | [Employee list, detail, bulk (de)activate, resend login API](workforce/14a-employee-list-detail-bulk-api.md) | ready-for-agent | 13b |
 | 14b | [Employee edit API](workforce/14b-employee-edit-api.md) | ready-for-agent | 14a |
 | 15 | [Main project change API](workforce/15-main-project-change-api.md) | ready-for-agent | 14b |
