@@ -6,10 +6,13 @@ module.exports = (sequelize, DataTypes) => {
     {
       id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
       employer_id: { type: DataTypes.UUID, allowNull: false, references: { model: "employers", key: "id" } },
-      approval_group_id: { type: DataTypes.UUID, allowNull: false, references: { model: "hrms_approval_groups", key: "id" } },
+      // Empty for an owner-only request (the employee has no approval group, workforce D18).
+      approval_group_id: { type: DataTypes.UUID, references: { model: "hrms_approval_groups", key: "id" } },
       module_key: { type: DataTypes.STRING(100), allowNull: false },
       entity_type: { type: DataTypes.STRING(100), allowNull: false },
       entity_id: { type: DataTypes.CHAR(36), allowNull: false },
+      // The employee the request is about (never decides it, workforce D26).
+      subject_employee_id: { type: DataTypes.UUID, references: { model: "employees", key: "id" } },
       request_code: { type: DataTypes.STRING(100), allowNull: false },
       // The raiser's employee record, when they have one (the owner has none, workforce D27).
       requested_by: { type: DataTypes.UUID, references: { model: "employees", key: "id" } },
@@ -32,6 +35,7 @@ module.exports = (sequelize, DataTypes) => {
     ApprovalRequest.belongsTo(models.Employer, { as: "employer", foreignKey: "employer_id" });
     ApprovalRequest.belongsTo(models.ApprovalGroup, { as: "approvalGroup", foreignKey: "approval_group_id" });
     ApprovalRequest.belongsTo(models.Employee, { as: "requestedBy", foreignKey: "requested_by" });
+    ApprovalRequest.belongsTo(models.Employee, { as: "subjectEmployee", foreignKey: "subject_employee_id" });
     ApprovalRequest.belongsTo(models.User, { as: "requestedByUser", foreignKey: "requested_by_user_id" });
     ApprovalRequest.hasMany(models.ApprovalRequestLog, { as: "approvalRequestLogs", foreignKey: "approval_request_id" });
     ApprovalRequest.hasMany(models.AttendanceCorrectionRequest, { as: "attendanceCorrectionRequests", foreignKey: "approval_request_id" });

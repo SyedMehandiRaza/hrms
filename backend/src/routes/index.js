@@ -11,6 +11,7 @@ const { router: shiftRoutes } = require("./shift.routes");
 const leaveTypeRoutes = require("./leaveType.routes");
 const salaryComponentRoutes = require("./salaryComponent.routes");
 const approvalGroupRoutes = require("./approvalGroup.routes");
+const approvalRoutes = require("./approval.routes");
 const { designationRouter, departmentDesignationsRouter } = require("./designation.routes");
 
 const router = Router();
@@ -26,6 +27,7 @@ router.use("/shifts", shiftRoutes);
 router.use("/leave-types", leaveTypeRoutes);
 router.use("/salary-components", salaryComponentRoutes);
 router.use("/approval-groups", approvalGroupRoutes);
+router.use("/approvals", approvalRoutes);
 router.use("/departments/:id/designations", departmentDesignationsRouter);
 router.use("/departments", departmentRoutes);
 router.use("/designations", designationRouter);

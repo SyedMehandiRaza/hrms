@@ -238,7 +238,8 @@ describe("flags and lists", () => {
 
   it("lists newest first with search and status; approver options show ACTIVE/IN_NOTICE employees and who's on a project", async () => {
     const ctx = await setup();
-    await create(ctx);
+    const older = await create(ctx);
+    await db.sequelize.query("UPDATE hrms_approval_groups SET created_at = ? WHERE id = ?", { replacements: [new Date("2026-01-01T00:00:00Z"), older.id] });
     await create(ctx, { name: "Finance", code: "FIN" });
     expect((await api.get("/api/approval-groups", ctx.token)).body.data.items.map((g) => g.code)).toEqual(["FIN", "HR-EXIT"]);
     expect((await api.get("/api/approval-groups", ctx.token, { query: { search: "fin" } })).body.data.items.map((g) => g.code)).toEqual(["FIN"]);

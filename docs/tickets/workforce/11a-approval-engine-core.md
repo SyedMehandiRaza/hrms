@@ -6,24 +6,29 @@ approver email).
 
 **Blocked by:** 10 Approval groups API
 
-**Status:** ready-for-agent
+**Status:** done
 
 Tested through the engine's service with a test entity that supplies its own label and email text (the exit, with
 its real text, arrives in 16b).
 
-- [ ] When a request is raised for an employee → it records the employee's group, total levels, current level 1,
+- [x] When a request is raised for an employee → it records the employee's group, total levels, current level 1,
       status PENDING and the raiser as a user (`requested_by_user_id`, also when the raiser is the owner); a pending
       log row exists per level-1 approver, and the L1 approvers get the entity's email.
-- [ ] When the only mandatory approver at L1 approves → current level moves to 2; L2 approvers get the entity's email.
-- [ ] A level with two mandatory approvers moves on only after both approve.
-- [ ] A level with no mandatory approvers moves on after any one approves.
-- [ ] When the last level approves → status APPROVED, completed time set, the entity's "on approved" hook runs once.
-- [ ] When any approver rejects with a reason → status REJECTED, the entity's "on rejected" hook runs; a reason
+- [x] When the only mandatory approver at L1 approves → current level moves to 2; L2 approvers get the entity's email.
+- [x] A level with two mandatory approvers moves on only after both approve.
+- [x] A level with no mandatory approvers moves on after any one approves.
+- [x] When the last level approves → status APPROVED, completed time set, the entity's "on approved" hook runs once.
+- [x] When any approver rejects with a reason → status REJECTED, the entity's "on rejected" hook runs; a reason
       shorter than 5 or longer than 500 → 400 `VALIDATION_FAILED`, reason "Reason must be 5–500 characters".
-- [ ] A request for an employee with no group → an owner-only request: no member log rows, it shows only in the
+- [x] A request for an employee with no group → an owner-only request: no member log rows, it shows only in the
       owner's inbox and the owner gets the entity's email.
-- [ ] Cancelling a pending request (used by the entity, e.g. exit withdraw) → status CANCELLED, it leaves every inbox,
+- [x] Cancelling a pending request (used by the entity, e.g. exit withdraw) → status CANCELLED, it leaves every inbox,
       past log rows unchanged.
-- [ ] The inbox lists only requests at the caller's current level, with type label, employee, dates and level.
-- [ ] Changing the group's members updates who can act on current and future levels; past log rows don't change.
-- [ ] Requests and inbox are scoped to the company; another company's request → `NOT_FOUND`.
+- [x] The inbox lists only requests at the caller's current level, with type label, employee, dates and level.
+- [x] Changing the group's members updates who can act on current and future levels; past log rows don't change.
+- [x] Requests and inbox are scoped to the company; another company's request → `NOT_FOUND`.
+
+Notes (2026-10-20): `backend/src/services/approval.service.js` (`registerEntity`, `raise`, `decide`, `cancel`, `inbox`;
+extension points for 11b). Migration `20261020600008`: `approval_group_id` is optional (owner-only requests) and
+requests record `subject_employee_id`. Endpoints `GET /approvals/inbox`, `POST /approvals/:id/approve { comment? }`,
+`POST /approvals/:id/reject { reason }` for any company login. Each entity names its own email template.
