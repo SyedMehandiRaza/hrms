@@ -1,0 +1,24 @@
+# 23: Contracts list, detail, stats and preview
+
+**What to build:** HR list with filters and search, contract detail with recipient, fields and activity, stats for
+the dashboard, and the HR PDF download (live preview for drafts, frozen preview before completion, stored final
+PDF after) (plan decisions 22, 36, 39, 42).
+
+**Blocked by:** 07 Drafts API, 11 PDF rendering service, 22 Merge values
+
+**Status:** ready-for-agent
+
+- [ ] When HR lists contracts → filters by status, audience and type; search by name or number; pagination.
+- [ ] When HR asks for stats → counts by status and by audience match the data.
+- [ ] When HR opens a contract → its recipient, fields and activity (newest first).
+- [ ] When a SENT or VIEWED contract is past its sign-by time and the job hasn't run → the list, stats and detail
+      show it as EXPIRED, with one EXPIRED activity.
+- [ ] When HR downloads a draft → the PDF with live merge values and a "Not final" watermark.
+- [ ] When HR downloads a SENT, VIEWED or SUBMITTED contract → the PDF with frozen values and a "Not final"
+      watermark.
+- [ ] When HR downloads a COMPLETED contract → the stored final PDF.
+- [ ] When HR downloads → an attachment named after the contract number (or name), with no-store caching.
+- [ ] When deleted drafts exist → they aren't listed or counted.
+- [ ] When HR opens or downloads another company's contract → 404 / "The requested record was not found."
+- [ ] When a sub-admin without `contract:read`, the employee or the staffing company calls these → 403 / "You
+      don't have permission to do this."

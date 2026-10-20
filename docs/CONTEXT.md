@@ -24,3 +24,16 @@ Decisions behind them: `docs/adr/`. Full plans: `docs/backend-plan.md`, `docs/pl
 | **Reset code (OTP)** | 6-digit code for forgotten passwords. 10 min, 5 attempts. Exchanged for a 15-min reset token. |
 | **Lockout** | 5 consecutive wrong passwords lock the person for 15 minutes. |
 | **Platform operator** | The SaaS vendor. Only one who changes company status (ACTIVE / INACTIVE / BANNED); for now directly in the database. |
+| **Contract Studio** | The admin module under `/admin/new-contracts/*`: documents → templates → contracts → signing. Not the legacy `/admin/contracts/*` pages. |
+| **Audience** | Who a template/contract is for: EMPLOYEE or STAFFING_COMPANY (VENDOR, CLIENT, COLLABORATING_COMPANY later). |
+| **Contract document** | An uploaded PDF. Immutable: rename or archive only. |
+| **Template** | A document plus placed fields and a contract type. ACTIVE or ARCHIVED. No versions. |
+| **Contract type** | Company-defined category (e.g. Employment, Extension, Amendment, Staffing Agreement), set on the template. |
+| **Merge field** | A DB_COLUMN field filled from a fixed catalogue (Employee, Staffing Company, Contract groups). Frozen at send. |
+| **Signer** | The one recipient of a contract (PRIMARY_SIGNER): an employee or a staffing company's login. |
+| **Sign-by date** | Last day the signer can sign (defaults to today + 7 when the contract is created; must still be tomorrow–90 days at send). After it, a SENT/VIEWED contract becomes EXPIRED. |
+| **Active contract** | A contract in SENT, VIEWED or SUBMITTED. At most one per signer × contract type. |
+| **Submit** | The signer's signing action; the contract becomes SUBMITTED. HR **approval** then makes it COMPLETED. |
+| **Revoke** | HR withdraws a SENT/VIEWED/SUBMITTED contract with a reason; also done by the system when the signer leaves. |
+| **Signing evidence** | Write-once record captured at submit: profile name, signature, UTC time, IP, user agent, consent, hashes. |
+| **Certificate of completion** | Page appended to the final, locked PDF at COMPLETED, holding the evidence and approver. |

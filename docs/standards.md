@@ -31,7 +31,7 @@ Module-specific rules live in `docs/plans/`; terms in `docs/CONTEXT.md`; reasons
   the current `localStorage.lang` and shows `message` exactly as returned.
 - `errors`: only on validation failures. Field → message map, read by `hrms/src/utils/applyFieldErrors.js`.
 - Validation failures are **400**. Other statuses: 401 not logged in / session invalid, 403 not allowed,
-  404 not found **or belongs to another company**, 409 conflict, 423 account locked, 429 rate limited,
+  404 not found **or belongs to another company**, 409 conflict, 413 body too large, 423 account locked, 429 rate limited,
   500 unexpected (never leaks details).
 - One catalog: `backend/src/constants/messages.js` (`code → { status, en, ar }`). Field messages reuse the
   UI's existing i18n strings so client and server validation say the same thing.
@@ -128,3 +128,40 @@ Auth + Company codes added 2026-10-19. Every module appends its codes here.
 | Time settings | timezone: "Choose a valid timezone" · fy_start_month: "Choose a month from 1 to 12" |
 | Department | name: "Department Name is required", "Department Name must be at least 2 characters", "Department Name cannot exceed 150 characters", "Department Name cannot contain emojis" · code: "Dept. Code is required", "Dept. Code cannot exceed 50 characters", "Dept. Code cannot contain emojis" · description: "Description cannot exceed 2000 characters", "Description cannot contain emojis" · deptHeadId: **"Select an active employee of this company."** |
 | Designation | name: "Designation Name is required", "Designation Name must be at least 2 characters", "Designation Name cannot exceed 150 characters", "Designation Name cannot contain emojis" · code: "Designation Code cannot exceed 50 characters", "Designation Code cannot contain emojis" · description: as Department |
+
+### 7.3 Contract Studio (added 2026-10-20, plan `docs/plans/contract-studio.md`)
+| Code | HTTP | Message |
+|---|---|---|
+| `CONTRACT_TYPE_NAME_TAKEN` | 409 | A contract type with this name already exists. |
+| `CONTRACT_TYPE_CODE_TAKEN` | 409 | A contract type with this code already exists. |
+| `CONTRACT_TYPE_IN_USE` | 409 | This contract type is in use and can't be deleted. Deactivate it instead. |
+| `CONTRACT_DOCUMENT_INVALID` | 400 | Upload a PDF file up to 20 MB and 50 pages. |
+| `CONTRACT_UPLOAD_LIMIT` | 400 | You can upload at most 10 files at a time. |
+| `CONTRACT_DOCUMENT_IN_USE` | 409 | This document is used by a template or contract and can't be deleted. Archive it instead. |
+| `CONTRACT_DOCUMENT_ARCHIVED` | 409 | This document is archived and can't be used for templates. |
+| `CONTRACT_TEMPLATE_IN_USE` | 409 | This template is used by contracts and can't be deleted. Archive it instead. |
+| `CONTRACT_TEMPLATE_INACTIVE` | 409 | This template is archived. Choose an active template. |
+| `CONTRACT_AUDIENCE_UNSUPPORTED` | 400 | Only Employee and Staffing Company contracts are available right now. |
+| `CONTRACT_BULK_LIMIT` | 400 | You can send to at most 200 recipients at a time. |
+| `CONTRACT_FIELD_MISSING` | 400 | Some contract values are missing: {{fields}}. |
+| `CONTRACT_NO_OPEN_FY` | 409 | There's no open financial year for today. Open one before sending contracts. |
+| `CONTRACT_ACTIVE_EXISTS` | 409 | This recipient already has an active contract of this type ({{number}}). Revoke it or wait for it to finish. |
+| `CONTRACT_RECIPIENT_INACTIVE` | 409 | This recipient is no longer active. |
+| `CONTRACT_STATUS_INVALID` | 409 | This contract can no longer be changed. |
+| `CONTRACT_ALREADY_SIGNED` | 409 | You have already signed this contract. |
+| `CONTRACT_EXPIRED` | 409 | This contract has expired. Contact HR for a new one. |
+| `CONTRACT_REVOKED` | 409 | This contract was withdrawn by HR. |
+| `CONTRACT_CONSENT_REQUIRED` | 400 | Please confirm that you agree to sign electronically. |
+| `CONTRACT_SELF_APPROVAL` | 403 | You can't approve a contract you signed yourself. |
+| `PAYLOAD_TOO_LARGE` | 413 | The request is too large. |
+
+Auto-revoke reason (stored, shown in activity): "Recipient is no longer active."
+
+| Form | Field → messages |
+|---|---|
+| Contract type | name: "Contract Type Name is required", "Name must be at least 2 characters", "Name cannot exceed 150 characters", "Emojis are not allowed" · code: "Code is required", "Code must be at least 2 characters", "Code cannot exceed 100 characters", "Emojis are not allowed" · description: "Description cannot exceed 500 characters" |
+| Document rename | name: **"Document name is required"**, **"Document name cannot exceed 255 characters"** |
+| Template | name: "Give the template a name.", **"Template name cannot exceed 255 characters"** · documentId: "Select a source document first." · fields: "Add at least one field or column.", **"Add at least one signature field."**, **"Fields must sit inside the page."**, **"A template can have at most 20 signature and initials fields"**, **"A template can have at most 200 fields"** · field label: **"Label cannot exceed 160 characters"** · contractTypeId: **"Choose a contract type"** · db_column: **"Unknown merge field"** |
+| Draft / send | templateId: "Pick a template to continue." · recipientIds: "Select at least one recipient." · name: **"Contract name cannot exceed 255 characters"** · start_date: **"Start date is required"**, "Enter a valid date (YYYY-MM-DD)" · end_date: "Enter a valid date (YYYY-MM-DD)", "End date must be on or after the start date", **"End date can't be in the past"** · renewal_due: "Enter a valid date (YYYY-MM-DD)", **"Renewal due must be between the start and end dates"** · sign_by: **"Sign-by date must be between tomorrow and 90 days from today"** · rate: **"Rate must be a positive amount with up to 2 decimals"** · rate_unit: **"Choose how the rate is paid"** · currency: **"Choose a valid currency"** · notice_period_days: **"Notice period must be 0–365 days"** |
+| Sign (submit) | each field id: **"This field is required"**, "Enter a valid date (YYYY-MM-DD)" · input: **"This field cannot exceed 500 characters"**, "Emojis are not allowed" · typed signature: **"Signature must be 2–100 characters"**, "Emojis are not allowed" · typed initials: **"Initials must be 1–10 characters"**, "Emojis are not allowed" · drawn or malformed signature/initials: **"Signature image is invalid or too large"** |
+| Reject / Revoke | reason: **"Reason is required"**, **"Reason must be at least 10 characters"**, **"Reason cannot exceed 500 characters"**, "Emojis are not allowed" |

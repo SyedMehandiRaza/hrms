@@ -44,3 +44,45 @@ Frontier = every ready-for-agent ticket whose blockers are all done.
 | 26 | [Departments list screen](auth-company/26-ui-departments-list.md) | done | 14, 12 |
 | 27 | [Department detail + designations screen](auth-company/27-ui-department-detail.md) | done | 26, 13 |
 | 28 | [Real email delivery over SMTP](auth-company/28-smtp-mailer.md) | done | 03 |
+
+## Contract Studio (`contract-studio/`)
+
+Plan: `docs/plans/contract-studio.md`. Only reads Employees/Staffing data (ADR 0008); safe to build in parallel
+with the Employees/Termination module. Frontier = every ready-for-agent ticket whose blockers are all done.
+Tickets 22–25 were split out of 01, 07, 08 and 10 during review, so number order isn't strict dependency order here:
+the **Blocked by** column is the source of truth.
+
+### Backend + tests
+
+| # | Ticket | Status | Blocked by |
+|---|---|---|---|
+| 01 | [Contract schema changes](contract-studio/01-schema-changes.md) | ready-for-agent | — |
+| 02 | [Contract Studio messages](contract-studio/02-error-catalog.md) | ready-for-agent | — |
+| 03 | [Contract types API](contract-studio/03-contract-types-api.md) | ready-for-agent | 01, 02 |
+| 04 | [Contract documents API](contract-studio/04-documents-api.md) | ready-for-agent | 01, 02 |
+| 05 | [Templates and merge-field catalogue API](contract-studio/05-templates-api.md) | ready-for-agent | 03, 04 |
+| 06 | [Recipient lookup API](contract-studio/06-recipient-lookup-api.md) | ready-for-agent | — |
+| 07 | [Drafts API (create, edit, delete)](contract-studio/07-drafts-api.md) | ready-for-agent | 05, 06 |
+| 22 | [Merge values](contract-studio/22-merge-values.md) | ready-for-agent | 05, 06 |
+| 23 | [Contracts list, detail, stats and preview](contract-studio/23-contracts-list-detail-preview.md) | ready-for-agent | 07, 11, 22 |
+| 08 | [Send contracts (single and bulk)](contract-studio/08-send-api.md) | ready-for-agent | 07, 22 |
+| 09 | [Signer inbox API](contract-studio/09-signer-inbox-api.md) | ready-for-agent | 08, 11 |
+| 10 | [Sign (submit)](contract-studio/10-sign-api.md) | ready-for-agent | 09 |
+| 24 | [Reject](contract-studio/24-reject-api.md) | ready-for-agent | 09 |
+| 11 | [PDF rendering service](contract-studio/11-pdf-rendering.md) | ready-for-agent | 01 |
+| 12 | [Approve and revoke](contract-studio/12-approve-revoke-api.md) | ready-for-agent | 10, 11 |
+| 13 | [Expiry, reminder and inactive-recipient job](contract-studio/13-expiry-job.md) | ready-for-agent | 08 |
+| 14 | [Contract notifications](contract-studio/14-notifications.md) | ready-for-agent | 12, 13, 24 |
+| 25 | [Demo contracts seed](contract-studio/25-demo-contracts-seed.md) | ready-for-agent | 12 |
+
+### UI (one ticket per screen)
+
+| # | Ticket | Status | Blocked by |
+|---|---|---|---|
+| 15 | [Contract Types screen](contract-studio/15-ui-contract-types.md) | ready-for-agent | 03 |
+| 16 | [Documents screen](contract-studio/16-ui-documents.md) | ready-for-agent | 04 |
+| 17 | [Templates list and builder](contract-studio/17-ui-templates-builder.md) | ready-for-agent | 05, 16 |
+| 18 | [Send wizard](contract-studio/18-ui-send-wizard.md) | ready-for-agent | 08, 17 |
+| 19 | [Contracts dashboard, list and HR viewer](contract-studio/19-ui-contracts-list-viewer.md) | ready-for-agent | 12, 18, 23 |
+| 20 | [My Contracts (Employee panel and admin My Requests)](contract-studio/20-ui-my-contracts-employee.md) | ready-for-agent | 10, 12, 24 |
+| 21 | [Staffing portal Contracts page](contract-studio/21-ui-my-contracts-staffing.md) | ready-for-agent | 20 |
