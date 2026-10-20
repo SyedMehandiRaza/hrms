@@ -72,4 +72,17 @@ const operatorNames = async (doc, pageNo) => {
   return ops.fnArray.map((fn) => names[fn]);
 };
 
-module.exports = { makePng, pngOfSize, dataUrl, openPdf, pageText, textInBox, operatorNames };
+// Unicode of every glyph in painting order (left to right along a line). Unlike pageText,
+// pdf.js does not re-order these for right-to-left scripts.
+const paintedGlyphs = async (doc, pageNo) => {
+  const page = await doc.getPage(pageNo);
+  const ops = await page.getOperatorList();
+  const out = [];
+  ops.fnArray.forEach((fn, i) => {
+    if (fn !== pdfjs.OPS.showText) return;
+    for (const g of ops.argsArray[i][0]) if (g && typeof g === "object" && g.unicode) out.push(g.unicode);
+  });
+  return out.join("");
+};
+
+module.exports = { makePng, pngOfSize, dataUrl, openPdf, pageText, textInBox, operatorNames, paintedGlyphs };

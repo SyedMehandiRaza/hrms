@@ -82,7 +82,10 @@ const drawTextInBox = (page, fonts, value, box, { maxSize = MAX_SIZE, color = TE
   for (const run of runs) {
     const font = run.arabic ? fonts.arabic : fonts.latin;
     // A run of spaces only moves the pen (a lone subset space glyph extracts as a control char).
-    if (run.text.trim()) page.drawText(run.text, { x, y, size, font, color });
+    // fontkit lays out an Arabic run right to left itself (it reverses the glyphs), so it
+    // gets the run back in logical order and paints it in our visual order.
+    const text = run.arabic ? [...run.text].reverse().join("") : run.text;
+    if (run.text.trim()) page.drawText(text, { x, y, size, font, color });
     x += font.widthOfTextAtSize(run.text, size);
   }
   return { size, runs };

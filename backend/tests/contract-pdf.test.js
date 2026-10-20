@@ -4,7 +4,7 @@ const path = require("path");
 const { PDFDocument } = require("pdf-lib");
 
 const { render, visualRuns, ContractPdfError, MIN_SIZE } = require("../src/services/contractPdf.service");
-const { makePng, openPdf, pageText, textInBox, operatorNames } = require("./helpers/pdf");
+const { makePng, openPdf, pageText, textInBox, operatorNames, paintedGlyphs } = require("./helpers/pdf");
 
 // PDF rendering service (ticket contract-studio#11; plan decisions 38–40, ADR 0009).
 
@@ -26,6 +26,8 @@ const base = (s) => s.normalize("NFKC");
 const isPresentationForm = (ch) => /[ﭐ-﷿ﹰ-\uFEFF]/.test(ch);
 // eslint-disable-next-line no-control-regex
 const stripGaps = (s) => s.replace(/[\s\u0000-\u001f]/g, "");
+// Only the Arabic letters (the sample page also carries Latin text).
+const arabicOnly = (s) => s.replace(/[^؀-ۿ]/g, "");
 
 describe("stamping values", () => {
   const png = makePng(120, 40);
@@ -114,8 +116,18 @@ describe("Arabic", () => {
     const drawn = stripGaps(items.map((i) => i.str).join(""));
     // Joined: every letter is a contextual (presentation) form, not a bare letter.
     [...drawn].forEach((ch) => expect(isPresentationForm(ch)).toBe(true));
-    // Right to left: read left to right, the glyphs are the logical text reversed.
-    expect(base(drawn)).toBe(stripGaps([...name].reverse().join("")));
+    // Right to left: painted left to right, the glyphs are the logical text reversed.
+    const painted = await paintedGlyphs(await openPdf(bytes), 1);
+    expect(arabicOnly(base(painted))).toBe(stripGaps([...name].reverse().join("")));
+  });
+
+  it("paints a typed Arabic signature and an Arabic input right to left", async () => {
+    const sig = field({ field_type: "SIGNATURE", value: { type: "TYPED", text: "سارة خان" }, height: 0.06 });
+    const { bytes } = await render({ sourceBytes: SOURCE, fields: [sig] });
+    expect(arabicOnly(base(await paintedGlyphs(await openPdf(bytes), 1)))).toBe(stripGaps([..."سارة خان"].reverse().join("")));
+    const input = field({ field_type: "INPUT", value: "مهندس موقع" });
+    const out = await render({ sourceBytes: SOURCE, fields: [input] });
+    expect(arabicOnly(base(await paintedGlyphs(await openPdf(out.bytes), 1)))).toBe(stripGaps([..."مهندس موقع"].reverse().join("")));
   });
 
   it("draws mixed Arabic and Latin in visual order", async () => {
@@ -126,7 +138,8 @@ describe("Arabic", () => {
     const latin = items.find((i) => i.str.startsWith("Ali"));
     const arabic = items.find((i) => /[؀-ۿﭐ-\uFEFF]/.test(i.str));
     expect(latin.str.replace(/\s+/g, " ")).toBe("Ali 2026");
-    expect(base(arabic.str)).toBe([..."علي"].reverse().join(""));
+    expect(arabic).toBeDefined();
+    expect(arabicOnly(base(await paintedGlyphs(await openPdf(bytes), 1)))).toBe([..."علي"].reverse().join(""));
     expect(arabic.x).toBeGreaterThan(latin.x);
     // Unicode bidi: a number after Arabic belongs to the RTL run, so left to right it reads
     // "Ali", then "2026 علي" mirrored.
@@ -201,7 +214,7 @@ describe("final", () => {
     ]) {
       expect(text).toContain(expected);
     }
-    expect(base(stripGaps(text))).toContain(stripGaps([..."سارة خان"].reverse().join("")));
+    expect(arabicOnly(base(await paintedGlyphs(doc, 4)))).toContain(stripGaps([..."سارة خان"].reverse().join("")));
     expect((await pageText(doc, 1)).map((i) => i.str)).not.toContain("Not final");
   });
 });
