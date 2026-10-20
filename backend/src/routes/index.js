@@ -7,6 +7,7 @@ const departmentRoutes = require("./department.routes");
 const { createGeoRouter } = require("./geo.routes");
 const officeRoutes = require("./office.routes");
 const projectRoutes = require("./project.routes");
+const { router: shiftRoutes } = require("./shift.routes");
 const { designationRouter, departmentDesignationsRouter } = require("./designation.routes");
 
 const router = Router();
@@ -18,6 +19,7 @@ router.use("/industry-types", industryTypeRoutes);
 router.use("/countries", createGeoRouter());
 router.use("/offices", officeRoutes);
 router.use("/projects", projectRoutes);
+router.use("/shifts", shiftRoutes);
 router.use("/departments/:id/designations", departmentDesignationsRouter);
 router.use("/departments", departmentRoutes);
 router.use("/designations", designationRouter);
