@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { toast } from "react-toastify";
 import {
   MdAdd,
   MdOutlineSearch,
@@ -8,22 +9,23 @@ import {
   MdOutlineDescription,
   MdOutlineSend,
   MdOutlineVisibility,
-  MdOutlineContentCopy,
   MdOutlineDelete,
   MdOutlineGridView,
   MdOutlineViewList,
   MdOutlinePeople,
 } from "react-icons/md";
 import CustomDropdown from "../../components/CustomDropdown";
-import { NC_STATUS_STYLES, NC_AUDIENCES } from "./newContractData";
-import { useNcContracts } from "./newContractStore";
+import { NC_STATUS_STYLES, NC_STATUS_KEY, NC_AUDIENCE_ID } from "./newContractData";
 import Pagination from "../../components/Pagination";
-import { ncStatsOf } from "../../data/groupF";
-import { matches, paginate } from "../../data/common";
-import ContractViewer from "./ContractViewer";
-
-const AUDIENCE_LABEL = Object.fromEntries(NC_AUDIENCES.map((a) => [a.id, a.label]));
-const AUDIENCE_ID = Object.fromEntries(NC_AUDIENCES.map((a) => [a.label, a.id]));
+import ConfirmationModal from "../../components/ConfirmationModal";
+import { ScreenError, ScreenLoader } from "../../components/ScreenState";
+import { contractStats, deleteDraft, listContracts } from "../../api/contracts";
+import useApiQuery from "../../hooks/useApiQuery";
+import { useCan } from "../../hooks/usePermission";
+import { useFormat } from "../../hooks/useFormat";
+import { MODULES } from "../../constants/permissions";
+import { toastApiError } from "../../utils/apiError";
+import HrContractViewer from "./HrContractViewer";
 
 const TABS = [
   { id: "all", labelKey: "contracts.tabs.all" },
@@ -33,33 +35,62 @@ const TABS = [
   { id: "Rejected", labelKey: "contracts.tabs.rejected" },
 ];
 
-// tab → the contract statuses it shows ("all" = no filter)
+// tab → the API statuses it shows ("all" = no filter)
 const TAB_STATUSES = {
-  Draft: ["Draft"],
-  Pending: ["Pending", "Sent", "Viewed"],
-  Signed: ["Signed"],
-  Rejected: ["Rejected"],
+  Draft: ["DRAFT"],
+  Pending: ["SENT", "VIEWED"],
+  Signed: ["SUBMITTED", "COMPLETED"],
+  Rejected: ["REJECTED"],
 };
+
+const AVATAR_COLORS = ["bg-indigo-50 text-indigo-600", "bg-amber-50 text-amber-600", "bg-cyan-50 text-cyan-600", "bg-rose-50 text-rose-600", "bg-emerald-50 text-emerald-600"];
+const initialsOf = (name = "") =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+const colorOf = (id = "") => AVATAR_COLORS[[...id].reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_COLORS.length];
 
 export default function NewContracts() {
   const { t } = useTranslation("contractStudio");
   const navigate = useNavigate();
-  const contracts = useNcContracts();
+  const { fmtDate } = useFormat();
+  const can = useCan();
+  const canCreate = can(MODULES.CONTRACT, "create");
+  const canDelete = can(MODULES.CONTRACT, "delete");
 
-  const [viewing, setViewing] = useState(null);
+  // the open contract lives in the URL (?contract=<id>, also the emails' link)
+  const [params, setParams] = useSearchParams();
+  const viewing = params.get("contract");
+  const setViewing = (id) =>
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (id) next.set("contract", id);
+        else next.delete("contract");
+        return next;
+      },
+      { replace: true },
+    );
+
   const [tab, setTab] = useState("all");
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [audience, setAudience] = useState("All Audiences");
+  const [audience, setAudience] = useState("");
   const [view, setView] = useState("list");
+  const [deleting, setDeleting] = useState(null); // the draft whose delete is being confirmed
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const inFlight = useRef(false);
 
   const [page, setPage] = useState(1);
   const limit = 10;
-  const stats = useMemo(() => ncStatsOf(contracts), [contracts]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedQuery(query);
+      setDebouncedQuery(query.trim());
     }, 400);
     return () => clearTimeout(timer);
   }, [query]);
@@ -72,28 +103,52 @@ export default function NewContracts() {
     setPage(1);
   }
 
-  const { rows: filtered, total, totalPages } = useMemo(() => {
-    const statuses = TAB_STATUSES[tab];
-    const audId = AUDIENCE_ID[audience];
-    const rows = contracts.filter(
-      (c) =>
-        (!statuses || statuses.includes(c.status)) &&
-        (!audId || c.audience === audId) &&
-        matches(c, debouncedQuery.trim(), ["name", "id", "recipient"]),
-    );
-    return paginate(rows, page, limit);
-  }, [contracts, tab, audience, debouncedQuery, page]);
+  const status = (TAB_STATUSES[tab] || []).join(",");
+  const listQuery = useApiQuery(() => listContracts({ page, limit, q: debouncedQuery, status, audience }), [page, debouncedQuery, status, audience]);
+  const statsQuery = useApiQuery(() => contractStats(), []);
+  const reload = () => {
+    listQuery.reload();
+    statsQuery.reload();
+  };
+
+  const filtered = listQuery.data?.items || [];
+  const total = listQuery.data?.total || 0;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
 
   const counts = useMemo(() => {
-    if (!stats) return {};
+    const s = statsQuery.data;
+    if (!s) return {};
+    const sum = (list) => list.reduce((n, k) => n + (s.byStatus[k] || 0), 0);
     return {
-      all: stats.total || 0,
-      Draft: stats.draft || 0,
-      Pending: stats.pending || 0,
-      Signed: stats.submitted || 0,
-      Rejected: stats.rejected || 0,
+      all: s.total || 0,
+      Draft: sum(TAB_STATUSES.Draft),
+      Pending: sum(TAB_STATUSES.Pending),
+      Signed: sum(TAB_STATUSES.Signed),
+      Rejected: sum(TAB_STATUSES.Rejected),
     };
-  }, [stats]);
+  }, [statsQuery.data]);
+
+  const confirmDelete = async () => {
+    if (!deleting || inFlight.current) return;
+    inFlight.current = true;
+    setDeleteBusy(true);
+    try {
+      await deleteDraft(deleting.id);
+      toast.success(t("viewer.toast.draftDeleted"));
+    } catch (err) {
+      toastApiError(err);
+    } finally {
+      inFlight.current = false;
+      setDeleteBusy(false);
+      setDeleting(null);
+      reload();
+    }
+  };
+
+  const closeViewer = () => setViewing(null);
+
+  if (listQuery.error && !listQuery.data) return <ScreenError error={listQuery.error} onRetry={listQuery.reload} />;
+  if (!listQuery.data) return <ScreenLoader />;
 
   return (
     <div className="space-y-6 pb-10">
@@ -105,13 +160,15 @@ export default function NewContracts() {
             {t("contracts.subtitle")}
           </p>
         </div>
-        <button
-          onClick={() => navigate("/admin/new-contracts/create")}
-          className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#20B2AA] to-cyan-500 hover:from-[#1C9D96] hover:to-cyan-600 rounded-lg shadow-sm shadow-cyan-200 transition-all"
-        >
-          <MdAdd className="text-lg" />
-          {t("actions.sendContract")}
-        </button>
+        {canCreate && (
+          <button
+            onClick={() => navigate("/admin/new-contracts/create")}
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#20B2AA] to-cyan-500 hover:from-[#1C9D96] hover:to-cyan-600 rounded-lg shadow-sm shadow-cyan-200 transition-all"
+          >
+            <MdAdd className="text-lg" />
+            {t("actions.sendContract")}
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
@@ -148,8 +205,8 @@ export default function NewContracts() {
             value={audience}
             onChange={(e) => setAudience(e.target.value)}
             options={[
-              { label: t("audiences.all"), value: "All Audiences" },
-              ...NC_AUDIENCES.map((a) => ({ label: t(`audiences.${a.id}`, { defaultValue: a.label }), value: a.label })),
+              { label: t("audiences.all"), value: "" },
+              ...Object.entries(NC_AUDIENCE_ID).map(([api, id]) => ({ label: t(`audiences.${id}`), value: api })),
             ]}
           />
         </div>
@@ -171,7 +228,7 @@ export default function NewContracts() {
           <button
             onClick={() => {
               setQuery("");
-              setAudience("All Audiences");
+              setAudience("");
               setTab("all");
             }}
             className="w-full sm:w-auto flex justify-center items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white px-5 py-2 rounded-lg font-medium text-sm transition-colors h-[42px]"
@@ -191,46 +248,53 @@ export default function NewContracts() {
           <p className="text-sm text-gray-500 max-w-sm mb-5">
             {t("contracts.empty.description")}
           </p>
-          <button
-            onClick={() => navigate("/admin/new-contracts/create")}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-[#20B2AA] hover:bg-[#1C9D96] rounded-lg transition-colors"
-          >
-            <MdAdd className="text-lg" /> {t("actions.sendContract")}
-          </button>
+          {canCreate && (
+            <button
+              onClick={() => navigate("/admin/new-contracts/create")}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-[#20B2AA] hover:bg-[#1C9D96] rounded-lg transition-colors"
+            >
+              <MdAdd className="text-lg" /> {t("actions.sendContract")}
+            </button>
+          )}
         </div>
       ) : view === "grid" ? (
         // GRID VIEW
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
             {filtered.map((c) => {
-              const st = NC_STATUS_STYLES[c.status] || NC_STATUS_STYLES.Draft;
+              const statusKey = NC_STATUS_KEY[c.status];
+              const st = NC_STATUS_STYLES[statusKey] || NC_STATUS_STYLES.Draft;
               return (
                 <div
                   key={c.id}
                   className="group bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-lg hover:shadow-gray-100 hover:-translate-y-0.5 transition-all"
                 >
                   <div className="flex items-start justify-between mb-4">
-                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold ${c.color}`}>
-                      {c.initials}
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold ${colorOf(c.id)}`}>
+                      {initialsOf(c.recipient?.name || c.name)}
                     </div>
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${st.chip}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
-                      {t(`status.${c.status}`, { defaultValue: c.status })}
+                      {t(`status.${statusKey}`, { defaultValue: c.status })}
                     </span>
                   </div>
                   <h3 className="font-semibold text-gray-900 text-sm mb-0.5 truncate">{c.name}</h3>
-                  <p className="text-[11px] text-gray-400 mb-4">{t("common.idLabel", { id: c.id })}</p>
+                  <p className="text-[11px] text-gray-400 mb-4">{t("common.idLabel", { id: c.number || "—" })}</p>
                   <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
-                    <span className="inline-flex items-center gap-1"><MdOutlinePeople className="text-sm" /> {c.recipient}</span>
-                    <span>{t("common.fieldsCount", { count: c.fields })}</span>
+                    <span className="inline-flex items-center gap-1"><MdOutlinePeople className="text-sm" /> {c.recipient?.name || "—"}</span>
+                    <span>{t("common.fieldsCount", { count: c.field_count })}</span>
                   </div>
                   <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                    <span className="text-[11px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{t(`modules.${c.module}`, { defaultValue: c.module })}</span>
+                    <span className="text-[11px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{c.contract_type?.name || "—"}</span>
                     <div className="flex items-center gap-2 text-gray-400">
-                      <button onClick={() => setViewing(c)} title={t("actions.view")}>
+                      <button onClick={() => setViewing(c.id)} title={t("actions.view")}>
                         <MdOutlineVisibility className="text-lg hover:text-cyan-600 cursor-pointer transition-colors" />
                       </button>
-                      <MdOutlineSend className="text-lg hover:text-cyan-600 cursor-pointer transition-colors" />
+                      {c.status === "DRAFT" && canCreate && (
+                        <button onClick={() => setViewing(c.id)} title={t("actions.send")}>
+                          <MdOutlineSend className="text-lg hover:text-cyan-600 cursor-pointer transition-colors" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -268,7 +332,8 @@ export default function NewContracts() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filtered.map((c, idx) => {
-                  const st = NC_STATUS_STYLES[c.status] || NC_STATUS_STYLES.Draft;
+                  const statusKey = NC_STATUS_KEY[c.status];
+              const st = NC_STATUS_STYLES[statusKey] || NC_STATUS_STYLES.Draft;
                   return (
                     <tr key={c.id} className="hover:bg-gray-50/70 transition-colors">
                       <td className="px-5 py-3.5 text-sm font-medium text-gray-500">
@@ -276,34 +341,35 @@ export default function NewContracts() {
                       </td>
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-bold ${c.color}`}>
-                            {c.initials}
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-bold ${colorOf(c.id)}`}>
+                            {initialsOf(c.recipient?.name || c.name)}
                           </div>
                           <div className="min-w-0">
                             <p className="font-semibold text-gray-900 text-sm truncate">{c.name}</p>
-                            <p className="text-[11px] text-gray-400">{t("common.idLabel", { id: c.id })}</p>
+                            <p className="text-[11px] text-gray-400">{t("common.idLabel", { id: c.number || "—" })}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-3.5 text-sm text-gray-600">{c.recipient}</td>
+                      <td className="px-5 py-3.5 text-sm text-gray-600">{c.recipient?.name || "—"}</td>
                       <td className="px-5 py-3.5">
                         <span className="text-[11px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                          {AUDIENCE_LABEL[c.audience] && t(`audiences.${c.audience}`, { defaultValue: AUDIENCE_LABEL[c.audience] })}
+                          {t(`audiences.${NC_AUDIENCE_ID[c.audience_type]}`, { defaultValue: c.audience_type })}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-sm text-gray-500">{c.sentDate}</td>
-                      <td className="px-5 py-3.5 text-sm text-gray-500">{c.fields}</td>
+                      <td className="px-5 py-3.5 text-sm text-gray-500">{c.sent_at ? fmtDate(c.sent_at) : "—"}</td>
+                      <td className="px-5 py-3.5 text-sm text-gray-500">{c.field_count}</td>
                       <td className="px-5 py-3.5">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${st.chip}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
-                          {t(`status.${c.status}`, { defaultValue: c.status })}
+                          {t(`status.${statusKey}`, { defaultValue: c.status })}
                         </span>
                       </td>
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3 text-gray-400">
-                          <button onClick={() => setViewing(c)} title={t("actions.view")} className="hover:text-cyan-600 transition-colors"><MdOutlineVisibility className="text-lg" /></button>
-                          <button title={t("actions.duplicate")} className="hover:text-gray-700 transition-colors"><MdOutlineContentCopy className="text-lg" /></button>
-                          <button title={t("actions.delete")} className="hover:text-rose-500 transition-colors"><MdOutlineDelete className="text-lg" /></button>
+                          <button onClick={() => setViewing(c.id)} title={t("actions.view")} className="hover:text-cyan-600 transition-colors"><MdOutlineVisibility className="text-lg" /></button>
+                          {c.status === "DRAFT" && canDelete && (
+                            <button onClick={() => setDeleting(c)} title={t("actions.delete")} className="hover:text-rose-500 transition-colors"><MdOutlineDelete className="text-lg" /></button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -327,14 +393,18 @@ export default function NewContracts() {
         </div>
       )}
 
-      {viewing && (
-        <ContractViewer
-          contract={viewing}
-          canSign={false}
-          canApprove
-          onClose={() => setViewing(null)}
-        />
-      )}
+      {viewing && <HrContractViewer key={viewing} contractId={viewing} onClose={closeViewer} onChanged={reload} />}
+      <ConfirmationModal
+        isOpen={!!deleting}
+        type="delete"
+        title={t("viewer.deleteTitle")}
+        message={t("viewer.deleteMessage", { name: deleting?.name })}
+        confirmText={t("actions.delete")}
+        cancelText={t("actions.cancel")}
+        isLoading={deleteBusy}
+        onClose={() => setDeleting(null)}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

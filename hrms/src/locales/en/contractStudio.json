@@ -11,7 +11,8 @@
     "Rejected": "Rejected",
     "Expired": "Expired",
     "Saved": "Saved",
-    "Archived": "Archived"
+    "Archived": "Archived",
+    "Revoked": "Revoked"
   },
   "recipientStatus": {
     "PENDING": "PENDING",
@@ -124,7 +125,16 @@
     "noContracts": "No contracts yet — send one to get started.",
     "recentActivity": "Recent Activity",
     "noActivity": "No activity yet.",
-    "viewAllActivity": "View All Activity"
+    "viewAllActivity": "View All Activity",
+    "feed": {
+      "SENT": "{{name}} sent to {{recipient}}",
+      "VIEWED": "{{name}} viewed by {{recipient}}",
+      "SUBMITTED": "{{name}} signed by {{recipient}}",
+      "COMPLETED": "{{name}} approved",
+      "REJECTED": "{{name}} declined by {{recipient}}",
+      "EXPIRED": "{{name}} expired",
+      "REVOKED": "{{name}} revoked"
+    }
   },
   "contracts": {
     "title": "Contracts",
@@ -444,8 +454,62 @@
       "signedSubmitted": "Signed & submitted",
       "approved": "Contract approved",
       "approveFailed": "Could not approve",
-      "pdfFailed": "Could not generate the PDF (document not available)."
-    }
+      "pdfFailed": "Could not generate the PDF (document not available).",
+      "draftUpdated": "Draft updated",
+      "draftDeleted": "Draft deleted",
+      "revoked": "Contract revoked",
+      "rejected": "Contract rejected"
+    },
+    "activity": "Activity",
+    "system": "System",
+    "reasonLine": "Reason: {{reason}}",
+    "sending": "Sending…",
+    "editTerms": "Edit terms",
+    "save": "Save",
+    "saving": "Saving…",
+    "revoke": "Revoke",
+    "revokeTitle": "Revoke contract",
+    "revoking": "Revoking…",
+    "deleteTitle": "Delete draft",
+    "deleteMessage": "Delete the draft \"{{name}}\"? This cannot be undone.",
+    "activityActions": {
+      "CREATED": "Created",
+      "UPDATED": "Updated",
+      "SENT": "Sent",
+      "VIEWED": "Viewed",
+      "REMINDED": "Reminder sent",
+      "SIGNED": "Signed",
+      "DECLINED": "Rejected",
+      "EXPIRED": "Expired",
+      "REVOKED": "Revoked",
+      "COMPLETED": "Approved"
+    },
+    "reason": {
+      "label": "Reason",
+      "placeholder": "Explain why…",
+      "validation": {
+        "required": "Reason is required",
+        "min": "Reason must be at least 10 characters",
+        "max": "Reason cannot exceed 500 characters",
+        "noEmojis": "Emojis are not allowed"
+      }
+    },
+    "blocked": {
+      "expired": "This contract has expired. Contact HR for a new one.",
+      "revoked": "This contract was withdrawn by HR."
+    },
+    "signBy": "Sign by",
+    "fieldTypes": {
+      "INPUT": "Text",
+      "CHECKBOX": "Checkbox",
+      "DATE": "Date",
+      "INITIALS": "Initials",
+      "SIGNATURE": "Signature"
+    },
+    "consent": "I agree that my electronic signature is legally binding, the same as a handwritten signature.",
+    "reject": "Reject",
+    "rejectTitle": "Reject contract",
+    "rejecting": "Rejecting…"
   },
   "signaturePad": {
     "title": "Add your signature",

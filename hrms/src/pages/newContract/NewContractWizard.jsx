@@ -26,7 +26,8 @@ import {
 } from "react-icons/md";
 import { listContractTemplates, lookupRecipients, createContracts } from "../../api/contracts";
 import useApiQuery from "../../hooks/useApiQuery";
-import { ContractTermFields } from "../contract/ContractTermModal";
+import ContractTermInputs from "./ContractTermInputs";
+import { TERM_KEYS, blank, termsBody, validateTerms } from "./contractTerms";
 import { useFormat } from "../../hooks/useFormat";
 import { ScreenError, ScreenLoader } from "../../components/ScreenState";
 import { toastApiError } from "../../utils/apiError";
@@ -52,8 +53,6 @@ const AUD = {
 };
 
 const AVATAR_COLORS = ["bg-cyan-100 text-cyan-700", "bg-violet-100 text-violet-700", "bg-amber-100 text-amber-700", "bg-emerald-100 text-emerald-700", "bg-rose-100 text-rose-700"];
-const RATE_UNITS = ["HOURLY", "DAILY", "MONTHLY", "ANNUAL"];
-const TERM_KEYS = ["start_date", "end_date", "renewal_due", "sign_by", "rate", "rate_unit", "currency", "notice_period_days"];
 
 const initialsOf = (name = "") =>
   name
@@ -70,35 +69,6 @@ const inDays = (n) => {
   d.setDate(d.getDate() + n);
   return ymd(d);
 };
-const isRealYmd = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v) && ymd(new Date(`${v}T00:00:00`)) === v;
-const blank = (v) => v === undefined || v === null || String(v).trim() === "";
-
-// Client-side checks with the server's texts (standards §7.3 "Draft / send"); rules that
-// depend on the company's today (end in the past, sign-by range) are the server's.
-const validateTerms = (t, v) => {
-  const e = {};
-  const msg = (k) => t(`wizard.terms.validation.${k}`);
-  if (blank(v.start_date)) e.start_date = msg("startDateRequired");
-  ["start_date", "end_date", "renewal_due"].forEach((k) => {
-    if (!blank(v[k]) && !isRealYmd(v[k])) e[k] = msg("dateInvalid");
-  });
-  if (!e.start_date && !e.end_date && !blank(v.end_date) && v.end_date < v.start_date) e.end_date = msg("endBeforeStart");
-  if (!blank(v.rate)) {
-    const n = Number(v.rate);
-    if (!(n > 0) || Math.abs(Math.round(n * 100) - n * 100) > 1e-6 || n > 9999999999.99) e.rate = msg("rateInvalid");
-    else if (blank(v.rate_unit)) e.rate_unit = msg("rateUnitRequired");
-  }
-  if (!/^[A-Za-z]{3}$/.test(String(v.currency || "").trim())) e.currency = msg("currencyInvalid");
-  if (!blank(v.notice_period_days)) {
-    const n = Number(v.notice_period_days);
-    if (!Number.isInteger(n) || n < 0 || n > 365) e.notice_period_days = msg("noticePeriodRange");
-  }
-  return e;
-};
-
-const inputCls = (bad) =>
-  `w-full px-3 py-2.5 bg-gray-50 border rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-cyan-500 ${bad ? "border-red-500" : "border-gray-200"}`;
-const FieldError = ({ message }) => (message ? <p className="text-red-500 text-xs mt-1">{message}</p> : null);
 
 export default function NewContractWizard() {
   const { t } = useTranslation("contractStudio");
@@ -223,14 +193,7 @@ export default function NewContractWizard() {
         mode,
         templateId: template.id,
         recipientIds: selected.map((r) => r.id),
-        start_date: term.start_date,
-        end_date: term.end_date || null,
-        renewal_due: term.renewal_due || null,
-        sign_by: term.sign_by || null,
-        rate: blank(term.rate) ? null : Number(term.rate),
-        rate_unit: blank(term.rate) ? null : term.rate_unit || null,
-        currency: term.currency.trim().toUpperCase(),
-        notice_period_days: blank(term.notice_period_days) ? null : Number(term.notice_period_days),
+        ...termsBody(term),
       });
       setResult(data);
     } catch (err) {
@@ -562,39 +525,7 @@ export default function NewContractWizard() {
               <h3 className="text-base font-bold text-gray-900">{t("contracts:details.contractDates")}</h3>
             </div>
             <p className="text-xs text-gray-500 mb-4">{t("contracts:term.hint")}</p>
-            <ContractTermFields values={term} errors={termErrors} onChange={changeTerm} disabled={!!submitting} />
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-              <div className="min-w-0">
-                <label htmlFor="term-sign_by" className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">{t("wizard.terms.signBy")}</label>
-                <input id="term-sign_by" type="date" value={term.sign_by} onChange={(e) => changeTerm("sign_by", e.target.value)} className={inputCls(!!termErrors.sign_by)} />
-                <FieldError message={termErrors.sign_by} />
-              </div>
-              <div className="min-w-0">
-                <label htmlFor="term-rate" className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">{t("wizard.terms.rate")}</label>
-                <input id="term-rate" type="number" step="0.01" min="0" value={term.rate} onChange={(e) => changeTerm("rate", e.target.value)} className={inputCls(!!termErrors.rate)} />
-                <FieldError message={termErrors.rate} />
-              </div>
-              <div className="min-w-0">
-                <label htmlFor="term-rate_unit" className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">{t("wizard.terms.rateUnit")}</label>
-                <select id="term-rate_unit" value={term.rate_unit} onChange={(e) => changeTerm("rate_unit", e.target.value)} className={inputCls(!!termErrors.rate_unit)}>
-                  <option value="">{t("wizard.terms.rateUnitPlaceholder")}</option>
-                  {RATE_UNITS.map((u) => (
-                    <option key={u} value={u}>{t(`wizard.terms.units.${u}`)}</option>
-                  ))}
-                </select>
-                <FieldError message={termErrors.rate_unit} />
-              </div>
-              <div className="min-w-0">
-                <label htmlFor="term-currency" className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">{t("wizard.terms.currency")}</label>
-                <input id="term-currency" maxLength={3} value={term.currency} onChange={(e) => changeTerm("currency", e.target.value.toUpperCase())} className={inputCls(!!termErrors.currency)} />
-                <FieldError message={termErrors.currency} />
-              </div>
-              <div className="min-w-0">
-                <label htmlFor="term-notice" className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">{t("wizard.terms.noticePeriod")}</label>
-                <input id="term-notice" type="number" min="0" max="365" step="1" value={term.notice_period_days} onChange={(e) => changeTerm("notice_period_days", e.target.value)} className={inputCls(!!termErrors.notice_period_days)} />
-                <FieldError message={termErrors.notice_period_days} />
-              </div>
-            </div>
+            <ContractTermInputs values={term} errors={termErrors} onChange={changeTerm} disabled={!!submitting} />
           </section>
         </div>
       )}

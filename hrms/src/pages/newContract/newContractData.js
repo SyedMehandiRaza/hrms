@@ -132,7 +132,24 @@ export const NC_STATUS_STYLES = {
   Completed: { chip: "bg-emerald-50 text-emerald-600", dot: "bg-emerald-500" },
   Rejected: { chip: "bg-rose-50 text-rose-600", dot: "bg-rose-500" },
   Expired: { chip: "bg-rose-50 text-rose-500", dot: "bg-rose-400" },
+  Submitted: { chip: "bg-emerald-50 text-emerald-600", dot: "bg-emerald-500" },
+  Revoked: { chip: "bg-orange-50 text-orange-600", dot: "bg-orange-500" },
 };
+
+// API contract status → display key (status.* strings and NC_STATUS_STYLES).
+export const NC_STATUS_KEY = {
+  DRAFT: "Draft",
+  SENT: "Sent",
+  VIEWED: "Viewed",
+  SUBMITTED: "Submitted",
+  COMPLETED: "Completed",
+  REJECTED: "Rejected",
+  EXPIRED: "Expired",
+  REVOKED: "Revoked",
+};
+
+// API audience → NC_AUDIENCES id.
+export const NC_AUDIENCE_ID = { EMPLOYEE: "employee", STAFFING_COMPANY: "staffing" };
 
 export const NC_CONTRACTS = [
   { id: "OFF-24-0091", name: "Offer Letter — John Doe", recipient: "John Doe", initials: "JD", color: "bg-indigo-50 text-indigo-600", module: "Employees", audience: "employee", sentDate: "Oct 24, 2023", status: "Pending", fields: 6 },

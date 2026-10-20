@@ -71,18 +71,22 @@ describe("list and stats", () => {
       audience_type: "EMPLOYEE",
       contract_type: { id: ctx.type.id, name: "Employment Contract" },
       recipient: { name: "Sara Khan", type: "EMPLOYEE" },
+      field_count: 2,
     });
     expect(all.find((c) => c.id === ids.sent).number).toMatch(/^CON-\d{4}-0001$/);
   });
 
-  it("filters by status, audience and type, and searches name or number", async () => {
+  it("filters by status, audience and type, and searches name, number or recipient", async () => {
     const q = async (query) => (await list(ctx.token, query)).body.data.items.map((c) => c.id).sort();
     expect(await q({ status: "SENT" })).toEqual([ids.sent]);
     expect(await q({ status: "DRAFT" })).toEqual([ids.draft, ids.staffing].sort());
+    expect(await q({ status: "SENT,DRAFT" })).toEqual([ids.sent, ids.draft, ids.staffing].sort());
+    expect((await list(ctx.token, { status: "SENT,NOPE" })).status).toBe(400);
     expect(await q({ audience: "STAFFING_COMPANY" })).toEqual([ids.staffing]);
     expect(await q({ type: ctx.staffType.id })).toEqual([ids.staffing]);
     expect(await q({ q: "beta" })).toEqual([ids.draft]);
     expect(await q({ q: "0001" })).toEqual([ids.sent]);
+    expect(await q({ q: "omar" })).toEqual([ids.draft]);
   });
 
   it("counts by status and audience", async () => {

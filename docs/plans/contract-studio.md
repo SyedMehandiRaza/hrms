@@ -414,7 +414,7 @@ eight contract tables, plus one foreign-key change on `hrms_contracts.contract_t
 | `GET /contract-templates` · `POST` · `GET/PUT/DELETE /:id` · `POST /:id/duplicate` · `PATCH /:id/status` | `contract:*` |
 | `GET /contract-merge-fields?audience=` | `contract:read` |
 | `GET /contract-recipients?audience=&projectId=&staffingCompanyId=&q=` (id, name, code, project, staffing co, status) | `contract:create` |
-| `GET /contracts` (status, audience, type, q, page) · `GET /contracts/stats` · `GET /contracts/:id` (recipient, fields, activity) | `contract:read` |
+| `GET /contracts` (status — one or several comma-separated, audience, type, q — name, number or recipient name, page; items carry `field_count`) · `GET /contracts/stats` · `GET /contracts/:id` (recipient, fields, activity) | `contract:read` |
 | `POST /contracts` `{ mode: "DRAFT"\|"SEND", templateId, recipientIds[], name?, terms }` → per-recipient results | `contract:create` |
 | `PUT /contracts/:id` (draft name/terms) | `contract:update` |
 | `DELETE /contracts/:id` (draft) | `contract:delete` |

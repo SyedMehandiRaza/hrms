@@ -23,15 +23,38 @@ const findContract = async (employerId, id, options = {}) => {
   return c;
 };
 
+// List items with each contract's field count (the lists' Fields column).
+const withFieldCounts = async (rows) => {
+  const counts = rows.length
+    ? await ContractField.findAll({
+        where: { contract_id: rows.map((r) => r.id) },
+        attributes: ["contract_id", [sequelize.fn("COUNT", sequelize.col("id")), "n"]],
+        group: ["contract_id"],
+        raw: true,
+      })
+    : [];
+  const fieldCount = Object.fromEntries(counts.map((r) => [r.contract_id, Number(r.n)]));
+  return rows.map((r) => ({ ...contractItem(r), field_count: fieldCount[r.id] || 0 }));
+};
+
 const listContracts = async ({ employerId }, { page, limit, q, status, audience, type }) => {
   await expireDue({ employerId });
   const where = { employer_id: employerId };
-  if (status) where.status = status;
+  if (status) where.status = { [Op.in]: status.split(",") };
   if (audience) where.audience_type = audience;
   if (type) where.contract_type_id = type;
   if (q) {
     const pattern = likePattern(q);
-    where[Op.or] = [{ name: { [Op.like]: pattern } }, { reference_no: { [Op.like]: pattern } }];
+    const byRecipient = await ContractRecipient.findAll({
+      where: { employer_id: employerId, recipient_name: { [Op.like]: pattern } },
+      attributes: ["contract_id"],
+      raw: true,
+    });
+    where[Op.or] = [
+      { name: { [Op.like]: pattern } },
+      { reference_no: { [Op.like]: pattern } },
+      { id: byRecipient.map((r) => r.contract_id) },
+    ];
   }
   const total = await Contract.count({ where });
   const rows = await Contract.findAll({
@@ -44,7 +67,7 @@ const listContracts = async ({ employerId }, { page, limit, q, status, audience,
     limit,
     offset: (page - 1) * limit,
   });
-  return { items: rows.map(contractItem), total, page, limit };
+  return { items: await withFieldCounts(rows), total, page, limit };
 };
 
 const contractStats = async ({ employerId }) => {
@@ -131,4 +154,4 @@ const hrContractPdf = async ({ employerId }, id) => {
   return contractPdf(await findContract(employerId, id));
 };
 
-module.exports = { listContracts, contractStats, getContract, hrContractPdf, fieldView, fieldsOf, findContract, ACTIVITY_ORDER };
+module.exports = { withFieldCounts, listContracts, contractStats, getContract, hrContractPdf, fieldView, fieldsOf, findContract, ACTIVITY_ORDER };

@@ -11,7 +11,8 @@
     "Rejected": "مرفوض",
     "Expired": "منتهي الصلاحية",
     "Saved": "محفوظ",
-    "Archived": "مؤرشف"
+    "Archived": "مؤرشف",
+    "Revoked": "ملغى"
   },
   "recipientStatus": {
     "PENDING": "قيد الانتظار",
@@ -124,7 +125,16 @@
     "noContracts": "لا توجد عقود بعد — أرسل عقدًا للبدء.",
     "recentActivity": "أحدث النشاطات",
     "noActivity": "لا يوجد نشاط بعد.",
-    "viewAllActivity": "عرض جميع النشاطات"
+    "viewAllActivity": "عرض جميع النشاطات",
+    "feed": {
+      "SENT": "أُرسل {{name}} إلى {{recipient}}",
+      "VIEWED": "عرض {{recipient}} {{name}}",
+      "SUBMITTED": "وقّع {{recipient}} {{name}}",
+      "COMPLETED": "اعتُمد {{name}}",
+      "REJECTED": "رفض {{recipient}} {{name}}",
+      "EXPIRED": "انتهت صلاحية {{name}}",
+      "REVOKED": "أُلغي {{name}}"
+    }
   },
   "contracts": {
     "title": "العقود",
@@ -448,8 +458,62 @@
       "signedSubmitted": "تم التوقيع والتقديم",
       "approved": "تم اعتماد العقد",
       "approveFailed": "تعذّر الاعتماد",
-      "pdfFailed": "تعذّر إنشاء ملف PDF (المستند غير متاح)."
-    }
+      "pdfFailed": "تعذّر إنشاء ملف PDF (المستند غير متاح).",
+      "draftUpdated": "تم تحديث المسودة",
+      "draftDeleted": "تم حذف المسودة",
+      "revoked": "تم إلغاء العقد",
+      "rejected": "تم رفض العقد"
+    },
+    "activity": "النشاط",
+    "system": "النظام",
+    "reasonLine": "السبب: {{reason}}",
+    "sending": "جارٍ الإرسال…",
+    "editTerms": "تعديل الشروط",
+    "save": "حفظ",
+    "saving": "جارٍ الحفظ…",
+    "revoke": "إلغاء العقد",
+    "revokeTitle": "إلغاء العقد",
+    "revoking": "جارٍ الإلغاء…",
+    "deleteTitle": "حذف المسودة",
+    "deleteMessage": "هل تريد حذف المسودة \"{{name}}\"؟ لا يمكن التراجع عن ذلك.",
+    "activityActions": {
+      "CREATED": "أُنشئ",
+      "UPDATED": "عُدّل",
+      "SENT": "أُرسل",
+      "VIEWED": "عُرض",
+      "REMINDED": "أُرسل تذكير",
+      "SIGNED": "وُقّع",
+      "DECLINED": "رُفض",
+      "EXPIRED": "انتهت صلاحيته",
+      "REVOKED": "أُلغي",
+      "COMPLETED": "اعتُمد"
+    },
+    "reason": {
+      "label": "السبب",
+      "placeholder": "اشرح السبب…",
+      "validation": {
+        "required": "السبب مطلوب",
+        "min": "يجب ألا يقل السبب عن 10 أحرف",
+        "max": "لا يمكن أن يتجاوز السبب 500 حرف",
+        "noEmojis": "لا يُسمح باستخدام الرموز التعبيرية"
+      }
+    },
+    "blocked": {
+      "expired": "انتهت صلاحية هذا العقد. تواصل مع الموارد البشرية للحصول على عقد جديد.",
+      "revoked": "سحبت الموارد البشرية هذا العقد."
+    },
+    "signBy": "التوقيع قبل",
+    "fieldTypes": {
+      "INPUT": "نص",
+      "CHECKBOX": "مربع اختيار",
+      "DATE": "تاريخ",
+      "INITIALS": "الأحرف الأولى",
+      "SIGNATURE": "التوقيع"
+    },
+    "consent": "أوافق على أن توقيعي الإلكتروني ملزم قانونًا، تمامًا مثل التوقيع بخط اليد.",
+    "reject": "رفض",
+    "rejectTitle": "رفض العقد",
+    "rejecting": "جارٍ الرفض…"
   },
   "signaturePad": {
     "title": "أضف توقيعك",

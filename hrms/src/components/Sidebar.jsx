@@ -265,6 +265,7 @@ const Sidebar = () => {
       id: "contract-studio",
       label: "menu.contractStudio",
       icon: MdOutlineNoteAdd,
+      module: MODULES.CONTRACT,
       children: [
         {
           id: "cs-dashboard",
@@ -289,6 +290,8 @@ const Sidebar = () => {
           label: "menu.sendContract",
           icon: MdOutlineNoteAdd,
           path: "/admin/new-contracts/create",
+          module: MODULES.CONTRACT,
+          action: "create",
         },
         {
           id: "cs-contracts",
@@ -489,8 +492,8 @@ const Sidebar = () => {
     return attendanceRead;
   };
 
-  // A nav node with a `module` field is hidden unless the user can read it.
-  const moduleVisible = (node) => !node.module || can(node.module, "read");
+  // A nav node with a `module` field is hidden unless the user has its `action` (default read).
+  const moduleVisible = (node) => !node.module || can(node.module, node.action || "read");
 
   const visibleMenuItems = menuItems
     .map((item) => {

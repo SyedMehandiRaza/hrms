@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -19,9 +19,14 @@ import {
   MdOutlineDoneAll,
   MdOutlineTrendingUp,
 } from "react-icons/md";
-import { NC_STATUS_STYLES } from "./newContractData";
-import { useNcContracts } from "./newContractStore";
-import { ncStatsOf, NC_ACTIVITY_FEED } from "../../data/groupF";
+import { NC_STATUS_STYLES, NC_STATUS_KEY } from "./newContractData";
+import { contractStats, listContracts } from "../../api/contracts";
+import useApiQuery from "../../hooks/useApiQuery";
+import { useCan } from "../../hooks/usePermission";
+import { useCurrentUser } from "../../hooks/useSession";
+import { useFormat } from "../../hooks/useFormat";
+import { MODULES } from "../../constants/permissions";
+import { ScreenError, ScreenLoader } from "../../components/ScreenState";
 
 const STAT_ICONS = {
   total: MdOutlineDescription,
@@ -50,6 +55,29 @@ const MINI_TONE = {
   bad: "text-rose-600",
   warn: "text-amber-600",
 };
+
+// The feed: each recent non-draft contract's latest step (status → icon, tone, text, time).
+const FEED = {
+  SENT: { icon: "sent", tone: "cyan", at: "sent_at" },
+  VIEWED: { icon: "viewed", tone: "sky", at: "viewed_at" },
+  SUBMITTED: { icon: "signed", tone: "emerald", at: "submitted_at" },
+  COMPLETED: { icon: "completed", tone: "emerald", at: "completed_at" },
+  REJECTED: { icon: "rejected", tone: "rose", at: "updated_at" },
+  EXPIRED: { icon: "rejected", tone: "rose", at: "expires_at" },
+  REVOKED: { icon: "rejected", tone: "rose", at: "revoked_at" },
+};
+const FEED_STATUSES = Object.keys(FEED).join(",");
+
+const AVATAR_COLORS = ["bg-indigo-50 text-indigo-600", "bg-amber-50 text-amber-600", "bg-cyan-50 text-cyan-600", "bg-rose-50 text-rose-600", "bg-emerald-50 text-emerald-600"];
+const initialsOf = (name = "") =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+const colorOf = (id = "") => AVATAR_COLORS[[...id].reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_COLORS.length];
 
 const ACT_ICON = {
   signed: MdOutlineDraw,
@@ -91,52 +119,51 @@ function StatCard({ stat }) {
 export default function NewContractDashboard() {
   const { t } = useTranslation("contractStudio");
   const navigate = useNavigate();
-  const sent = useNcContracts();
+  const { fmtDate } = useFormat();
+  const user = useCurrentUser();
+  const canCreate = useCan()(MODULES.CONTRACT, "create");
   const [query, setQuery] = useState("");
-  const apiStats = useMemo(() => ncStatsOf(sent), [sent]);
-  const activities = NC_ACTIVITY_FEED;
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query.trim()), 400);
+    return () => clearTimeout(timer);
+  }, [query]);
 
-  const recent = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return sent.slice(0, 5);
-    return sent.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        (c.recipient || "").toLowerCase().includes(q) ||
-        (c.module || "").toLowerCase().includes(q)
-    );
-  }, [sent, query]);
+  const statsQuery = useApiQuery(() => contractStats(), []);
+  const recentQuery = useApiQuery(() => listContracts({ limit: 5, q: debouncedQuery }), [debouncedQuery]);
+  const feedQuery = useApiQuery(() => listContracts({ limit: 5, status: FEED_STATUSES }), []);
+  const recent = recentQuery.data?.items || [];
 
-  // Metrics: prefer the API stats, else derive from the sent contracts.
   const metrics = useMemo(() => {
-    if (apiStats) {
-      return {
-        total: apiStats.total || 0,
-        pending: apiStats.pending || 0,
-        signed: apiStats.submitted || 0,
-        completed: (apiStats.approved || 0) + (apiStats.completed || 0),
-        draft: apiStats.draft || 0,
-        viewed: apiStats.byStatus?.VIEWED || 0,
-        rejected: apiStats.rejected || 0,
-        expired: apiStats.expired || 0,
-      };
-    }
-    const c = { DRAFT: 0, SENT: 0, VIEWED: 0, SIGNED: 0, COMPLETED: 0, REJECTED: 0, EXPIRED: 0 };
-    sent.forEach((x) => {
-      const s = (x.status || "").toUpperCase();
-      if (c[s] !== undefined) c[s] += 1;
-    });
+    const by = statsQuery.data?.byStatus || {};
     return {
-      total: sent.length,
-      pending: c.SENT + c.VIEWED,
-      signed: c.SIGNED,
-      completed: c.COMPLETED,
-      draft: c.DRAFT,
-      viewed: c.VIEWED,
-      rejected: c.REJECTED,
-      expired: c.EXPIRED,
+      total: statsQuery.data?.total || 0,
+      pending: (by.SENT || 0) + (by.VIEWED || 0),
+      signed: by.SUBMITTED || 0,
+      completed: by.COMPLETED || 0,
+      draft: by.DRAFT || 0,
+      viewed: by.VIEWED || 0,
+      rejected: by.REJECTED || 0,
+      expired: by.EXPIRED || 0,
     };
-  }, [apiStats, sent]);
+  }, [statsQuery.data]);
+
+  const activities = useMemo(
+    () =>
+      (feedQuery.data?.items || [])
+        .map((c) => {
+          const f = FEED[c.status];
+          return {
+            id: c.id,
+            icon: f.icon,
+            tone: f.tone,
+            text: t(`dashboard.feed.${c.status}`, { name: c.name, recipient: c.recipient?.name || "—" }),
+            at: c[f.at] || c.updated_at,
+          };
+        })
+        .sort((a, b) => new Date(b.at) - new Date(a.at)),
+    [feedQuery.data, t],
+  );
 
   const statCards = [
     { key: "total", labelKey: "dashboard.stats.total", value: metrics.total, deltaKey: "dashboard.stats.allContracts", deltaTone: "muted", icon: "total", tint: "cyan" },
@@ -150,7 +177,22 @@ export default function NewContractDashboard() {
     { labelKey: "dashboard.mini.rejected", value: metrics.rejected, tone: "bad" },
     { labelKey: "dashboard.mini.expired", value: metrics.expired, tone: "warn" },
   ];
-  const feed = (activities || []).slice(0, 5);
+  const feed = activities;
+
+  const firstError = statsQuery.error || recentQuery.error || feedQuery.error;
+  if (firstError && !(statsQuery.data && recentQuery.data && feedQuery.data)) {
+    return (
+      <ScreenError
+        error={firstError}
+        onRetry={() => {
+          statsQuery.reload();
+          recentQuery.reload();
+          feedQuery.reload();
+        }}
+      />
+    );
+  }
+  if (!statsQuery.data || !recentQuery.data || !feedQuery.data) return <ScreenLoader />;
 
   return (
     <div className="space-y-6 pb-10">
@@ -164,7 +206,7 @@ export default function NewContractDashboard() {
             <span className="text-[11px] text-gray-400">{t("dashboard.edition")}</span>
           </div>
           <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
-            {t("dashboard.greeting", { name: "Alex" })}
+            {t("dashboard.greeting", { name: user?.name || "" })}
           </h1>
           <p className="text-gray-500 mt-1 text-sm">
             {t("dashboard.subtitle")}
@@ -180,13 +222,15 @@ export default function NewContractDashboard() {
               className="w-64 ps-10 pe-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition"
             />
           </div>
-          <button
-            onClick={() => navigate("/admin/new-contracts/create")}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#20B2AA] to-cyan-500 hover:from-[#1C9D96] hover:to-cyan-600 rounded-lg shadow-sm shadow-cyan-200 transition-all"
-          >
-            <MdAdd className="text-lg" />
-            {t("actions.sendContract")}
-          </button>
+          {canCreate && (
+            <button
+              onClick={() => navigate("/admin/new-contracts/create")}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-[#20B2AA] to-cyan-500 hover:from-[#1C9D96] hover:to-cyan-600 rounded-lg shadow-sm shadow-cyan-200 transition-all"
+            >
+              <MdAdd className="text-lg" />
+              {t("actions.sendContract")}
+            </button>
+          )}
         </div>
       </div>
 
@@ -238,11 +282,12 @@ export default function NewContractDashboard() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {recent.map((c, idx) => {
-                  const st = NC_STATUS_STYLES[c.status] || NC_STATUS_STYLES.Draft;
+                  const statusKey = NC_STATUS_KEY[c.status];
+                  const st = NC_STATUS_STYLES[statusKey] || NC_STATUS_STYLES.Draft;
                   return (
                     <tr
                       key={c.id}
-                      onClick={() => navigate("/admin/new-contracts")}
+                      onClick={() => navigate(`/admin/new-contracts?contract=${c.id}`)}
                       className="hover:bg-gray-50/70 transition-colors cursor-pointer"
                     >
                       <td className="px-5 py-3.5 text-sm font-medium text-gray-500">
@@ -250,26 +295,26 @@ export default function NewContractDashboard() {
                       </td>
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-bold ${c.color}`}>
-                            {c.initials}
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-bold ${colorOf(c.id)}`}>
+                            {initialsOf(c.recipient?.name || c.name)}
                           </div>
                           <div className="min-w-0">
                             <p className="font-semibold text-gray-900 text-sm truncate">{c.name}</p>
-                            <p className="text-[11px] text-gray-400">{t("common.idLabel", { id: c.id })}</p>
+                            <p className="text-[11px] text-gray-400">{t("common.idLabel", { id: c.number || "—" })}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-3.5 text-sm text-gray-600">{c.recipient}</td>
+                      <td className="px-5 py-3.5 text-sm text-gray-600">{c.recipient?.name || "—"}</td>
                       <td className="px-5 py-3.5">
                         <span className="text-[11px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                          {t(`modules.${c.module}`, { defaultValue: c.module })}
+                          {c.contract_type?.name || "—"}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-sm text-gray-500">{c.sentDate}</td>
+                      <td className="px-5 py-3.5 text-sm text-gray-500">{c.sent_at ? fmtDate(c.sent_at) : "—"}</td>
                       <td className="px-5 py-3.5">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${st.chip}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
-                          {t(`status.${c.status}`, { defaultValue: c.status })}
+                          {t(`status.${statusKey}`, { defaultValue: c.status })}
                         </span>
                       </td>
                       <td className="px-5 py-3.5">
@@ -281,7 +326,7 @@ export default function NewContractDashboard() {
                 {recent.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-5 py-10 text-center text-sm text-gray-400">
-                      {query ? t("dashboard.noMatch", { query }) : t("dashboard.noContracts")}
+                      {debouncedQuery ? t("dashboard.noMatch", { query: debouncedQuery }) : t("dashboard.noContracts")}
                     </td>
                   </tr>
                 )}
@@ -312,7 +357,7 @@ export default function NewContractDashboard() {
                       </div>
                       <div className="min-w-0 pt-0.5">
                         <p className="text-[13px] text-gray-700 leading-snug">{a.text}</p>
-                        <p className="text-[11px] text-gray-400 mt-0.5">{a.time}</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">{a.at ? fmtDate(a.at) : ""}</p>
                       </div>
                     </li>
                   );

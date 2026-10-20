@@ -193,10 +193,16 @@ const myContractsListSchema = Joi.object({ ...pagination, q: search });
 
 // GET /contracts?status=&audience=&type=&q=&page=&limit=
 const CONTRACT_STATUSES = ["DRAFT", "SENT", "VIEWED", "SUBMITTED", "COMPLETED", "REJECTED", "EXPIRED", "REVOKED"];
+const STATUS_ALT = CONTRACT_STATUSES.join("|");
 const listContractsSchema = Joi.object({
   ...pagination,
   q: search,
-  status: Joi.string().valid(...CONTRACT_STATUSES).allow("").default("").messages({ "string.base": INVALID, "any.only": INVALID }),
+  // One status or several, comma-separated (e.g. the list's Pending tab: SENT,VIEWED).
+  status: Joi.string()
+    .pattern(new RegExp(`^(${STATUS_ALT})(,(${STATUS_ALT}))*$`))
+    .allow("")
+    .default("")
+    .messages({ "string.base": INVALID, "string.pattern.base": INVALID }),
   audience: Joi.string().valid("EMPLOYEE", "STAFFING_COMPANY").allow("").default("").messages({ "string.base": INVALID, "any.only": INVALID }),
   type: optionalId,
 });
