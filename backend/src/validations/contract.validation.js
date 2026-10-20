@@ -122,7 +122,74 @@ const listTemplatesSchema = Joi.object({
 
 const mergeFieldsQuerySchema = Joi.object({ audience: Joi.string().trim().allow("").messages({ "string.base": INVALID }) });
 
+// ---------- drafts / send (decisions 18–22; standards §7.3 "Draft / send") ----------
+const { CURRENCIES } = require("../constants/currencies");
+const { isRealDate } = require("../utils/companyTime");
+
+const RATE_UNITS = ["HOURLY", "DAILY", "MONTHLY", "ANNUAL"];
+const MAX_RATE = 9999999999.99; // DECIMAL(12,2)
+
+// "YYYY-MM-DD" that is a real date, else `key`.
+const dateOnly = (key) =>
+  Joi.string()
+    .trim()
+    .custom((value, helpers) => (isRealDate(value) ? value : helpers.error("any.invalid")))
+    .messages({ "string.base": key, "string.empty": key, "any.invalid": key });
+
+const hasTwoDecimalsAtMost = (v) => Math.abs(Math.round(v * 100) - v * 100) < 1e-6;
+
+// Terms shared by create and edit. Relations to "today" (company time) and between dates
+// are checked by the service. Absent optional terms are null.
+const termFields = {
+  name: Joi.string().trim().max(255).allow("", null).messages({ "string.base": INVALID, "string.max": "contractNameMax" }),
+  start_date: dateOnly("dateInvalid").messages({ "any.required": "startDateRequired", "string.empty": "startDateRequired" }),
+  end_date: dateOnly("dateInvalid").allow("", null),
+  renewal_due: dateOnly("dateInvalid").allow("", null),
+  sign_by: dateOnly("signByRange").allow("", null),
+  rate: Joi.number()
+    .positive()
+    .max(MAX_RATE)
+    .custom((v, helpers) => (hasTwoDecimalsAtMost(v) ? v : helpers.error("any.invalid")))
+    .allow(null, "")
+    .messages({ "number.base": "rateInvalid", "number.positive": "rateInvalid", "number.max": "rateInvalid", "number.unsafe": "rateInvalid", "any.invalid": "rateInvalid" }),
+  rate_unit: Joi.string()
+    .valid(...RATE_UNITS)
+    .allow(null, "")
+    .when("rate", { is: Joi.number().required(), then: Joi.required().invalid(null, "") })
+    .messages({ "string.base": "rateUnitRequired", "any.only": "rateUnitRequired", "any.required": "rateUnitRequired", "any.invalid": "rateUnitRequired" }),
+  currency: Joi.string()
+    .trim()
+    .valid(...CURRENCIES)
+    .allow(null, "")
+    .messages({ "string.base": "currencyInvalid", "any.only": "currencyInvalid" }),
+  notice_period_days: Joi.number()
+    .integer()
+    .min(0)
+    .max(365)
+    .allow(null, "")
+    .messages({ "number.base": "noticePeriodRange", "number.integer": "noticePeriodRange", "number.min": "noticePeriodRange", "number.max": "noticePeriodRange" }),
+};
+
+// POST /contracts { mode, templateId, recipientIds[], name?, ...terms } (plan endpoints).
+const createContractsSchema = Joi.object({
+  mode: Joi.string().valid("DRAFT", "SEND").required().messages({ "string.base": INVALID, "any.only": INVALID, "any.required": INVALID, "string.empty": INVALID }),
+  templateId: Joi.string().trim().guid().required().messages({ ...required("contractTemplateRequired"), "string.guid": "contractTemplateRequired" }),
+  recipientIds: Joi.array()
+    .items(Joi.string().trim())
+    .min(1)
+    .required()
+    .messages({ "array.base": "contractRecipientsRequired", "array.min": "contractRecipientsRequired", "any.required": "contractRecipientsRequired", "string.base": INVALID }),
+  ...termFields,
+  start_date: termFields.start_date.required(),
+});
+
+// PUT /contracts/:id (drafts): name and terms only; template/recipient keys are stripped.
+const editDraftSchema = Joi.object(termFields);
+
 module.exports = {
+  createContractsSchema,
+  editDraftSchema,
+  RATE_UNITS,
   recipientLookupSchema,
   contractTypeSchema,
   listContractTypesSchema,

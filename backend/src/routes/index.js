@@ -8,6 +8,7 @@ const { designationRouter, departmentDesignationsRouter } = require("./designati
 const contractRecipientRoutes = require("./contractRecipient.routes");
 const contractTypeRoutes = require("./contractType.routes");
 const contractDocumentRoutes = require("./contractDocument.routes");
+const contractRoutes = require("./contract.routes");
 const { templateRouter: contractTemplateRoutes, mergeFieldRouter: contractMergeFieldRoutes } = require("./contractTemplate.routes");
 
 const router = Router();
@@ -24,5 +25,6 @@ router.use("/contract-types", contractTypeRoutes);
 router.use("/contract-documents", contractDocumentRoutes);
 router.use("/contract-templates", contractTemplateRoutes);
 router.use("/contract-merge-fields", contractMergeFieldRoutes);
+router.use("/contracts", contractRoutes);
 
 module.exports = router;
