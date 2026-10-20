@@ -1,5 +1,5 @@
 const crypto = require("crypto");
-const { PDFDocument, PDFDict, PDFName, PDFRawStream, PDFStream } = require("pdf-lib");
+const { PDFArray, PDFDocument, PDFDict, PDFName, PDFRawStream, PDFStream } = require("pdf-lib");
 const storage = require("./storage.service");
 const ErrorHandler = require("../utils/ErrorHandler");
 
@@ -20,15 +20,24 @@ const dictOf = (obj) => {
   return null;
 };
 
+// A direct value with a forbidden key or name anywhere inside it (nested dictionaries and
+// arrays, e.g. a link annotation's inline /A action). References are checked as their own objects.
+const isActive = (value) => {
+  if (value instanceof PDFName) return FORBIDDEN_NAMES.has(value.asString().slice(1));
+  if (value instanceof PDFArray) return value.asArray().some(isActive);
+  const dict = dictOf(value);
+  if (!dict) return false;
+  for (const [key, inner] of dict.entries()) {
+    if (FORBIDDEN_KEYS.has(key.asString().slice(1))) return true;
+    if (isActive(inner)) return true;
+  }
+  return false;
+};
+
 // Walks every object (object streams are already unpacked by pdf-lib).
 const hasActiveContent = (pdf) => {
   for (const [, obj] of pdf.context.enumerateIndirectObjects()) {
-    const dict = dictOf(obj);
-    if (!dict) continue;
-    for (const [key, value] of dict.entries()) {
-      if (FORBIDDEN_KEYS.has(key.decodeText ? key.decodeText() : key.asString().slice(1))) return true;
-      if (value instanceof PDFName && FORBIDDEN_NAMES.has(value.asString().slice(1))) return true;
-    }
+    if (isActive(obj)) return true;
   }
   return false;
 };

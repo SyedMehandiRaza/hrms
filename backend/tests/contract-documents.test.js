@@ -36,6 +36,27 @@ const pdfWithJavaScript = async () => {
   pdf.catalog.set(PDFName.of("OpenAction"), action);
   return Buffer.from(await pdf.save()); // object streams on: the action is compressed
 };
+// Script actions nested inside other objects, not at an object's top level (decision 6).
+const pdfWithLinkScript = async () => {
+  const pdf = await PDFDocument.create();
+  const page = pdf.addPage([200, 200]);
+  const annot = pdf.context.obj({
+    Type: "Annot",
+    Subtype: "Link",
+    Rect: [0, 0, 100, 100],
+    A: { S: "JavaScript", JS: PDFString.of("app.alert('hi')") },
+  });
+  page.node.set(PDFName.of("Annots"), pdf.context.obj([annot]));
+  return Buffer.from(await pdf.save({ useObjectStreams: false }));
+};
+const pdfWithNameTreeScript = async () => {
+  const pdf = await PDFDocument.create();
+  pdf.addPage([200, 200]);
+  const action = pdf.context.obj({ S: "JavaScript", JS: PDFString.of("app.alert('hi')") });
+  const names = pdf.context.obj({ Names: [PDFString.of("x"), action] });
+  pdf.catalog.set(PDFName.of("Names"), pdf.context.register(pdf.context.obj({ Dests: names })));
+  return Buffer.from(await pdf.save({ useObjectStreams: false }));
+};
 const pdfWithAttachment = async () => {
   const pdf = await PDFDocument.create();
   pdf.addPage([200, 200]);
@@ -116,6 +137,16 @@ describe("upload", () => {
     expect(res.status).toBe(201);
     expect(res.body.data.items.map((d) => d.name)).toEqual(["good"]);
     expect(res.body.data.errors).toEqual(files.slice(0, 8).map(([, name]) => invalid(name)));
+  });
+
+  it("refuses scripts nested inside annotations and name trees", async () => {
+    const files = [
+      [await pdfWithLinkScript(), "link-script.pdf"],
+      [await pdfWithNameTreeScript(), "nested-script.pdf"],
+    ];
+    const res = await upload(token, files);
+    expect(res.body.data.items).toEqual([]);
+    expect(res.body.data.errors).toEqual(files.map(([, name]) => invalid(name)));
   });
 
   it("accepts exactly 50 pages", async () => {
