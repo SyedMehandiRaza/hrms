@@ -81,6 +81,7 @@ module.exports = {
         office_name: "Riyadh Head Office",
         office_email: "riyadh@alnoor.test",
         office_phone: "+966112345678",
+        phone_country: "SA",
         office_location: "King Fahd Road, Al Olaya, Riyadh",
         country_id: seedId("country:SA"),
         city_id: seedId("city:Riyadh"),

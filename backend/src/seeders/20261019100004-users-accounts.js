@@ -30,6 +30,7 @@ module.exports = {
         name,
         email,
         phone_number,
+        phone_country: "SA",
         password,
         user_status: "ACTIVE",
         is_email_verified: true,
