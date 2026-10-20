@@ -1,6 +1,7 @@
 const contractService = require("../services/contract.service");
 const contractSendService = require("../services/contractSend.service");
 const contractQueryService = require("../services/contractQuery.service");
+const contractApprovalService = require("../services/contractApproval.service");
 const { sendPdf } = require("../services/contractFiles.service");
 
 // POST /contracts: drafts, or drafts sent one by one in SEND mode (decision 25).
@@ -42,4 +43,23 @@ const contractPdf = async (req, res) => {
   sendPdf(res, bytes, { fileName, inline: false });
 };
 
-module.exports = { createContracts, editDraft, deleteDraft, sendDraft, listContracts, contractStats, getContract, contractPdf };
+const approveContract = async (req, res) => {
+  res.json({ success: true, data: await contractApprovalService.approveContract(req.auth, req.params.id) });
+};
+
+const revokeContract = async (req, res) => {
+  res.json({ success: true, data: await contractApprovalService.revokeContract(req.auth, req.params.id, req.body) });
+};
+
+module.exports = {
+  createContracts,
+  editDraft,
+  deleteDraft,
+  sendDraft,
+  listContracts,
+  contractStats,
+  getContract,
+  contractPdf,
+  approveContract,
+  revokeContract,
+};

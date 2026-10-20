@@ -15,5 +15,8 @@ router.get("/:id/pdf", ...can("read"), contractController.contractPdf);
 router.put("/:id", ...can("update"), validate(editDraftSchema), contractController.editDraft);
 router.delete("/:id", ...can("delete"), contractController.deleteDraft);
 router.post("/:id/send", ...can("create"), contractController.sendDraft);
+// Body (revoke reason) is checked by the service after the state (decision 37).
+router.post("/:id/approve", ...can("update"), contractController.approveContract);
+router.post("/:id/revoke", ...can("update"), contractController.revokeContract);
 
 module.exports = router;

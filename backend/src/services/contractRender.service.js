@@ -1,6 +1,8 @@
 const { ContractDocument, ContractField, ContractRecipient } = require("../models");
 const ErrorHandler = require("../utils/ErrorHandler");
-const { render, ContractPdfError } = require("./contractPdf.service");
+const pdf = require("./contractPdf.service");
+
+const { ContractPdfError } = pdf;
 const { readVerified } = require("./contractFiles.service");
 const { resolveMergeValues } = require("./contractMerge.service");
 
@@ -61,7 +63,7 @@ const contractPdf = async (contract) => {
     values.push({ ...f.get({ plain: true }), value: await renderValue(f, raw) });
   }
   try {
-    const { bytes } = await render({ sourceBytes, sourceSha256: document.file_sha256, fields: values, mode: "preview" });
+    const { bytes } = await pdf.render({ sourceBytes, sourceSha256: document.file_sha256, fields: values, mode: "preview" });
     return { bytes, fileName: fileName(contract) };
   } catch (err) {
     if (err instanceof ContractPdfError) {
@@ -72,4 +74,29 @@ const contractPdf = async (contract) => {
   }
 };
 
-module.exports = { contractPdf, parseSignature, renderValue };
+// The final PDF at approval (decision 38): every frozen and signed value stamped, form
+// fields flattened, certificate page appended. → { bytes, sha256 }. Throws ContractPdfError.
+const buildFinalPdf = async (contract, certificate) => {
+  const document = await ContractDocument.findByPk(contract.document_id, { paranoid: false });
+  if (!document) throw new ContractPdfError("SOURCE_INVALID", "document missing");
+  let sourceBytes;
+  try {
+    sourceBytes = await readVerified(document.file_path, document.file_sha256, { documentId: document.id });
+  } catch {
+    throw new ContractPdfError("INTEGRITY", "document unreadable or changed");
+  }
+  const fields = await ContractField.findAll({ where: { contract_id: contract.id } });
+  const values = [];
+  for (const f of fields) {
+    let value;
+    try {
+      value = await renderValue(f, f.value);
+    } catch {
+      throw new ContractPdfError("INTEGRITY", "signature image unreadable or changed");
+    }
+    values.push({ ...f.get({ plain: true }), value });
+  }
+  return pdf.render({ sourceBytes, sourceSha256: document.file_sha256, fields: values, mode: "final", certificate });
+};
+
+module.exports = { contractPdf, buildFinalPdf, parseSignature, renderValue };
