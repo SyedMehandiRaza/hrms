@@ -17,6 +17,11 @@ app.use(language);
 app.use(helmet());
 // The UI sends the refresh cookie, so CORS must allow credentials for its origin.
 app.use(cors({ origin: getCorsOrigin(), credentials: true }));
+// Drafts carry the whole Add Employee wizard (data up to 1 MB, workforce D53). A bigger body is
+// reported as the draft's own field error, not as a server error.
+app.use("/api/employee-drafts", express.json({ limit: "2mb" }), (err, req, res, next) =>
+  next(err.type === "entity.too.large" ? new ErrorHandler("VALIDATION_FAILED", { errors: { data: "draftTooLarge" } }) : err)
+);
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 if (process.env.NODE_ENV !== "test") {
