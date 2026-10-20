@@ -70,7 +70,7 @@ workforce branch (`hrms-project-moduleA`) being merged into main (plan section 7
 | 09 | [Signer inbox API](contract-studio/09-signer-inbox-api.md) | ready-for-agent | 08, 11 |
 | 10 | [Sign (submit)](contract-studio/10-sign-api.md) | ready-for-agent | 09 |
 | 24 | [Reject](contract-studio/24-reject-api.md) | ready-for-agent | 09 |
-| 11 | [PDF rendering service](contract-studio/11-pdf-rendering.md) | ready-for-agent | 01 |
+| 11 | [PDF rendering service](contract-studio/11-pdf-rendering.md) | done | 01 |
 | 12 | [Approve and revoke](contract-studio/12-approve-revoke-api.md) | ready-for-agent | 10, 11 |
 | 13 | [Expiry, reminder and inactive-recipient job](contract-studio/13-expiry-job.md) | ready-for-agent | 08 |
 | 14 | [Contract notifications](contract-studio/14-notifications.md) | ready-for-agent | 12, 13, 24 |
