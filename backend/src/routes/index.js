@@ -7,6 +7,7 @@ const departmentRoutes = require("./department.routes");
 const { designationRouter, departmentDesignationsRouter } = require("./designation.routes");
 const contractRecipientRoutes = require("./contractRecipient.routes");
 const contractTypeRoutes = require("./contractType.routes");
+const contractDocumentRoutes = require("./contractDocument.routes");
 
 const router = Router();
 
@@ -19,5 +20,6 @@ router.use("/departments", departmentRoutes);
 router.use("/designations", designationRouter);
 router.use("/contract-recipients", contractRecipientRoutes);
 router.use("/contract-types", contractTypeRoutes);
+router.use("/contract-documents", contractDocumentRoutes);
 
 module.exports = router;

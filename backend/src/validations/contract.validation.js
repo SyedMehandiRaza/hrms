@@ -65,10 +65,25 @@ const listContractTypesSchema = Joi.object({
   status: Joi.string().valid("ACTIVE", "INACTIVE").allow("").default("").messages({ "string.base": INVALID, "any.only": INVALID }),
 });
 
+// ---------- documents (decisions 6–7; standards §7.3 "Document rename") ----------
+const listDocumentsSchema = Joi.object({
+  ...pagination,
+  search,
+  status: Joi.string().valid("SAVED", "ARCHIVED").allow("").default("").messages({ "string.base": INVALID, "any.only": INVALID }),
+});
+
+// PATCH /contract-documents/:id: rename and/or archive (SAVED ⇄ ARCHIVED).
+const documentUpdateSchema = Joi.object({
+  name: Joi.string().trim().max(255).messages({ ...required("documentNameRequired"), "string.max": "documentNameMax" }),
+  status: Joi.string().valid("SAVED", "ARCHIVED").messages({ "string.base": INVALID, "string.empty": INVALID, "any.only": INVALID }),
+});
+
 module.exports = {
   recipientLookupSchema,
   contractTypeSchema,
   listContractTypesSchema,
+  listDocumentsSchema,
+  documentUpdateSchema,
   pagination,
   search,
   optionalId,
