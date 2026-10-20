@@ -13,6 +13,7 @@ const {
   Country,
 } = require("../models");
 const { COMPANY_COUNTRY_ISO2 } = require("../utils/geoReference");
+const { addStarterSalaryComponents } = require("../utils/starterSalaryComponents");
 const ErrorHandler = require("../utils/ErrorHandler");
 const { getAuthConfig } = require("../config/auth");
 const { ACCESS_LEVELS, PANEL_BY_ACCESS_LEVEL } = require("../constants/accessLevels");
@@ -271,6 +272,8 @@ const signup = async ({ companyName, name, email, phone, phoneCountry, password,
         { employer_id: employer.id, timezone: SIGNUP_TIMEZONE, fy_start_month: SIGNUP_FY_START_MONTH },
         { transaction }
       );
+      // Every company starts with the starter salary components (workforce D42).
+      await addStarterSalaryComponents(sequelize, employer.id, { transaction });
 
       const year = yearIn(SIGNUP_TIMEZONE, now);
       await FinancialYear.create(

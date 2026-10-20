@@ -1,5 +1,6 @@
 "use strict";
 
+const { STARTER_SALARY_COMPONENTS } = require("../utils/starterSalaryComponents");
 const { seedId, deleteIds } = require("../utils/seed");
 
 const EMPLOYER = seedId("employer:alnoor");
@@ -14,14 +15,8 @@ const DOCUMENT_TYPES = [
   ["TAX_FORM", "Tax Form", "GENERAL", false, false, false],
 ];
 // [code, name, type]
-const SALARY_COMPONENTS = [
-  ["BASIC", "Basic Salary", "EARNING"],
-  ["HOUSING", "Housing Allowance", "EARNING"],
-  ["TRANSPORT", "Transport Allowance", "EARNING"],
-  ["FOOD", "Food Allowance", "EARNING"],
-  ["GOSI", "GOSI Contribution", "DEDUCTION"],
-  ["ADVANCE", "Salary Advance Recovery", "DEDUCTION"],
-];
+// The company's salary components are the starter set every company gets (workforce D42).
+const SALARY_COMPONENTS = STARTER_SALARY_COMPONENTS;
 // [code, name, is_paid, allow_half_day, requires_document, yearly_quota, monthly_accrual, carry, negative]
 const LEAVE_TYPES = [
   ["ANNUAL", "Annual Leave", true, true, false, 21, 1.75, true, false],
@@ -47,13 +42,14 @@ module.exports = {
     );
     await queryInterface.bulkInsert(
       "hrms_salary_components",
-      SALARY_COMPONENTS.map(([code, name, type]) => ({
+      SALARY_COMPONENTS.map(([code, name, type, is_default, is_system]) => ({
         id: seedId(`component:${code}`),
         employer_id: EMPLOYER,
         code,
         name,
         type,
-        is_system: code === "BASIC",
+        is_default,
+        is_system,
       }))
     );
     await queryInterface.bulkInsert(
