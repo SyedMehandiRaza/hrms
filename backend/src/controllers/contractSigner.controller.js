@@ -1,5 +1,6 @@
 const contractSignerService = require("../services/contractSigner.service");
 const contractSignService = require("../services/contractSign.service");
+const contractRejectService = require("../services/contractReject.service");
 const { sendPdf } = require("../services/contractFiles.service");
 
 const requestFacts = (req) => ({ ip: req.ip, userAgent: req.get("user-agent") });
@@ -26,4 +27,8 @@ const submitContract = async (req, res) => {
   res.json({ success: true, data: await contractSignService.submitContract(req.auth, req.params.id, req.body, requestFacts(req)) });
 };
 
-module.exports = { listMine, getMine, myDocument, myPdf, submitContract, requestFacts };
+const rejectContract = async (req, res) => {
+  res.json({ success: true, data: await contractRejectService.rejectContract(req.auth, req.params.id, req.body) });
+};
+
+module.exports = { listMine, getMine, myDocument, myPdf, submitContract, rejectContract, requestFacts };
