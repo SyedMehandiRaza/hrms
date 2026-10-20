@@ -186,6 +186,9 @@ const createContractsSchema = Joi.object({
 // PUT /contracts/:id (drafts): name and terms only; template/recipient keys are stripped.
 const editDraftSchema = Joi.object(termFields);
 
+// GET /my/contracts?q=&page=&limit=
+const myContractsListSchema = Joi.object({ ...pagination, q: search });
+
 // GET /contracts?status=&audience=&type=&q=&page=&limit=
 const CONTRACT_STATUSES = ["DRAFT", "SENT", "VIEWED", "SUBMITTED", "COMPLETED", "REJECTED", "EXPIRED", "REVOKED"];
 const listContractsSchema = Joi.object({
@@ -199,6 +202,7 @@ const listContractsSchema = Joi.object({
 module.exports = {
   createContractsSchema,
   listContractsSchema,
+  myContractsListSchema,
   editDraftSchema,
   RATE_UNITS,
   recipientLookupSchema,
