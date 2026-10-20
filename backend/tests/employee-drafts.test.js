@@ -11,6 +11,10 @@ const CREATOR = { employee: { can_create: true } };
 const MB = 1024 * 1024;
 const bigData = (bytes) => ({ notes: "x".repeat(bytes - JSON.stringify({ notes: "" }).length) });
 
+// Moves a draft's last save into the past (Sequelize would reset updated_at on a model update).
+const backdate = (draft) =>
+  db.sequelize.query("UPDATE hrms_employee_drafts SET updated_at = ? WHERE id = ?", { replacements: [new Date("2026-01-01T00:00:00Z"), draft.id] });
+
 const save = async (token, body) => {
   const res = await api.post("/api/employee-drafts", token, body);
   if (res.status !== 201) throw new Error(JSON.stringify(res.body));
@@ -82,7 +86,7 @@ describe("PUT /api/employee-drafts/:id", () => {
   it("saving again updates the same draft (step, data, last saved, saved by)", async () => {
     const ctx = await ownerCompany();
     const first = await save(ctx.token, { step: 1, fullName: "Ahmed", data: { basic: { fullName: "Ahmed" } } });
-    await db.EmployeeDraft.update({ updated_at: new Date("2026-01-01T00:00:00Z") }, { where: { id: first.id }, silent: true });
+    await backdate(first);
     const other = await loginFor(ctx.employer, "EMPLOYEE", CREATOR);
     const data = { basic: { fullName: "Ahmed Ali" }, job: { employmentType: "FULL_TIME" } };
     const res = await api.put(`/api/employee-drafts/${first.id}`, other.token, { step: 3, fullName: "Ahmed Ali", email: "ahmed@x.test", data });
@@ -127,7 +131,7 @@ describe("GET /api/employee-drafts and /:id", () => {
     await save(other.token, { step: 1, fullName: "Theirs", data: {} });
     const old = await save(ctx.token, { step: 1, fullName: "Old One", data: { big: "kept out of the list" } });
     const untitled = await save(ctx.token, { step: 4, data: {} });
-    await db.EmployeeDraft.update({ updated_at: new Date("2026-01-01T00:00:00Z") }, { where: { id: old.id }, silent: true });
+    await backdate(old);
     const res = await api.get("/api/employee-drafts", ctx.token);
     expect(res.status).toBe(200);
     expect(res.body.data).toEqual({
