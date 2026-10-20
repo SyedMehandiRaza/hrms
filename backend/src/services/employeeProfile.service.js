@@ -209,7 +209,8 @@ const salaryOf = async (employee) => {
   };
 };
 
-const getEmployee = async (auth, id, lang) => {
+// `afterEdit`: the caller just saved this employee with employee:update, so the read check is skipped.
+const getEmployee = async (auth, id, lang, { afterEdit = false } = {}) => {
   const employee = await findEmployee(auth.employerId, id, {
     include: [
       { model: User, as: "user", attributes: ["id", "email", "phone_number", "phone_country"] },
@@ -222,7 +223,7 @@ const getEmployee = async (auth, id, lang) => {
       { model: CompanyShift, as: "shift", attributes: ["id", "name"], required: false },
     ],
   });
-  await assertCanRead(auth, employee.id);
+  if (!afterEdit) await assertCanRead(auth, employee.id);
   const account = await HrmsAccount.findOne({
     where: { user_id: employee.user_id, employer_id: auth.employerId },
     include: [{ model: Role, as: "role", attributes: ["id", "name"], required: false }],

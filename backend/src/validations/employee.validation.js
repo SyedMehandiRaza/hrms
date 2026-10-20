@@ -165,4 +165,21 @@ const bulkStatusSchema = Joi.object({
   status: Joi.string().valid("ACTIVE", "SUSPENDED").required().messages({ ...required(INVALID), "any.only": INVALID }),
 });
 
-module.exports = { listEmployeesSchema, bulkStatusSchema, createEmployeeSchema, checkUniqueSchema, ACCESS_LEVELS, SALARY_MODES };
+// PUT /employees/:id (D54): the create fields; salary, projects, joining date and draft are
+// ignored (D52; tickets 05, 15).
+const ignored = Joi.any().strip();
+const editEmployeeSchema = createEmployeeSchema.keys({
+  projectIds: ignored,
+  mainProjectId: ignored,
+  joiningDate: ignored,
+  currency: ignored,
+  salaryMode: ignored,
+  workingHours: ignored,
+  hourlyRate: ignored,
+  minHours: ignored,
+  overtimeRate: ignored,
+  components: ignored,
+  draft_id: ignored,
+});
+
+module.exports = { editEmployeeSchema, listEmployeesSchema, bulkStatusSchema, createEmployeeSchema, checkUniqueSchema, ACCESS_LEVELS, SALARY_MODES };

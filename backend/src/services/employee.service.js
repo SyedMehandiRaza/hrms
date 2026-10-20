@@ -17,6 +17,7 @@ const {
   Designation,
   StaffingCompany,
   ApprovalGroup,
+  Employer,
   LeavePolicy,
   LeaveType,
   EmployeeLeavePolicy,
@@ -54,13 +55,29 @@ const findOwn = async (Model, employerId, id, transaction) => {
 
 // ---------- Uniqueness (D45, D46; also GET /employees/check-unique) ----------
 
-const idNumberTaken = async (employerId, countryEmpId, transaction) =>
-  Boolean(await Employee.findOne({ where: { employer_id: employerId, country_emp_id: countryEmpId }, attributes: ["id"], paranoid: false, transaction }));
+const idNumberTaken = async (employerId, countryEmpId, transaction, exceptEmployeeId = null) =>
+  Boolean(
+    await Employee.findOne({
+      where: { employer_id: employerId, country_emp_id: countryEmpId, ...(exceptEmployeeId ? { id: { [Op.ne]: exceptEmployeeId } } : {}) },
+      attributes: ["id"],
+      paranoid: false,
+      transaction,
+    })
+  );
 
 // The email's error code, or null when it's free: anyone with a login or employee record in this
 // company → EMPLOYEE_EMAIL_TAKEN; a current account elsewhere → ACCOUNT_EMAIL_IN_OTHER_COMPANY.
-const emailClash = async (employerId, email, transaction) => {
+// On edit (selfUserId), the person's own email is free; another person's email from elsewhere
+// can't be taken over (one users row per email).
+const emailClash = async (employerId, email, transaction, selfUserId = null) => {
   const user = await User.findOne({ where: { email }, attributes: ["id"], paranoid: false, transaction });
+  if (user && selfUserId) {
+    if (user.id === selfUserId) return null;
+    const here =
+      (await HrmsAccount.count({ where: { user_id: user.id, employer_id: employerId }, paranoid: false, transaction })) +
+      (await Employee.count({ where: { user_id: user.id, employer_id: employerId }, paranoid: false, transaction }));
+    return here ? "EMPLOYEE_EMAIL_TAKEN" : "ACCOUNT_EMAIL_IN_OTHER_COMPANY";
+  }
   if (user) {
     const here =
       (await HrmsAccount.count({ where: { user_id: user.id, employer_id: employerId }, paranoid: false, transaction })) +
@@ -155,11 +172,12 @@ const addMonths = (iso, months) => {
   return target.toISOString().slice(0, 10);
 };
 
-// Role (D48): required for SUB_ADMIN, else optional; must be a company role.
-const checkAccess = async (auth, body, transaction) => {
+// Role (D48): required for SUB_ADMIN, else optional; must be a company role. Only the owner may
+// make someone a SUB_ADMIN (`changing` is false on an edit that keeps the access level).
+const checkAccess = async (auth, body, transaction, { changing = true } = {}) => {
   if (body.accessLevel === ACCESS_LEVELS.ADMIN) throw new ErrorHandler("ACCOUNT_ADMIN_EXISTS");
   if (body.accessLevel === ACCESS_LEVELS.SUB_ADMIN) {
-    if (auth.accessLevel !== ACCESS_LEVELS.ADMIN) throw new ErrorHandler("FORBIDDEN");
+    if (changing && auth.accessLevel !== ACCESS_LEVELS.ADMIN) throw new ErrorHandler("FORBIDDEN");
     if (!body.roleId) throw fieldError("roleId", "roleRequired");
   }
   return body.roleId ? findOwn(Role, auth.employerId, body.roleId, transaction) : null;
@@ -230,7 +248,8 @@ const checkApprovalGroup = async (employerId, body, mainProjectId, transaction) 
 // ---------- Leave, shift, salary at create (13b) ----------
 
 // Leave policies (D33): at least one (Joi), all of the company, active (policy and type), one per type.
-const checkLeave = async (employerId, policyIds, transaction) => {
+// Policies the employee already has (`kept`, on edit) may have become inactive since; they stay.
+const checkLeave = async (employerId, policyIds, transaction, kept = new Set()) => {
   if (!policyIds.every((id) => UUID.test(id))) throw new ErrorHandler("NOT_FOUND");
   const policies = await LeavePolicy.findAll({
     where: { id: policyIds, employer_id: employerId },
@@ -238,7 +257,9 @@ const checkLeave = async (employerId, policyIds, transaction) => {
     transaction,
   });
   if (policies.length !== policyIds.length) throw new ErrorHandler("NOT_FOUND");
-  if (policies.some((p) => !p.is_active || !p.leaveType || !p.leaveType.is_active)) throw fieldError("leavePolicyIds", "leavePoliciesActive");
+  if (policies.some((p) => !kept.has(p.id) && (!p.is_active || !p.leaveType || !p.leaveType.is_active))) {
+    throw fieldError("leavePolicyIds", "leavePoliciesActive");
+  }
   if (new Set(policies.map((p) => p.leave_type_id)).size !== policies.length) throw fieldError("leavePolicyIds", "leavePolicyPerType");
   return policies;
 };
@@ -512,4 +533,101 @@ const createEmployee = async (auth, body) => {
   });
 };
 
-module.exports = { createEmployee, checkUnique, findOwn, emailClash, phoneTaken, idNumberTaken };
+// ---------- PUT /employees/:id (14b) ----------
+
+// Shift change on edit (D40): effective today; a second change today overwrites today's row;
+// clearing writes no row.
+const changeShift = async ({ employerId, employee, shift, today }, transaction) => {
+  if (!shift) return;
+  const todays = await EmployeeShiftHistory.findOne({ where: { employee_id: employee.id, effective_from: today }, transaction });
+  if (todays) await todays.update({ shift_id: shift.id }, { transaction });
+  else await EmployeeShiftHistory.create({ employer_id: employerId, employee_id: employee.id, shift_id: shift.id, effective_from: today }, { transaction });
+};
+
+// Leave on edit (D33): removed policies end today (balances kept); added ones start today with a
+// balance as at create.
+const changeLeave = async ({ employerId, userId, employee, policyIds, today }, transaction) => {
+  const current = await EmployeeLeavePolicy.findAll({ where: { employee_id: employee.id, is_active: true }, transaction, lock: transaction.LOCK.UPDATE });
+  const kept = new Set(current.map((r) => r.leave_policy_id));
+  const policies = await checkLeave(employerId, policyIds, transaction, kept);
+  for (const row of current) {
+    if (!policyIds.includes(row.leave_policy_id)) await row.update({ is_active: false, effective_to: today }, { transaction });
+  }
+  const added = policies.filter((p) => !kept.has(p.id));
+  if (added.length) await assignLeave({ employerId, userId, employee, policies: added, joiningDate: today, today }, transaction);
+};
+
+// Routing on edit (D18, D51): set, change or (with no active group in the company) clear the
+// employee's one group. Pending requests keep the group they were raised with.
+const changeRouting = async ({ employerId, employee, group }, transaction) => {
+  const routing = await EmployeeApprovalRouting.findOne({ where: { employee_id: employee.id, module_key: MODULE_ALL }, transaction });
+  if (!group) {
+    if (routing) await routing.destroy({ transaction });
+    return;
+  }
+  if (routing) await routing.update({ approval_group_id: group.id }, { transaction });
+  else await EmployeeApprovalRouting.create({ employer_id: employerId, employee_id: employee.id, module_key: MODULE_ALL, approval_group_id: group.id }, { transaction });
+};
+
+// PUT /employees/:id (D54): the create rules for basic and job fields; salary, projects and the
+// joining date aren't edited here (D52; tickets 05, 15). EXITED → EMPLOYEE_EXITED (D56a).
+const updateEmployee = async (auth, id, body) => {
+  const { employerId, userId } = auth;
+  return sequelize.transaction(async (transaction) => {
+    await lockSequence(employerId, transaction);
+    const employee = await findOwn(Employee, employerId, id, transaction);
+    if (employee.employment_status === "EXITED") throw new ErrorHandler("EMPLOYEE_EXITED");
+    const employer = await Employer.findByPk(employerId, { attributes: ["user_id"], transaction });
+    if (employee.user_id === employer.user_id) throw new ErrorHandler("ACCOUNT_OWNER_PROTECTED");
+    const account = await HrmsAccount.findOne({ where: { user_id: employee.user_id, employer_id: employerId }, transaction, lock: transaction.LOCK.UPDATE });
+    if (!account) throw new ErrorHandler("NOT_FOUND");
+
+    const role = await checkAccess(auth, body, transaction, { changing: account.access_level !== body.accessLevel });
+    const current = await EmployeeProject.findAll({ where: { employee_id: employee.id, is_active: true }, transaction });
+    if (body.accessLevel === ACCESS_LEVELS.GENERAL_EMPLOYEE && current.length > 1) throw new ErrorHandler("PROJECT_GENERAL_EMPLOYEE_SINGLE");
+    const places = await checkPlaces(body, transaction);
+    await checkJob(employerId, body, transaction);
+    const shift = body.shiftId ? await findOwn(CompanyShift, employerId, body.shiftId, transaction) : null;
+    const main = current.find((r) => r.main_project);
+    const group = await checkApprovalGroup(employerId, body, main ? main.project_id : null, transaction);
+
+    if (await idNumberTaken(employerId, body.country_emp_id, transaction, employee.id)) throw new ErrorHandler("EMPLOYEE_ID_NUMBER_TAKEN");
+    const emailCode = await emailClash(employerId, body.email, transaction, employee.user_id);
+    if (emailCode) throw new ErrorHandler(emailCode);
+    if (await phoneTaken(employerId, body.phone, employee.user_id, transaction)) throw new ErrorHandler("EMPLOYEE_PHONE_TAKEN");
+
+    const today = await companyToday(employerId, { transaction });
+    await User.update({ email: body.email, phone_number: body.phone, phone_country: body.phoneCountry }, { where: { id: employee.user_id }, transaction });
+    await account.update({ access_level: body.accessLevel, role_id: role ? role.id : null, updated_by: userId }, { transaction });
+    const shiftChanged = (shift ? shift.id : null) !== (employee.shift_id || null);
+    await saveOrClash(
+      () =>
+        employee.update(
+          {
+            country_emp_id: body.country_emp_id,
+            full_name: body.name,
+            nationality_country_id: places.nationalityId,
+            residence_country_id: places.residenceCountryId,
+            residence_city_id: places.residenceCityId,
+            dob: body.dob || null,
+            gender: body.gender || null,
+            address: body.address || null,
+            accommodation: body.accommodation || null,
+            employment_type: body.employmentType,
+            department_id: body.departmentId || null,
+            designation_id: body.designationId || null,
+            staffing_company_id: body.staffingCompanyId || null,
+            shift_id: shift ? shift.id : null,
+          },
+          { transaction }
+        ),
+      { uq_employees_employer_id_country_emp_id: "EMPLOYEE_ID_NUMBER_TAKEN" }
+    );
+    if (shiftChanged) await changeShift({ employerId, employee, shift, today }, transaction);
+    await changeLeave({ employerId, userId, employee, policyIds: body.leavePolicyIds, today }, transaction);
+    await changeRouting({ employerId, employee, group }, transaction);
+    return employee.id;
+  });
+};
+
+module.exports = { createEmployee, updateEmployee, checkUnique, findOwn, emailClash, phoneTaken, idNumberTaken };

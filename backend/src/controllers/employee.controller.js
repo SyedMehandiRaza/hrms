@@ -9,6 +9,11 @@ const checkUnique = async (req, res) => {
   res.json({ success: true, data: await employeeService.checkUnique(req.auth, req.query, req.lang) });
 };
 
+const updateEmployee = async (req, res) => {
+  const id = await employeeService.updateEmployee(req.auth, req.params.id, req.body);
+  res.json({ success: true, data: await employeeProfileService.getEmployee(req.auth, id, req.lang, { afterEdit: true }) });
+};
+
 const listEmployees = async (req, res) => {
   res.json({ success: true, data: await employeeProfileService.listEmployees(req.auth, req.query) });
 };
@@ -25,4 +30,4 @@ const resendLogin = async (req, res) => {
   res.json({ success: true, data: await employeeProfileService.resendLogin(req.auth, req.params.id) });
 };
 
-module.exports = { createEmployee, checkUnique, listEmployees, getEmployee, bulkStatus, resendLogin };
+module.exports = { createEmployee, updateEmployee, checkUnique, listEmployees, getEmployee, bulkStatus, resendLogin };

@@ -4,7 +4,7 @@ const requireAuth = require("../middlewares/requireAuth");
 const requireAccessLevel = require("../middlewares/requireAccessLevel");
 const requirePermission = require("../middlewares/requirePermission");
 const { ACCESS_LEVELS } = require("../constants/accessLevels");
-const { createEmployeeSchema, checkUniqueSchema, listEmployeesSchema, bulkStatusSchema } = require("../validations/employee.validation");
+const { createEmployeeSchema, editEmployeeSchema, checkUniqueSchema, listEmployeesSchema, bulkStatusSchema } = require("../validations/employee.validation");
 const employeeController = require("../controllers/employee.controller");
 
 // /employees (workforce D44–D53): ADMIN, or a role with the matching employee flag.
@@ -31,6 +31,7 @@ router.get(
 router.post("/bulk-status", ...can("update"), validate(bulkStatusSchema), employeeController.bulkStatus);
 // Detail: employee:read, or an Employee-panel login reading itself (checked by the service).
 router.get("/:id", ...companyLogin, employeeController.getEmployee);
+router.put("/:id", ...can("update"), validate(editEmployeeSchema), employeeController.updateEmployee);
 router.post("/:id/resend-login", ...can("update"), employeeController.resendLogin);
 
 module.exports = router;
