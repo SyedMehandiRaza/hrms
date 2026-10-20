@@ -63,7 +63,8 @@ const client = axios.create({
 
 client.interceptors.request.use((config) => {
   config.headers = config.headers || {};
-  config.headers["Accept-Language"] = currentLang();
+  // A call may ask for a specific language (e.g. a lookup cached per language); otherwise the UI's.
+  if (!config.headers["Accept-Language"]) config.headers["Accept-Language"] = currentLang();
   const token = sessionStore.getAccessToken();
   if (token && !config.headers.Authorization) {
     config.headers.Authorization = `Bearer ${token}`;

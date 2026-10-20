@@ -49,5 +49,14 @@
     "title": "Level {{level}}: {{approved}}/{{total}} approved",
     "short": "L{{level}}"
   },
-  "unauthorized": "Unauthorized"
+  "unauthorized": "Unauthorized",
+  "geo": {
+    "selectCountry": "Select country",
+    "selectCity": "Select city",
+    "noCities": "No cities available",
+    "phoneInvalid": "Enter a valid phone number for the selected country.",
+    "phoneCountryRequired": "Select the phone number's country.",
+    "countryRequired": "Select a country.",
+    "cityNotInCountry": "Select a city in the selected country."
+  }
 }

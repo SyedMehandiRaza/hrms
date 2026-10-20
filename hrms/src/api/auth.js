@@ -19,7 +19,7 @@ export const logout = () => client.post("/auth/logout").then((res) => res.data);
 export const me = () => client.get("/auth/me").then((res) => res.data.data);
 
 // POST /auth/signup → { accessToken, mustChangePassword, me } (the refresh cookie is set too).
-// Body: { companyName, name, email, phone?, password, confirmPassword }.
+// Body: { companyName, name, email, phone?, phoneCountry? (ISO-2, with a phone), password, confirmPassword }.
 export const signup = (body) => client.post("/auth/signup", body).then((res) => res.data.data);
 
 // POST /auth/forgot-password → the whole body { success, code: "AUTH_RESET_SENT", message }

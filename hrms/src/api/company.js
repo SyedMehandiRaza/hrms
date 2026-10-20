@@ -5,15 +5,15 @@ import client from "./client";
 // utils/apiError.js / utils/applyFieldErrors.js.
 
 // GET /company (any login) → { id, company_name, industry_type_id, industry_name, company_email,
-//   company_phone_number, address, company_logo ("/uploads/..." or null — use assetUrl), created_at,
-//   timezone, currency }
+//   company_phone_number (E.164), phone_country (ISO-2), address, company_logo ("/uploads/..." or null — use
+//   assetUrl), created_at, timezone, currency, country: { id, iso2, name, callingCode } }
 export const getCompany = () => client.get("/company").then((res) => res.data.data);
 
 // PUT /company (owner only) → the company (as getCompany).
-// Body: { companyName, industryTypeId, email, phone, address } — every field required.
-export const updateCompany = ({ companyName, industryTypeId, email, phone, address }) =>
+// Body: { companyName, industryTypeId, email, phone, phoneCountry, address } — every field required.
+export const updateCompany = ({ companyName, industryTypeId, email, phone, phoneCountry, address }) =>
   client
-    .put("/company", { companyName, industryTypeId, email, phone, address })
+    .put("/company", { companyName, industryTypeId, email, phone, phoneCountry, address })
     .then((res) => res.data.data);
 
 // PUT /company/logo (owner only), multipart field `logo` (JPG/PNG ≤ 2 MB) → the company.

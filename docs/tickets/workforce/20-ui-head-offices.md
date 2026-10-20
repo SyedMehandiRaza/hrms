@@ -18,6 +18,8 @@ Verified by the ui-tester agent:
 - [ ] Uploading a photo shows it after reload; removing it clears it.
 - [ ] Create and edit use the shared Country → City and Phone inputs (approved UI addition); a city and phone saved
       with Saudi Arabia show again after reload.
+- [ ] The City select (first used here, carried from geo 05) loads the chosen country's cities as you type; changing
+      the country clears the city; a country with no cities (e.g. France) shows "No cities available".
 - [ ] Edit through the modal → saved and the list refreshes.
 - [ ] Deleting an Unassigned office → confirm → removed; deleting one with a project → "This head office has a project
       and can't be deleted."

@@ -49,5 +49,14 @@
     "title": "المستوى {{level}}: تمت موافقة {{approved}} من {{total}}",
     "short": "م{{level}}"
   },
-  "unauthorized": "غير مصرّح بالوصول"
+  "unauthorized": "غير مصرّح بالوصول",
+  "geo": {
+    "selectCountry": "اختر الدولة",
+    "selectCity": "اختر المدينة",
+    "noCities": "لا توجد مدن متاحة",
+    "phoneInvalid": "أدخل رقم هاتف صالحًا للدولة المحددة.",
+    "phoneCountryRequired": "اختر دولة رقم الهاتف.",
+    "countryRequired": "اختر دولة.",
+    "cityNotInCountry": "اختر مدينة في الدولة المحددة."
+  }
 }

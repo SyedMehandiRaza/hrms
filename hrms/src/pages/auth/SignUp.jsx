@@ -20,13 +20,15 @@ import { PANEL_HOME } from "../../data/sessionStore";
 import { apiErrorMessage } from "../../utils/apiError";
 import { applyFieldErrors } from "../../utils/applyFieldErrors";
 import { isStrongPassword } from "../../utils/passwordRule";
+import PhoneCountrySelect from "../../components/geo/PhoneCountrySelect";
+import { DEFAULT_PHONE_COUNTRY, phoneRule } from "../../utils/phone";
 
 // The server trims these too; the rules run on the trimmed value.
 const trim = (v) => (typeof v === "string" ? v.trim() : v);
 
 // Server field → form input (the others keep their names).
 const FIELD_MAP = { name: "contactPersonName", phone: "phoneNumber" };
-const KNOWN_FIELDS = ["companyName", "contactPersonName", "email", "phoneNumber", "password", "confirmPassword"];
+const KNOWN_FIELDS = ["companyName", "contactPersonName", "email", "phoneNumber", "phoneCountry", "password", "confirmPassword"];
 
 function SignUp() {
   const { t } = useTranslation("auth");
@@ -41,6 +43,7 @@ function SignUp() {
     register,
     handleSubmit,
     setError,
+    getValues,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -48,6 +51,7 @@ function SignUp() {
       contactPersonName: "",
       email: "",
       phoneNumber: "",
+      phoneCountry: DEFAULT_PHONE_COUNTRY,
       password: "",
       confirmPassword: "",
     },
@@ -63,7 +67,9 @@ function SignUp() {
         companyName: values.companyName,
         name: values.contactPersonName,
         email: values.email,
+        // Optional; sent with its phone country and stored as E.164 (countries-cities-phones D15–D19).
         phone: values.phoneNumber || undefined,
+        phoneCountry: values.phoneNumber ? values.phoneCountry : undefined,
         password: values.password,
         confirmPassword: values.confirmPassword,
       });
@@ -216,25 +222,31 @@ function SignUp() {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 {t("signup.phoneLabel")}
               </label>
-              <div className="relative">
-                <MdOutlinePhone className="absolute start-4 top-4 text-gray-400 text-lg" />
-                <input
-                  type="tel"
-                  placeholder={t("signup.phonePlaceholder")}
-                  {...register("phoneNumber", {
-                    // Optional; digits only, 6–15 (the server's rule, D28).
-                    setValueAs: trim,
-                    pattern: {
-                      value: /^\d{6,15}$/,
-                      message: t("validation.invalidPhone"),
-                    },
-                  })}
-                  className={inputClass(errors.phoneNumber)}
-                />
+              <div className="flex gap-2">
+                <div className="shrink-0 min-w-27.5">
+                  <PhoneCountrySelect
+                    {...register("phoneCountry")}
+                    error={!!errors.phoneCountry}
+                    className="py-3! bg-gray-100!"
+                  />
+                </div>
+                <div className="relative grow">
+                  <MdOutlinePhone className="absolute start-4 top-4 text-gray-400 text-lg" />
+                  <input
+                    type="tel"
+                    placeholder={t("signup.phonePlaceholder")}
+                    {...register("phoneNumber", {
+                      // Optional; a valid number of the chosen phone country (the server's rule).
+                      setValueAs: trim,
+                      validate: phoneRule(() => getValues("phoneCountry"), t),
+                    })}
+                    className={inputClass(errors.phoneNumber)}
+                  />
+                </div>
               </div>
-              {errors.phoneNumber && (
+              {(errors.phoneNumber || errors.phoneCountry) && (
                 <p className="text-red-500 text-xs mt-1">
-                  {errors.phoneNumber.message}
+                  {(errors.phoneNumber || errors.phoneCountry).message}
                 </p>
               )}
             </div>

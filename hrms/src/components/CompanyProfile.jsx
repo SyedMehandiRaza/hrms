@@ -15,6 +15,8 @@ import useApiQuery from "../hooks/useApiQuery";
 import { reloadMe, useCurrentUser } from "../hooks/useSession";
 import { applyFieldErrors } from "../utils/applyFieldErrors";
 import { toastApiError } from "../utils/apiError";
+import PhoneCountrySelect from "./geo/PhoneCountrySelect";
+import { DEFAULT_PHONE_COUNTRY, phoneForInput, phoneRule } from "../utils/phone";
 
 // Limits shared with the server (backend/src/validations/company.validation.js, D28/D29).
 const NAME_MIN = 2;
@@ -29,13 +31,16 @@ const FIELD_MAP = {
   industryTypeId: "industry",
   email: "email",
   phone: "phone",
+  phoneCountry: "phoneCountry",
   address: "address",
 };
 
-// GET /company → the form's values.
+// GET /company → the form's values. The phone is E.164; the form shows its phone country in
+// the code picker (default: the company country) and the rest of the number in the input.
 const toFormValues = (c) => ({
   companyName: c.company_name || "",
-  phone: c.company_phone_number || "",
+  phone: phoneForInput(c.company_phone_number),
+  phoneCountry: c.phone_country || c.country?.iso2 || DEFAULT_PHONE_COUNTRY,
   email: c.company_email || "",
   address: c.address || "",
   industry: c.industry_type_id ? String(c.industry_type_id) : "",
@@ -105,6 +110,7 @@ function CompanyProfileForm({ company, industries }) {
     reset,
     control,
     setError,
+    getValues,
     formState: { errors },
   } = useForm({
     defaultValues: savedValues,
@@ -132,6 +138,7 @@ function CompanyProfileForm({ company, industries }) {
         industryTypeId: data.industry,
         email: data.email.trim(),
         phone: data.phone.trim(),
+        phoneCountry: data.phoneCountry,
         address: data.address.trim(),
       });
       applyCompany(updated, { resetForm: true });
@@ -247,23 +254,27 @@ function CompanyProfileForm({ company, industries }) {
           </div>
           <div>
             <label className={labelCls}>{t("company.phone")}</label>
-            <input
-              {...register("phone", {
-                required: t("company.validation.phoneRequired"),
-                pattern: {
-                  value: /^[0-9]{6,15}$/,
-                  message: t("company.validation.phoneValid"),
-                },
-              })}
-              type="tel"
-              disabled={!canEdit}
-              className={inputCls(errors.phone)}
-              onInput={(e) => {
-                let val = e.target.value.replace(/\D/g, "");
-                e.target.value = val;
-              }}
-            />
-            <FieldErr error={errors.phone} />
+            <div className="flex gap-2">
+              <div className="shrink-0 min-w-27.5">
+                <PhoneCountrySelect {...register("phoneCountry")} disabled={!canEdit} error={!!errors.phoneCountry} />
+              </div>
+              <input
+                {...register("phone", {
+                  // A valid number of the chosen phone country (the server's rule, countries-cities-phones D17).
+                  validate: phoneRule(() => getValues("phoneCountry"), t, {
+                    required: true,
+                    requiredMessage: t("company.validation.phoneRequired"),
+                  }),
+                })}
+                type="tel"
+                disabled={!canEdit}
+                className={inputCls(errors.phone)}
+                onInput={(e) => {
+                  e.target.value = e.target.value.replace(/[^\d\s+()-]/g, "");
+                }}
+              />
+            </div>
+            <FieldErr error={errors.phone || errors.phoneCountry} />
           </div>
         </div>
 

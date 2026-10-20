@@ -69,9 +69,10 @@ describe("GET /api/countries", () => {
     }
   });
 
-  it("is cacheable", async () => {
+  it("is cacheable, one copy per language", async () => {
     const res = await request(app).get("/api/countries");
     expect(res.headers["cache-control"]).toBe("public, max-age=3600");
+    expect(res.headers.vary).toMatch(/Accept-Language/i);
   });
 });
 
@@ -83,6 +84,7 @@ describe("GET /api/countries/:id/cities", () => {
     expect(res.body.data).toMatchObject({ page: 1, limit: 20 });
     expect(res.body.data.total).toBeGreaterThanOrEqual(1);
     expect(res.headers["cache-control"]).toBe("public, max-age=3600");
+    expect(res.headers.vary).toMatch(/Accept-Language/i);
   });
 
   it("lists every city when there's no search, 20 at a time, alphabetically", async () => {

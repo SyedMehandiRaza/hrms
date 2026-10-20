@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, forwardRef, useMemo } from "react";
+import { useState, useRef, useEffect, forwardRef, useMemo } from "react";
 import { MdKeyboardArrowDown, MdSearch } from "react-icons/md";
 import { useTranslation } from "react-i18next";
 
@@ -173,7 +173,8 @@ const CustomDropdown = forwardRef(({
         } ${disabled ? "opacity-60 cursor-not-allowed bg-gray-50" : ""} ${className}`}
       >
         <span className={`block truncate ${!selectedOption ? "text-gray-400" : ""}`}>
-          {selectedOption ? selectedOption.label : placeholder}
+          {/* An option may carry a shorter text for the closed box (e.g. "🇸🇦 +966"). */}
+          {selectedOption ? selectedOption.selectedLabel ?? selectedOption.label : placeholder}
         </span>
         <MdKeyboardArrowDown 
           className={`text-gray-400 text-lg flex-shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} 
