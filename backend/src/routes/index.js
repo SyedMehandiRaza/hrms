@@ -15,6 +15,7 @@ const approvalRoutes = require("./approval.routes");
 const employeeDraftRoutes = require("./employeeDraft.routes");
 const employeeRoutes = require("./employee.routes");
 const { roleRouter, staffingCompanyRouter } = require("./lookup.routes");
+const { exitRouter, exitSettingsRouter } = require("./exit.routes");
 const { designationRouter, departmentDesignationsRouter } = require("./designation.routes");
 
 const router = Router();
@@ -35,6 +36,8 @@ router.use("/employee-drafts", employeeDraftRoutes);
 router.use("/employees", employeeRoutes);
 router.use("/roles", roleRouter);
 router.use("/staffing-companies", staffingCompanyRouter);
+router.use("/exits", exitRouter);
+router.use("/exit-settings", exitSettingsRouter);
 router.use("/departments/:id/designations", departmentDesignationsRouter);
 router.use("/departments", departmentRoutes);
 router.use("/designations", designationRouter);
