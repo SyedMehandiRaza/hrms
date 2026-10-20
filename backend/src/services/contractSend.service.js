@@ -7,6 +7,7 @@ const { SUPPORTED_AUDIENCES, isRecipientActive, mainProjects } = require("./cont
 const { resolveMergeValues, valuesSha256 } = require("./contractMerge.service");
 const { companyTimezone, todayIn, endOfDayUtc } = require("../utils/companyTime");
 const { lockContract, termErrors, contractItem, ITEM_INCLUDE } = require("./contract.service");
+const { emitContractEvent } = require("./contractEvents");
 
 // Sending (plan decisions 23–25, 35, 41). Per contract, one transaction:
 //   lock the draft → recipient active → terms valid → number (sequence row locked) and
@@ -191,6 +192,7 @@ const runSend = async (auth, id) => {
 const trySend = async (auth, id) => {
   try {
     const contract = await runSend(auth, id);
+    await emitContractEvent("SENT", { contractId: id });
     return { ok: true, contract };
   } catch (err) {
     if (!(err instanceof SendBlocked)) throw err;

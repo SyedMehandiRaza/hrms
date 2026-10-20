@@ -10,8 +10,12 @@ const language = require("./middlewares/language");
 const errorHandler = require("./middlewares/errorHandler");
 const { getCorsOrigin } = require("./config/auth");
 const { getUploadRoot } = require("./services/storage.service");
+const { registerContractNotifications } = require("./services/contractNotification.service");
 
 const app = express();
+
+// Contract events → in-app notifications and emails (plan decision 43).
+registerContractNotifications();
 
 // Behind a reverse proxy, TRUST_PROXY (hop count, "true", or proxy addresses) makes req.ip
 // the client's address: signing evidence and rate limits need it (plan decision 32).

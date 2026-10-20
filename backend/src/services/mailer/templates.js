@@ -5,7 +5,22 @@
 const setupLink = (appUrl, token) => `${appUrl}/reset-password?setup=${encodeURIComponent(token)}`;
 const loginLink = (appUrl) => `${appUrl}/login`;
 
+const { OPEN_CONTRACT } = require("../../constants/contractNotifications");
+
+// Contract notifications (plan decision 43): subject = title; body + an "Open contract" link.
+// Never carries the PDF or contract values; title/body arrive already in the receiver's language.
+const contractNotification = (lang) => ({ title, body, link }) => ({
+  subject: title,
+  text: [body, "", `${OPEN_CONTRACT[lang]}: ${link}`].join("\n"),
+});
+
 module.exports = {
+  "contract-notification": {
+    required: ["title", "body", "link"],
+    en: contractNotification("en"),
+    ar: contractNotification("ar"),
+  },
+
   "welcome-temp-password": {
     required: ["email", "temporaryPassword", "setupToken"],
     en: ({ email, temporaryPassword, setupToken }, { appUrl }) => ({
