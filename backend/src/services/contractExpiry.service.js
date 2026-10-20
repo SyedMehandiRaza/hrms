@@ -1,17 +1,14 @@
 const { Op } = require("sequelize");
 const { sequelize, Contract, ContractActivity } = require("../models");
+const { emitContractEvent } = require("./contractEvents");
 
 // Expiry (plan decision 36). One shared function expires due SENT/VIEWED contracts with a
 // conditional update (so a contract is expired once, whoever gets there first) and logs
 // an EXPIRED activity (actor = system). The hourly job calls it for every company; every
 // contract endpoint calls it for the caller's company first ("lazy expiry"), so stored
-// status is always true. `onExpired` (notifications, ticket 14) runs after each commit.
+// status is always true. The EXPIRED event (notifications) is raised after each commit.
 
 const PENDING = ["SENT", "VIEWED"];
-let onExpired = null;
-const setExpiredHandler = (fn) => {
-  onExpired = fn;
-};
 
 // → ids of the contracts this call expired.
 const expireDue = async ({ employerId, contractId, now = new Date() } = {}) => {
@@ -32,16 +29,10 @@ const expireDue = async ({ employerId, contractId, now = new Date() } = {}) => {
     });
     if (won) {
       expired.push(id);
-      if (onExpired) {
-        try {
-          await onExpired(id);
-        } catch (err) {
-          console.error("[contracts] expiry notification failed", { contractId: id, error: err.message });
-        }
-      }
+      await emitContractEvent("EXPIRED", { contractId: id });
     }
   }
   return expired;
 };
 
-module.exports = { expireDue, setExpiredHandler };
+module.exports = { expireDue, PENDING };

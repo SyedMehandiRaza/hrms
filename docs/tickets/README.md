@@ -72,7 +72,7 @@ workforce branch (`hrms-project-moduleA`) being merged into main (plan section 7
 | 24 | [Reject](contract-studio/24-reject-api.md) | ready-for-agent | 09 |
 | 11 | [PDF rendering service](contract-studio/11-pdf-rendering.md) | done | 01 |
 | 12 | [Approve and revoke](contract-studio/12-approve-revoke-api.md) | ready-for-agent | 10, 11 |
-| 13 | [Expiry, reminder and inactive-recipient job](contract-studio/13-expiry-job.md) | ready-for-agent | 08 |
+| 13 | [Expiry, reminder and inactive-recipient job](contract-studio/13-expiry-job.md) | done | 08 |
 | 14 | [Contract notifications](contract-studio/14-notifications.md) | ready-for-agent | 12, 13, 24 |
 | 25 | [Demo contracts seed](contract-studio/25-demo-contracts-seed.md) | ready-for-agent | 12 |
 | 26 | [Adapt to the geo + workforce data](contract-studio/26-adapt-to-geo.md) | ready-for-agent | geo + workforce branch merged into main, 06, 11, 22 |

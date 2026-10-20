@@ -14,3 +14,6 @@ try {
 app.listen(PORT, () => {
   console.log(`HRMS API listening on http://localhost:${PORT}`);
 });
+
+// Hourly contract expiry / reminder / inactive-recipient job (plan decision 36).
+require("./jobs/contractJob").startContractJob();
