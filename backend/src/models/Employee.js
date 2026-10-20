@@ -1,5 +1,7 @@
 "use strict";
 
+const { COMPANY_COUNTRY_ID } = require("../utils/geoReference");
+
 module.exports = (sequelize, DataTypes) => {
   const Employee = sequelize.define(
     "Employee",
@@ -10,7 +12,11 @@ module.exports = (sequelize, DataTypes) => {
       employee_code: { type: DataTypes.STRING(30), allowNull: false },
       country_emp_id: { type: DataTypes.STRING(20), allowNull: false },
       full_name: { type: DataTypes.STRING(255), allowNull: false },
+      // Deprecated text; nationality_country_id is the source (countries-cities-phones D13).
       nationality: { type: DataTypes.STRING(100) },
+      nationality_country_id: { type: DataTypes.UUID, references: { model: "countries", key: "id" } },
+      residence_country_id: { type: DataTypes.UUID, allowNull: false, defaultValue: COMPANY_COUNTRY_ID, references: { model: "countries", key: "id" } },
+      residence_city_id: { type: DataTypes.UUID, references: { model: "cities", key: "id" } },
       dob: { type: DataTypes.DATEONLY },
       gender: { type: DataTypes.ENUM("MALE", "FEMALE", "OTHER") },
       address: { type: DataTypes.TEXT },
@@ -40,6 +46,9 @@ module.exports = (sequelize, DataTypes) => {
 
   Employee.associate = (models) => {
     Employee.belongsTo(models.User, { as: "user", foreignKey: "user_id" });
+    Employee.belongsTo(models.Country, { as: "nationalityCountry", foreignKey: "nationality_country_id" });
+    Employee.belongsTo(models.Country, { as: "residenceCountry", foreignKey: "residence_country_id" });
+    Employee.belongsTo(models.City, { as: "residenceCity", foreignKey: "residence_city_id" });
     Employee.belongsTo(models.Employer, { as: "employer", foreignKey: "employer_id" });
     Employee.belongsTo(models.Department, { as: "department", foreignKey: "department_id" });
     Employee.belongsTo(models.Designation, { as: "designation", foreignKey: "designation_id" });

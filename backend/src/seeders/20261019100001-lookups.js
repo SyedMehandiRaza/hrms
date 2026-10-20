@@ -2,15 +2,8 @@
 
 const { seedId, deleteIds } = require("../utils/seed");
 
-const COUNTRIES = [
-  ["SA", "Saudi Arabia", "+966"],
-  ["IN", "India", "+91"],
-  ["PK", "Pakistan", "+92"],
-  ["EG", "Egypt", "+20"],
-  ["PH", "Philippines", "+63"],
-  ["BD", "Bangladesh", "+880"],
-];
-const CITIES = ["Riyadh", "Jeddah", "Dammam", "Mecca", "Medina", "Khobar"];
+// Countries and cities are reference data loaded by migration 20261020500002 (same ids as before:
+// seedId("country:<ISO2>") and seedId("city:<name>") for the first six Saudi cities).
 const INDUSTRIES = ["Construction", "Oil & Gas", "Facilities Management", "Manufacturing"];
 // Mirrors hrms/src/constants/permissions.js MODULES (minus keys of removed duplicate tables).
 const MODULES = [
@@ -45,19 +38,6 @@ module.exports = {
 
   async up(queryInterface) {
     await queryInterface.bulkInsert(
-      "countries",
-      COUNTRIES.map(([iso2, name, calling_code]) => ({ id: seedId(`country:${iso2}`), iso2, name, calling_code }))
-    );
-    await queryInterface.bulkInsert(
-      "cities",
-      CITIES.map((city_name) => ({
-        id: seedId(`city:${city_name}`),
-        country_id: seedId("country:SA"),
-        city_name,
-        is_active: true,
-      }))
-    );
-    await queryInterface.bulkInsert(
       "industry_types",
       INDUSTRIES.map((industry_name) => ({ id: seedId(`industry:${industry_name}`), industry_name }))
     );
@@ -71,8 +51,6 @@ module.exports = {
     await deleteIds(queryInterface, [
       ["modules", MODULES.map(([key]) => seedId(`module:${key}`))],
       ["industry_types", INDUSTRIES.map((name) => seedId(`industry:${name}`))],
-      ["cities", CITIES.map((name) => seedId(`city:${name}`))],
-      ["countries", COUNTRIES.map(([iso2]) => seedId(`country:${iso2}`))],
     ]);
   },
 };

@@ -10,7 +10,9 @@ const {
   Employer,
   CompanyTimeSetting,
   FinancialYear,
+  Country,
 } = require("../models");
+const { COMPANY_COUNTRY_ISO2 } = require("../utils/geoReference");
 const ErrorHandler = require("../utils/ErrorHandler");
 const { getAuthConfig } = require("../config/auth");
 const { ACCESS_LEVELS, PANEL_BY_ACCESS_LEVEL } = require("../constants/accessLevels");
@@ -252,8 +254,16 @@ const signup = async ({ companyName, name, email, phone, password, ip, userAgent
         existing ||
         (await User.create({ name, email, password: passwordHash, signup_by: "EMAIL" }, { transaction }));
 
+      // Every company is in Saudi Arabia for now (countries-cities-phones D11).
+      const country = await Country.findOne({ where: { iso2: COMPANY_COUNTRY_ISO2 }, attributes: ["id"], transaction, rejectOnEmpty: true });
       const employer = await Employer.create(
-        { user_id: user.id, company_name: companyName, company_phone_number: phone || null, employer_status: ACTIVE },
+        {
+          user_id: user.id,
+          company_name: companyName,
+          company_phone_number: phone || null,
+          employer_status: ACTIVE,
+          country_id: country.id,
+        },
         { transaction }
       );
       await CompanyTimeSetting.create(

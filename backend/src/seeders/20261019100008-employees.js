@@ -7,6 +7,8 @@ const GMS = seedId("staffing:gulf-manpower");
 
 // key, user key (existing login) or email for a new user, code, Iqama/National ID, name, nationality, gender,
 // department, designation, type, staffing?, main project, other projects, joined, basic salary
+// Seeded nationalities are demonyms; the country link is set directly (countries-cities-phones D13).
+const NATIONALITY_ISO2 = { Pakistani: "PK", Saudi: "SA", Indian: "IN", Egyptian: "EG", Filipino: "PH", Bangladeshi: "BD" };
 const EMPLOYEES = [
   ["omar", { user: "subadmin" }, "EMP-0001", "2384710293", "Omar Siddiqui", "Pakistani", "MALE", "engineering", "Project Manager", "FULL_TIME", false, "ksp", ["jwt"], "2023-04-01", 14000],
   ["fatima", { email: "fatima.alzahrani@alnoor.test" }, "EMP-0002", "1098234756", "Fatima Al-Zahrani", "Saudi", "FEMALE", "hr", "HR Officer", "FULL_TIME", false, "ksp", [], "2022-09-11", 11000],
@@ -55,6 +57,7 @@ const rows = () => {
     country_emp_id: e[3],
     full_name: e[4],
     nationality: e[5],
+    nationality_country_id: seedId(`country:${NATIONALITY_ISO2[e[5]]}`),
     gender: e[6],
     department_id: e[7] ? seedId(`department:${e[7]}`) : null,
     designation_id: e[8] ? seedId(`designation:${e[8]}`) : null,

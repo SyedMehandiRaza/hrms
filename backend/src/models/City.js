@@ -5,8 +5,10 @@ module.exports = (sequelize, DataTypes) => {
     "City",
     {
       id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-      country_id: { type: DataTypes.UUID, references: { model: "countries", key: "id" } },
+      country_id: { type: DataTypes.UUID, allowNull: false, references: { model: "countries", key: "id" } },
       city_name: { type: DataTypes.STRING(150), allowNull: false },
+      name_ar: { type: DataTypes.STRING(150) },
+      geoname_id: { type: DataTypes.INTEGER },
       city_code: { type: DataTypes.STRING(50) },
       is_active: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     },

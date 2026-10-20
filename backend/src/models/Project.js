@@ -7,6 +7,7 @@ module.exports = (sequelize, DataTypes) => {
       id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
       employer_id: { type: DataTypes.UUID, allowNull: false, references: { model: "employers", key: "id" } },
       office_id: { type: DataTypes.UUID, references: { model: "offices", key: "id" } },
+      country_id: { type: DataTypes.UUID, references: { model: "countries", key: "id" } },
       city_id: { type: DataTypes.UUID, references: { model: "cities", key: "id" } },
       project_name: { type: DataTypes.STRING(255), allowNull: false },
       project_code: { type: DataTypes.STRING(100), allowNull: false },
@@ -31,6 +32,7 @@ module.exports = (sequelize, DataTypes) => {
   Project.associate = (models) => {
     Project.belongsTo(models.Employer, { as: "employer", foreignKey: "employer_id" });
     Project.belongsTo(models.Office, { as: "office", foreignKey: "office_id" });
+    Project.belongsTo(models.Country, { as: "country", foreignKey: "country_id" });
     Project.belongsTo(models.City, { as: "city", foreignKey: "city_id" });
     Project.hasMany(models.StaffingCompanyProject, { as: "staffingCompanyProjects", foreignKey: "project_id" });
     Project.hasMany(models.EmployeeProject, { as: "employeeProjects", foreignKey: "project_id" });

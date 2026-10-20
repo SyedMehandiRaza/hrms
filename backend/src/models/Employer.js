@@ -1,5 +1,7 @@
 "use strict";
 
+const { COMPANY_COUNTRY_ID } = require("../utils/geoReference");
+
 module.exports = (sequelize, DataTypes) => {
   const Employer = sequelize.define(
     "Employer",
@@ -12,6 +14,9 @@ module.exports = (sequelize, DataTypes) => {
       contact_person_name: { type: DataTypes.STRING(255) },
       company_email: { type: DataTypes.STRING(255) },
       company_phone_number: { type: DataTypes.STRING(30) },
+      phone_country: { type: DataTypes.CHAR(2) },
+      // Every company is in Saudi Arabia for now (countries-cities-phones D11).
+      country_id: { type: DataTypes.UUID, allowNull: false, defaultValue: COMPANY_COUNTRY_ID, references: { model: "countries", key: "id" } },
       company_website: { type: DataTypes.STRING(255) },
       company_description: { type: DataTypes.TEXT },
       address: { type: DataTypes.TEXT },
@@ -30,6 +35,7 @@ module.exports = (sequelize, DataTypes) => {
 
   Employer.associate = (models) => {
     Employer.belongsTo(models.User, { as: "user", foreignKey: "user_id" });
+    Employer.belongsTo(models.Country, { as: "country", foreignKey: "country_id" });
     Employer.belongsTo(models.IndustryType, { as: "industryType", foreignKey: "industry_type_id" });
     Employer.hasOne(models.CompanyTimeSetting, { as: "companyTimeSetting", foreignKey: "employer_id" });
     Employer.hasMany(models.FinancialYear, { as: "financialYears", foreignKey: "employer_id" });

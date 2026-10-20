@@ -8,11 +8,20 @@ const randomText = (length) =>
     .toString("hex")
     .slice(0, length);
 
+let shortCode = 0;
+
 const valueFor = (attr) => {
   const type = attr.type.key;
   switch (type) {
-    case "STRING":
-    case "CHAR": {
+    case "CHAR":
+      // Short codes (iso2, iso3, phone country): digits only, so never a real ISO code, and
+      // unique within the run.
+      if ((attr.type.options?.length || 255) <= 3) {
+        shortCode += 1;
+        return String(shortCode % 10 ** attr.type.options.length).padStart(attr.type.options.length, "0");
+      }
+    // falls through
+    case "STRING": {
       const length = attr.type.options?.length || 255;
       return randomText(Math.min(length, 24));
     }

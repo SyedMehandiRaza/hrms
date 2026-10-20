@@ -20,6 +20,8 @@ module.exports = {
         contact_person_email: "staffing@hrms.test",
         contact_person_phone: "+966500000003",
         city: "Dammam",
+        country_id: seedId("country:SA"),
+        city_id: seedId("city:Dammam"),
         address: "Industrial City 2, Dammam",
         status: "ACTIVE",
       },

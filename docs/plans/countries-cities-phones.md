@@ -60,7 +60,7 @@ Builds on Auth + Company (done) and changes some Workforce tickets (§7).
     `0501234567` and `+966501234567` are the same number.
 19. Responses return `phone` (E.164) and `phoneCountry` (iso2). The UI shows the number in national format with the
     code from the country.
-20. Fields: `users.phone_number`, `employees.phone`, `employers.company_phone_number` (company profile and sign-up),
+20. Fields: `users.phone_number` (also the employee phone: employees have no phone column of their own), `employers.company_phone_number` (company profile and sign-up),
     `offices.office_phone`, `hrms_staffing_companies.phone` and `contact_person_phone`.
 21. **Data migration:** values with a `+code` are parsed as such; values without one are parsed as Saudi numbers;
     valid ones are rewritten to E.164 with their country. Anything that can't be parsed is left as it is, with
@@ -80,8 +80,8 @@ Builds on Auth + Company (done) and changes some Workforce tickets (§7).
 - `countries`: + `iso3 CHAR(3)`, `name_ar`, `flag`, `is_active bool =1`; `iso2` and `calling_code` NOT NULL.
 - `cities`: `country_id` NOT NULL; + `geoname_id INT` unique, `name_ar`, index `(country_id, city_name)`.
 - `employers`: + `country_id →countries NN` (Saudi Arabia).
-- `employees`: + `nationality_country_id`, `residence_country_id` (NN after migration, default company country),
-  `residence_city_id`, `phone_country CHAR(2)`; `nationality` text deprecated.
+- `employees`: + `nationality_country_id`, `residence_country_id` (NN, default company country), `residence_city_id`;
+  `nationality` text deprecated. (The employee phone is `users.phone_number` + `users.phone_country`.)
 - `offices`: + `country_id`, `city_id`, `phone_country`.
 - `projects`: + `country_id` (existing `city_id` must belong to it).
 - `hrms_staffing_companies`: + `country_id`, `city_id`, `phone_country`, `contact_person_phone_country`; text `city`

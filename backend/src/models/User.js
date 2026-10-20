@@ -8,6 +8,7 @@ module.exports = (sequelize, DataTypes) => {
       name: { type: DataTypes.STRING(150) },
       email: { type: DataTypes.STRING(255), allowNull: false },
       phone_number: { type: DataTypes.STRING(30) },
+      phone_country: { type: DataTypes.CHAR(2) },
       password: { type: DataTypes.STRING(255) },
       user_status: { type: DataTypes.ENUM("ACTIVE", "INACTIVE", "BLOCKED", "SUSPENDED"), allowNull: false, defaultValue: "ACTIVE" },
       is_email_verified: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },

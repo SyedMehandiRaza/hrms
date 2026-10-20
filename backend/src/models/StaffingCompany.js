@@ -11,10 +11,15 @@ module.exports = (sequelize, DataTypes) => {
       code: { type: DataTypes.STRING(100) },
       email: { type: DataTypes.STRING(255) },
       phone: { type: DataTypes.STRING(30) },
+      phone_country: { type: DataTypes.CHAR(2) },
       contact_person_name: { type: DataTypes.STRING(255) },
       contact_person_email: { type: DataTypes.STRING(255) },
       contact_person_phone: { type: DataTypes.STRING(30) },
+      contact_person_phone_country: { type: DataTypes.CHAR(2) },
+      // Deprecated text; city_id is the source (countries-cities-phones §3).
       city: { type: DataTypes.STRING(100) },
+      country_id: { type: DataTypes.UUID, references: { model: "countries", key: "id" } },
+      city_id: { type: DataTypes.UUID, references: { model: "cities", key: "id" } },
       address: { type: DataTypes.TEXT },
       status: { type: DataTypes.ENUM("ACTIVE", "INACTIVE"), allowNull: false, defaultValue: "ACTIVE" },
       signature_url: { type: DataTypes.STRING(512) },
@@ -33,6 +38,8 @@ module.exports = (sequelize, DataTypes) => {
 
   StaffingCompany.associate = (models) => {
     StaffingCompany.belongsTo(models.Employer, { as: "employer", foreignKey: "employer_id" });
+    StaffingCompany.belongsTo(models.Country, { as: "country", foreignKey: "country_id" });
+    StaffingCompany.belongsTo(models.City, { as: "cityRef", foreignKey: "city_id" });
     StaffingCompany.belongsTo(models.User, { as: "user", foreignKey: "user_id" });
     StaffingCompany.belongsTo(models.User, { as: "createdBy", foreignKey: "created_by" });
     StaffingCompany.belongsTo(models.User, { as: "updatedBy", foreignKey: "updated_by" });
