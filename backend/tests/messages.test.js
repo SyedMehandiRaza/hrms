@@ -6,7 +6,10 @@ const { resolveLang, translate } = require("../src/utils/i18n");
 
 // The catalog must match docs/standards.md §7 word for word, so the doc is the
 // single source of truth and this test catches any drift.
-const standards = fs.readFileSync(path.resolve(__dirname, "../../docs/standards.md"), "utf8");
+// Line endings normalised: git may check the doc out with CRLF on Windows.
+const standards = fs
+  .readFileSync(path.resolve(__dirname, "../../docs/standards.md"), "utf8")
+  .replace(/\r\n/g, "\n");
 
 const section = (startHeading, endPattern) => {
   const start = standards.indexOf(startHeading);
