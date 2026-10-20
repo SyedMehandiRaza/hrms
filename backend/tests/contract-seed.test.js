@@ -30,7 +30,9 @@ const SEEDERS = fs
   .filter((file) => /^\d+-.+\.js$/.test(file))
   .sort();
 const CONTRACT_SEEDER = "20261019100011-contracts.js";
-const BASE_SEEDERS = SEEDERS.filter((file) => file !== CONTRACT_SEEDER);
+// Seeders that need the contract schema run separately (the demo one needs ticket 12).
+const CONTRACT_DEMO_SEEDER = "20261019100012-contract-demo.js";
+const BASE_SEEDERS = SEEDERS.filter((file) => file !== CONTRACT_SEEDER && file !== CONTRACT_DEMO_SEEDER);
 const seeder = (file) => require(path.join(SEEDERS_DIR, file));
 
 const migrateUp = async () => {
