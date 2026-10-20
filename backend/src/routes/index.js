@@ -6,6 +6,7 @@ const industryTypeRoutes = require("./industryType.routes");
 const departmentRoutes = require("./department.routes");
 const { designationRouter, departmentDesignationsRouter } = require("./designation.routes");
 const contractRecipientRoutes = require("./contractRecipient.routes");
+const contractTypeRoutes = require("./contractType.routes");
 
 const router = Router();
 
@@ -17,5 +18,6 @@ router.use("/departments/:id/designations", departmentDesignationsRouter);
 router.use("/departments", departmentRoutes);
 router.use("/designations", designationRouter);
 router.use("/contract-recipients", contractRecipientRoutes);
+router.use("/contract-types", contractTypeRoutes);
 
 module.exports = router;

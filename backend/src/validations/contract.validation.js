@@ -33,4 +33,45 @@ const recipientLookupSchema = Joi.object({
   ...pagination,
 });
 
-module.exports = { recipientLookupSchema, pagination, search, optionalId, page, limit };
+// ---------- contract types (decision 15; standards §7.3 "Contract type") ----------
+const { noEmoji, required } = require("./department.validation");
+
+// POST /contract-types and PUT /contract-types/:id. Code stored uppercase. On edit, a
+// missing description / is_active keeps the current value; "" or null clears description.
+const contractTypeSchema = Joi.object({
+  name: noEmoji(Joi.string().trim().min(2).max(150))
+    .required()
+    .messages({
+      ...required("contractTypeNameRequired"),
+      "string.min": "nameMin",
+      "string.max": "contractTypeNameMax",
+      "string.pattern.invert.base": "noEmojis",
+    }),
+  code: noEmoji(Joi.string().trim().uppercase().min(2).max(100))
+    .required()
+    .messages({
+      ...required("codeRequired"),
+      "string.min": "codeMin",
+      "string.max": "codeMax100",
+      "string.pattern.invert.base": "noEmojis",
+    }),
+  description: Joi.string().trim().max(500).allow("", null).messages({ "string.base": INVALID, "string.max": "descriptionMax500" }),
+  is_active: Joi.boolean().messages({ "boolean.base": INVALID }),
+});
+
+const listContractTypesSchema = Joi.object({
+  ...pagination,
+  search,
+  status: Joi.string().valid("ACTIVE", "INACTIVE").allow("").default("").messages({ "string.base": INVALID, "any.only": INVALID }),
+});
+
+module.exports = {
+  recipientLookupSchema,
+  contractTypeSchema,
+  listContractTypesSchema,
+  pagination,
+  search,
+  optionalId,
+  page,
+  limit,
+};
