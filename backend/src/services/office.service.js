@@ -216,7 +216,7 @@ const removeImageFile = async (url) => {
   try {
     await storage.remove(storagePath);
   } catch (err) {
-    console.error("[offices] could not delete image file", { path: storagePath, error: err.message });
+    console.error("[uploads] could not delete image file", { path: storagePath, error: err.message });
   }
 };
 

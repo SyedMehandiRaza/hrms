@@ -32,11 +32,25 @@ const validationBody = (fields, lang = "en") => ({
 
 const moduleRow = async (moduleKey) => (await db.Module.findOrCreate({ where: { module_key: moduleKey }, defaults: { name: moduleKey } }))[0];
 
-// A company with its owner (ADMIN) account.
-const createCompany = async ({ name = "Al Noor Construction" } = {}) => {
+// A January–December financial year (yearKey = its calendar year).
+const createFinancialYear = (employer, yearKey, overrides = {}) =>
+  db.FinancialYear.create({
+    employer_id: employer.id,
+    year_key: yearKey,
+    label: `FY ${yearKey}`,
+    start_date: `${yearKey}-01-01`,
+    end_date: `${yearKey}-12-31`,
+    status: "OPEN",
+    ...overrides,
+  });
+
+// A company with its owner (ADMIN) account, Riyadh time and the current (OPEN) financial year,
+// like sign-up creates.
+const createCompany = async ({ name = "Al Noor Construction", timezone = "Asia/Riyadh" } = {}) => {
   const owner = await db.User.create({ name: "Owner Person", email: uniqueEmail("owner"), password: await hash() });
   const employer = await db.Employer.create({ user_id: owner.id, company_name: name, employer_status: "ACTIVE" });
-  await db.CompanyTimeSetting.create({ employer_id: employer.id, timezone: "Asia/Riyadh" });
+  await db.CompanyTimeSetting.create({ employer_id: employer.id, timezone, fy_start_month: 1 });
+  await createFinancialYear(employer, new Date().getUTCFullYear());
   await db.HrmsAccount.create({ user_id: owner.id, employer_id: employer.id, access_level: "ADMIN", password_setup_required: false });
   return { owner, employer };
 };
@@ -173,6 +187,7 @@ module.exports = {
   fieldText,
   validationBody,
   createCompany,
+  createFinancialYear,
   ownerCompany,
   createRole,
   createLogin,
