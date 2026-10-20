@@ -1,12 +1,14 @@
 import React, { useEffect } from "react";
 import { FiX } from "react-icons/fi";
 import { useForm } from "react-hook-form";
-import { contractTypesStore } from "../data/groupF";
+import { createContractType, updateContractType } from "../api/contracts";
+import { applyFieldErrors } from "../utils/applyFieldErrors";
+import { toastApiError } from "../utils/apiError";
 import { toast } from "react-toastify";
 import CustomDropdown from "./CustomDropdown";
 import { useTranslation } from "react-i18next";
 
-function CreateContractTypeModal({ isOpen, onClose, onSuccess, initialData, mode = "create" }) {
+function CreateContractTypeModal({ isOpen, onClose, onSuccess, onSaved, initialData, mode = "create" }) {
   const { t } = useTranslation("contracts");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const {
@@ -15,6 +17,7 @@ function CreateContractTypeModal({ isOpen, onClose, onSuccess, initialData, mode
     reset,
     setValue,
     watch,
+    setError,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -43,36 +46,30 @@ function CreateContractTypeModal({ isOpen, onClose, onSuccess, initialData, mode
   if (!isOpen) return null;
 
   const onSubmit = async (data) => {
-    let payload;
-    if (mode === "edit") {
-      payload = {
-        name: data.name,
-        code: data.code,
-        description: data.description,
-        is_active: data.status === "ACTIVE",
-      };
-    } else {
-      payload = {
-        name: data.name,
-        code: data.code,
-        description: data.description,
-        status: data.status,
-      };
-    }
+    const payload = {
+      name: data.name,
+      code: data.code,
+      description: data.description,
+      is_active: data.status === "ACTIVE",
+    };
 
     setIsSubmitting(true);
     try {
       if (mode === "edit") {
-        contractTypesStore.update(initialData.id, payload);
+        await updateContractType(initialData.id, payload);
         toast.success(t("typeModal.toasts.updated"));
+        if (onSaved) onSaved();
         onClose();
       } else {
-        contractTypesStore.create(payload);
+        await createContractType(payload);
         if (onSuccess) onSuccess();
         else onClose();
       }
     } catch (error) {
-      toast.error(error || t("typeModal.toasts.error"));
+      // Field messages land under their inputs; anything else (e.g. 409 name taken) is a toast.
+      const { mapped, unmapped } = applyFieldErrors(error, setError, { knownFields: ["name", "code", "description"] });
+      if (!mapped.length) toastApiError(error, t("typeModal.toasts.error"));
+      else unmapped.forEach((message) => toast.error(message));
     } finally {
       setIsSubmitting(false);
     }

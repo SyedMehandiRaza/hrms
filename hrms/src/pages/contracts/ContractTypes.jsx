@@ -13,15 +13,22 @@ import CreateContractTypeModal from "../../components/CreateContractTypeModal";
 import SuccessModal from "../../components/SuccessModal";
 import CustomDropdown from "../../components/CustomDropdown";
 
-import { contractTypesStore, useContractTypes } from "../../data/groupF";
-import { matches } from "../../data/common";
+import { TableLoader } from "../../components/Loader";
+import { ScreenError } from "../../components/ScreenState";
+import { listContractTypes, removeContractType } from "../../api/contracts";
+import useApiQuery from "../../hooks/useApiQuery";
+import { useCan } from "../../hooks/usePermission";
+import { MODULES } from "../../constants/permissions";
+import { toastApiError } from "../../utils/apiError";
 import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
 
 export default function ContractTypes() {
   const { t } = useTranslation("contracts");
-  const contractTypes = useContractTypes();
-  const loading = false;
+  const can = useCan();
+  const canCreate = can(MODULES.CONTRACT, "create");
+  const canUpdate = can(MODULES.CONTRACT, "update");
+  const canDelete = can(MODULES.CONTRACT, "delete");
 
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -37,12 +44,14 @@ export default function ContractTypes() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  // client-side search + status filter
-  const list = contractTypes.filter(
-    (item) =>
-      matches(item, debouncedSearch, ["name", "code", "description"]) &&
-      (statusInput === "all" || (statusInput === "active") === !!item.is_active)
+  // Server-side search (name or code), status filter and pagination.
+  const statusParam = statusInput === "all" ? "" : statusInput.toUpperCase();
+  const { data, loading, error, reload } = useApiQuery(
+    () => listContractTypes({ page, limit: LIMIT, search: debouncedSearch, status: statusParam }),
+    [page, debouncedSearch, statusParam],
   );
+  const list = data?.items || [];
+  const total = data?.total ?? 0;
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
@@ -62,10 +71,15 @@ export default function ContractTypes() {
   const confirmDelete = async () => {
     if (itemToDelete) {
       try {
-        contractTypesStore.remove(itemToDelete);
+        await removeContractType(itemToDelete);
         toast.success(t("types.toasts.deleted"));
-      } catch (error) {
-        toast.error(error || t("types.toasts.deleteFailed"));
+        // Deleting the last row of a page → step back a page.
+        if (list.length === 1 && page > 1) setPage((p) => p - 1);
+        else reload();
+      } catch (err) {
+        // e.g. 409 "This contract type is in use and can't be deleted. Deactivate it instead."
+        toastApiError(err, t("types.toasts.deleteFailed"));
+        reload();
       }
     }
     setDeleteModalOpen(false);
@@ -93,13 +107,13 @@ export default function ContractTypes() {
           </p>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0 self-start">
-          <button
+          {canCreate && <button
             onClick={() => openModal('create')}
             className="flex items-center gap-2 bg-[#14a0b3] hover:bg-cyan-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors shadow-sm"
           >
             <MdAdd className="text-lg" />
             {t("typeModal.createTitle")}
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -164,9 +178,11 @@ export default function ContractTypes() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
+                <TableLoader colSpan={6} />
+              ) : error ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
-                    {t("types.loading")}
+                  <td colSpan="6">
+                    <ScreenError error={error} onRetry={reload} />
                   </td>
                 </tr>
               ) : list.length === 0 ? (
@@ -182,7 +198,7 @@ export default function ContractTypes() {
                   return (
                     <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-6 py-4">
-                        <span className="text-[14px] font-medium text-gray-600">{String(index + 1).padStart(2, '0')}</span>
+                        <span className="text-[14px] font-medium text-gray-600">{String((page - 1) * LIMIT + index + 1).padStart(2, '0')}</span>
                       </td>
                       <td className="px-6 py-4">
                         <p className="text-[14px] font-bold text-gray-900" title={item.name}>
@@ -217,7 +233,7 @@ export default function ContractTypes() {
                           >
                             <MdOutlineRemoveRedEye className="text-[18px]" />
                           </button>
-                          <button
+                          {canUpdate && <button
                             onClick={() => openModal('edit', {
                               name: item.name,
                               description: item.description,
@@ -228,13 +244,13 @@ export default function ContractTypes() {
                             className="p-1 text-amber-500 hover:text-amber-600 transition-colors"
                           >
                             <MdOutlineEdit className="text-[18px]" />
-                          </button>
-                          <button
+                          </button>}
+                          {canDelete && <button
                             onClick={() => handleDeleteClick(item.id)}
                             className="p-1 text-red-500 hover:text-red-600 transition-colors cursor-pointer"
                           >
                             <MdOutlineDeleteOutline className="text-[18px]" />
-                          </button>
+                          </button>}
                         </div>
                       </td>
                     </tr>
@@ -248,8 +264,8 @@ export default function ContractTypes() {
         {/* Pagination Footer */}
         <Pagination
           page={page}
-          totalPages={Math.ceil(list.length / LIMIT) || 1}
-          total={list.length}
+          totalPages={Math.max(1, Math.ceil(total / LIMIT))}
+          total={total}
           limit={LIMIT}
           onPage={setPage}
           label={t("types.title")}
@@ -276,7 +292,11 @@ export default function ContractTypes() {
         onSuccess={() => {
           closeModal();
           setShowSuccessModal(true);
+          // A new type → back to page 1 (sorted by name) and refresh.
+          if (page !== 1) setPage(1);
+          else reload();
         }}
+        onSaved={reload}
         mode={modalState.mode}
         initialData={modalState.data}
       />

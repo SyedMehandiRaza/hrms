@@ -81,7 +81,7 @@ workforce branch (`hrms-project-moduleA`) being merged into main (plan section 7
 
 | # | Ticket | Status | Blocked by |
 |---|---|---|---|
-| 15 | [Contract Types screen](contract-studio/15-ui-contract-types.md) | ready-for-agent | 03 |
+| 15 | [Contract Types screen](contract-studio/15-ui-contract-types.md) | done | 03 |
 | 16 | [Documents screen](contract-studio/16-ui-documents.md) | ready-for-agent | 04 |
 | 17 | [Templates list and builder](contract-studio/17-ui-templates-builder.md) | ready-for-agent | 05, 16 |
 | 18 | [Send wizard](contract-studio/18-ui-send-wizard.md) | ready-for-agent | 08, 17 |
