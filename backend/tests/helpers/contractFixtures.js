@@ -39,7 +39,16 @@ const setupCompany = async (name) => {
   const template = await makeTemplate(employer, { document, type, fields: [mergeField("EMPLOYEE", "employee_name"), sig()] });
   const staffingTemplate = await makeTemplate(employer, { audience: "STAFFING_COMPANY", document, type: staffType, name: "Staffing Agreement", fields: [mergeField("STAFFING_COMPANY", "company_name"), sig()] });
   await db.CompanyTimeSetting.findOrCreate({ where: { employer_id: employer.id }, defaults: { timezone: TZ } });
-  return { ...company, document, type, staffType, template, staffingTemplate, token: await h.ownerToken(company) };
+  const year = Number(today().slice(0, 4));
+  const fy = await db.FinancialYear.create({
+    employer_id: employer.id,
+    year_key: year,
+    label: `FY ${year}`,
+    start_date: `${year}-01-01`,
+    end_date: `${year}-12-31`,
+    status: "OPEN",
+  });
+  return { ...company, document, type, staffType, template, staffingTemplate, fy, year, token: await h.ownerToken(company) };
 };
 
 const terms = (overrides = {}) => ({ start_date: today(), sign_by: inDays(7), ...overrides });

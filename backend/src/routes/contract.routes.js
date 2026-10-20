@@ -10,5 +10,6 @@ const router = Router();
 router.post("/", ...can("create"), validate(createContractsSchema), contractController.createContracts);
 router.put("/:id", ...can("update"), validate(editDraftSchema), contractController.editDraft);
 router.delete("/:id", ...can("delete"), contractController.deleteDraft);
+router.post("/:id/send", ...can("create"), contractController.sendDraft);
 
 module.exports = router;

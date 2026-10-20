@@ -124,7 +124,9 @@ eight contract tables, plus one foreign-key change on `hrms_contracts.contract_t
     (name + terms only; template and recipient are fixed), sent, or deleted (soft). Drafts are never visible to
     signers. The existing viewer previews a draft with live merge values.
 23. **Send** (from the wizard, or a draft from the list/viewer), per contract, in its own transaction:
-    1. Contract is DRAFT (or new); audience supported; template ACTIVE; type active.
+    1. Contract is DRAFT (or new); audience supported; template ACTIVE (wizard only; a draft keeps its own copy).
+       A deactivated contract type does **not** block sending (decision 15: existing templates keep working;
+       decided 2026-10-20).
     2. Recipient is active (decision 41); terms valid (decision 21).
     3. Number assigned (decision 24) and `sent_at` set, so `contract_no` and `sent_date` can be merged.
     4. **Merge values re-read now and frozen** into `hrms_contract_fields.value` (including `contract_no` and
@@ -394,7 +396,8 @@ eight contract tables, plus one foreign-key change on `hrms_contracts.contract_t
     - `hrms_contract_templates`: + `contract_type_id UUID →hrms_contract_types RESTRICT`, **nullable** in the
       database (required by the API, decision 12). The migration backfills existing templates with the same
       company's EMP type (EMPLOYEE audience) or STAFF type (STAFFING_COMPANY audience) when one exists; a template
-      still without a type can't be used in the wizard until it is edited.
+      still without a type can't be used in the wizard until it is edited: creating drafts or sending from it →
+      `CONTRACT_TEMPLATE_INACTIVE` (decided 2026-10-20).
     - `hrms_contract_template_fields`, `hrms_contract_fields`: `field_type` **+ DATE, INITIALS**;
       `db_source` **+ CONTRACT**.
     - `hrms_contract_recipients`: `reject_reason` → VARCHAR(500); + `signed_ip VARCHAR(64)`,

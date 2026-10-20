@@ -13,6 +13,7 @@ const {
   User,
 } = require("../models");
 const ErrorHandler = require("../utils/ErrorHandler");
+const { translate } = require("../utils/i18n");
 const { UUID } = require("./department.service");
 const { SUPPORTED_AUDIENCES } = require("./contractParties.service");
 const { companyTimezone, todayIn, addDays } = require("../utils/companyTime");
@@ -145,7 +146,8 @@ const usableTemplate = async (employerId, templateId) => {
     include: [{ model: ContractTemplateField, as: "contractTemplateFields" }],
   });
   if (!template) throw new ErrorHandler("NOT_FOUND");
-  if (template.status !== "ACTIVE") throw new ErrorHandler("CONTRACT_TEMPLATE_INACTIVE");
+  // A template still without a type (migration backfill) can't be used either (decision 46).
+  if (template.status !== "ACTIVE" || !template.contract_type_id) throw new ErrorHandler("CONTRACT_TEMPLATE_INACTIVE");
   if (!SUPPORTED_AUDIENCES.includes(template.audience_type)) throw new ErrorHandler("CONTRACT_AUDIENCE_UNSUPPORTED");
   return template;
 };
@@ -231,7 +233,7 @@ const createDraft = async ({ employerId, userId, template, terms, recipient }, t
 
 // POST /contracts. Whole-request checks first (nothing written on failure), then one
 // transaction per recipient (decision 25). `sendOne` (ticket 08) is used in SEND mode.
-const createContracts = async (auth, body, { sendOne, beforeSend } = {}) => {
+const createContracts = async (auth, body, { sendOne, beforeSend, lang } = {}) => {
   const { employerId } = auth;
   if (body.recipientIds.length > MAX_RECIPIENTS) throw new ErrorHandler("CONTRACT_BULK_LIMIT");
   const template = await usableTemplate(employerId, body.templateId);
@@ -249,7 +251,7 @@ const createContracts = async (auth, body, { sendOne, beforeSend } = {}) => {
       contract = await sequelize.transaction((transaction) => createDraft({ ...auth, template, terms, recipient }, transaction));
     } catch (err) {
       console.error("[contracts] creating a contract failed", { recipient: recipient.key, error: err.message });
-      results.push({ contractId: null, recipientName: recipient.name, result: "FAILED", code: "INTERNAL_ERROR" });
+      results.push({ contractId: null, recipientName: recipient.name, result: "FAILED", code: "INTERNAL_ERROR", message: translate("INTERNAL_ERROR", lang) });
       continue;
     }
     if (body.mode === "SEND" && sendOne) {
