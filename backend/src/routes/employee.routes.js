@@ -4,7 +4,7 @@ const requireAuth = require("../middlewares/requireAuth");
 const requireAccessLevel = require("../middlewares/requireAccessLevel");
 const requirePermission = require("../middlewares/requirePermission");
 const { ACCESS_LEVELS } = require("../constants/accessLevels");
-const { createEmployeeSchema, checkUniqueSchema } = require("../validations/employee.validation");
+const { createEmployeeSchema, checkUniqueSchema, listEmployeesSchema, bulkStatusSchema } = require("../validations/employee.validation");
 const employeeController = require("../controllers/employee.controller");
 
 // /employees (workforce D44–D53): ADMIN, or a role with the matching employee flag.
@@ -19,5 +19,18 @@ const can = (action) => [...companyLogin, requirePermission("employee", action)]
 // The wizard's step 1 (create) and the Edit modal (update) both check duplicates.
 router.get("/check-unique", ...can(["create", "update"]), validate(checkUniqueSchema, "query"), employeeController.checkUnique);
 router.post("/", ...can("create"), validate(createEmployeeSchema), employeeController.createEmployee);
+// The list is for the Admin panel only; Employee-panel logins see just their own profile (D57).
+router.get(
+  "/",
+  requireAuth,
+  requireAccessLevel(ACCESS_LEVELS.ADMIN, ACCESS_LEVELS.SUB_ADMIN),
+  requirePermission("employee", "read"),
+  validate(listEmployeesSchema, "query"),
+  employeeController.listEmployees
+);
+router.post("/bulk-status", ...can("update"), validate(bulkStatusSchema), employeeController.bulkStatus);
+// Detail: employee:read, or an Employee-panel login reading itself (checked by the service).
+router.get("/:id", ...companyLogin, employeeController.getEmployee);
+router.post("/:id/resend-login", ...can("update"), employeeController.resendLogin);
 
 module.exports = router;

@@ -135,4 +135,34 @@ const checkUniqueSchema = Joi.object({
   ...phoneFields({ required: false }),
 });
 
-module.exports = { createEmployeeSchema, checkUniqueSchema, ACCESS_LEVELS, SALARY_MODES };
+// GET /employees?page=&limit=&search=&status=&employmentType=&projectId=&roleId= (D56).
+const pageField = Joi.number().integer().min(1).default(1).messages({ "number.base": INVALID, "number.integer": INVALID, "number.min": INVALID, "number.unsafe": INVALID });
+const listEmployeesSchema = Joi.object({
+  page: pageField,
+  limit: Joi.number().integer().min(1).max(100).default(20).messages({
+    "number.base": INVALID,
+    "number.integer": INVALID,
+    "number.min": INVALID,
+    "number.max": INVALID,
+    "number.unsafe": INVALID,
+  }),
+  search: Joi.string().trim().max(150).allow("").default("").messages({ "string.base": INVALID, "string.max": INVALID }),
+  status: Joi.string().valid("ACTIVE", "IN_NOTICE", "EXITED").allow("").default("").messages({ "string.base": INVALID, "any.only": INVALID }),
+  employmentType: Joi.string().valid("FULL_TIME", "CONTRACT").allow("").default("").messages({ "string.base": INVALID, "any.only": INVALID }),
+  projectId: Joi.string().trim().allow("").default("").messages({ "string.base": INVALID }),
+  roleId: Joi.string().trim().allow("").default("").messages({ "string.base": INVALID }),
+});
+
+// POST /employees/bulk-status { employeeIds, status } (D56).
+const bulkStatusSchema = Joi.object({
+  employeeIds: Joi.array()
+    .items(id)
+    .min(1)
+    .max(500)
+    .custom(noRepeats)
+    .required()
+    .messages({ "any.required": INVALID, "array.base": INVALID, "array.min": INVALID, "array.max": INVALID, "array.repeat": INVALID }),
+  status: Joi.string().valid("ACTIVE", "SUSPENDED").required().messages({ ...required(INVALID), "any.only": INVALID }),
+});
+
+module.exports = { listEmployeesSchema, bulkStatusSchema, createEmployeeSchema, checkUniqueSchema, ACCESS_LEVELS, SALARY_MODES };
