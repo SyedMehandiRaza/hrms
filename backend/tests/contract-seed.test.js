@@ -89,7 +89,9 @@ const backfill = {};
 
 // Other test files leave rows behind (e.g. modules); the seeders need an empty database.
 const emptyAllTables = async () => {
-  const tables = (await qi.showAllTables()).filter((t) => t.toLowerCase() !== "sequelizemeta");
+  // Keeps sequelize-cli's own bookkeeping (src/config/database.js table names).
+  const KEEP = ["sequelize_meta", "sequelize_data", "sequelizemeta"];
+  const tables = (await qi.showAllTables()).filter((t) => !KEEP.includes(t.toLowerCase()));
   // One transaction = one connection, so the session setting applies to every delete.
   await db.sequelize.transaction(async (transaction) => {
     await db.sequelize.query("SET FOREIGN_KEY_CHECKS = 0", { transaction });

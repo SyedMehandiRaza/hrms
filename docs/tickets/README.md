@@ -62,7 +62,7 @@ workforce branch (`hrms-project-moduleA`) being merged into main (plan section 7
 | 03 | [Contract types API](contract-studio/03-contract-types-api.md) | ready-for-agent | 01, 02 |
 | 04 | [Contract documents API](contract-studio/04-documents-api.md) | ready-for-agent | 01, 02 |
 | 05 | [Templates and merge-field catalogue API](contract-studio/05-templates-api.md) | ready-for-agent | 03, 04 |
-| 06 | [Recipient lookup API](contract-studio/06-recipient-lookup-api.md) | ready-for-agent | — |
+| 06 | [Recipient lookup API](contract-studio/06-recipient-lookup-api.md) | done | — |
 | 07 | [Drafts API (create, edit, delete)](contract-studio/07-drafts-api.md) | ready-for-agent | 05, 06 |
 | 22 | [Merge values](contract-studio/22-merge-values.md) | ready-for-agent | 05, 06 |
 | 23 | [Contracts list, detail, stats and preview](contract-studio/23-contracts-list-detail-preview.md) | ready-for-agent | 07, 11, 22 |
