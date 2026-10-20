@@ -61,7 +61,7 @@ Workforce tickets 03, 04, 13a, 20, 21, 28a are also blocked by geo tickets (show
 ## Workforce structure + Employee lifecycle (`workforce/`)
 
 Plan: `docs/plans/workforce-and-lifecycle.md`. ADRs 0010 (1:1 head office ↔ project), 0011 (one approval group per
-employee). Builds on Auth + Company (all done). Senior review 2026-10-20 applied (plan §8). Frontier now: **03, 06, 08, 09, 10, 12, 12b**.
+employee). Builds on Auth + Company (all done). Senior review 2026-10-20 applied (plan §8). Frontier now: **04, 06, 08, 09, 10, 12, 12b**.
 
 ### Backend + tests
 
@@ -69,7 +69,7 @@ employee). Builds on Auth + Company (all done). Senior review 2026-10-20 applied
 |---|---|---|---|
 | 01 | [Schema changes](workforce/01-schema-changes.md) | done | — |
 | 02 | [Starter salary components](workforce/02-starter-salary-components.md) | done | 01 |
-| 03 | [Head offices API](workforce/03-head-offices-api.md) | ready-for-agent | 01, geo 02, geo 03 |
+| 03 | [Head offices API](workforce/03-head-offices-api.md) | done | 01, geo 02, geo 03 |
 | 04 | [Projects API](workforce/04-projects-api.md) | ready-for-agent | 03, geo 03 |
 | 05 | [Project assign / remove API](workforce/05-project-assign-remove-api.md) | ready-for-agent | 04 |
 | 06 | [Shifts API + timing history](workforce/06-shifts-api.md) | ready-for-agent | 01 |

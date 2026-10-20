@@ -1,16 +1,15 @@
 const { Employer, IndustryType, CompanyTimeSetting, Country } = require("../models");
 const ErrorHandler = require("../utils/ErrorHandler");
 const storage = require("./storage.service");
+const { IMAGE_MAX_BYTES, imageExtension, toUploadUrl, toStoragePath } = require("../utils/imageFile");
 
 // Company profile and logo (D27–D29). Always the caller's own company: the
 // employer id comes from the access token.
 
 // employers.company_logo holds the public URL of the file ("/uploads/logos/<uuid>.png"),
 // relative to the API origin; the file itself is storage path "logos/<uuid>.png".
-const UPLOAD_URL_PREFIX = "/uploads/";
 const LOGO_FOLDER = "logos";
-const toLogoUrl = (relativePath) => `${UPLOAD_URL_PREFIX}${relativePath}`;
-const toStoragePath = (url) => (url && url.startsWith(UPLOAD_URL_PREFIX) ? url.slice(UPLOAD_URL_PREFIX.length) : null);
+const toLogoUrl = toUploadUrl;
 
 // Body field → employers column, for PUT /company and the change log.
 const PROFILE_FIELDS = {
@@ -81,17 +80,8 @@ const updateProfile = async ({ employerId, userId }, body) => {
   return getCompany({ employerId });
 };
 
-// First bytes of the accepted image types (D29); the file name and the client's
-// content type are not trusted.
-const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-const JPEG_SIGNATURE = Buffer.from([0xff, 0xd8, 0xff]);
-const LOGO_MAX_BYTES = 2 * 1024 * 1024;
-
-const logoExtension = (buffer) => {
-  if (buffer.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE)) return "png";
-  if (buffer.subarray(0, JPEG_SIGNATURE.length).equals(JPEG_SIGNATURE)) return "jpg";
-  return null;
-};
+// JPG/PNG up to 2 MB, recognised by their first bytes (D29; utils/imageFile.js).
+const LOGO_MAX_BYTES = IMAGE_MAX_BYTES;
 
 // Removes an old logo file after the database no longer points at it. A failure only
 // leaves an orphan file, so it is logged rather than failing the request.
@@ -108,7 +98,7 @@ const removeLogoFile = async (url) => {
 // PUT /company/logo (owner only). `file` is multer's in-memory file (or undefined).
 const replaceLogo = async ({ employerId }, file) => {
   const buffer = file && file.buffer;
-  const ext = buffer && buffer.length <= LOGO_MAX_BYTES ? logoExtension(buffer) : null;
+  const ext = imageExtension(buffer);
   if (!ext) throw new ErrorHandler("COMPANY_LOGO_INVALID");
 
   const employer = await findCompany(employerId);

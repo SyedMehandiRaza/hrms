@@ -5,6 +5,7 @@ const companyRoutes = require("./company.routes");
 const industryTypeRoutes = require("./industryType.routes");
 const departmentRoutes = require("./department.routes");
 const { createGeoRouter } = require("./geo.routes");
+const officeRoutes = require("./office.routes");
 const { designationRouter, departmentDesignationsRouter } = require("./designation.routes");
 
 const router = Router();
@@ -14,6 +15,7 @@ router.use("/auth", createAuthRouter());
 router.use("/company", companyRoutes);
 router.use("/industry-types", industryTypeRoutes);
 router.use("/countries", createGeoRouter());
+router.use("/offices", officeRoutes);
 router.use("/departments/:id/designations", departmentDesignationsRouter);
 router.use("/departments", departmentRoutes);
 router.use("/designations", designationRouter);
