@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { MdClose, MdOutlineDraw, MdOutlineKeyboard, MdOutlineReplay } from "react-icons/md";
 import { useTranslation } from "react-i18next";
 
-// Digital-signature capture popup (UI demo, no backend).
-// The recipient either DRAWS on the canvas or TYPES their name; on save the
-// signature would be stored on their record and reused on future contracts.
+// Signature capture popup: the signer DRAWS on the canvas or TYPES their name. The result
+// goes on this contract only — never saved to the profile (plan decision 31, ADR 0008).
 // initialText pre-fills the typed signature (the signer's profile name, plan decision 29).
 export default function SignaturePadModal({ onClose, onSave, initialText = "" }) {
   const { t } = useTranslation("contractStudio");
@@ -160,10 +159,6 @@ export default function SignaturePadModal({ onClose, onSave, initialText = "" })
               </button>
             </div>
           </div>
-
-          <p className="text-[11px] text-gray-400 mt-3 text-center leading-relaxed">
-            {t("signaturePad.footnote")}
-          </p>
         </div>
       </div>
     </div>

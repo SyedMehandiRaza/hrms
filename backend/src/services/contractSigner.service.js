@@ -112,6 +112,7 @@ const getMine = async (auth, id, request) => {
 
 // The original PDF (for rendering pages under the fillable fields).
 const myDocument = async (auth, id) => {
+  if (UUID.test(String(id))) await expireDue({ employerId: auth.employerId, contractId: id });
   const { contract } = await findVisible(auth, id);
   const document = await ContractDocument.findByPk(contract.document_id, { paranoid: false });
   if (!document) throw new ErrorHandler("NOT_FOUND");

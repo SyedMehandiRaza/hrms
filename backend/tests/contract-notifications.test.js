@@ -157,7 +157,7 @@ it("notifies the signer with the reason on an HR revoke, and only the creator on
   await runContractJob();
   await flush();
   const cb = await db.Contract.findByPk(idb);
-  expect((await rowsFor(hr.user.id, idb)).find((r) => r.type === "CONTRACT_REVOKED_AUTO").body).toBe(
+  expect((await rowsFor(hr.user.id, idb)).find((r) => r.type === "CONTRACT_REVOKED").body).toBe(
     `Employment Agreement (${cb.reference_no}) was withdrawn because Sara Khan is no longer active.`
   );
   expect((await rowsFor(b.user.id, idb)).filter((r) => r.type.startsWith("CONTRACT_REVOKED"))).toHaveLength(0);

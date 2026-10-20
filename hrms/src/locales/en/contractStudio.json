@@ -518,7 +518,6 @@
     "drawHere": "Draw your signature here",
     "typePlaceholder": "Type your full name",
     "preview": "Preview",
-    "save": "Save signature",
-    "footnote": "Saved once to your record — reused automatically on every future contract."
+    "save": "Save signature"
   }
 }

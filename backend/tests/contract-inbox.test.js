@@ -182,6 +182,15 @@ describe("detail, VIEWED and downloads", () => {
     expect(await db.ContractActivity.count({ where: { contract_id: id, action: "EXPIRED" } })).toBe(1);
   });
 
+  it("expires a past-due contract when only its document is opened", async () => {
+    const t = await f.makeTemplate(ctx.employer, { document: ctx.document, type: await db.ContractType.create({ employer_id: ctx.employer.id, name: `D ${h.short()}`, code: `D${h.short()}` }) });
+    const [id] = await send(ctx, [me.employee.id], { templateId: t.id });
+    await db.Contract.update({ expires_at: new Date(Date.now() - 1000) }, { where: { id } });
+    expect((await myDoc(me.token, id)).status).toBe(200);
+    expect((await db.Contract.findByPk(id)).status).toBe("EXPIRED");
+    expect(await db.ContractActivity.count({ where: { contract_id: id, action: "EXPIRED" } })).toBe(1);
+  });
+
   it("serves the original document bytes inline, without values or watermark", async () => {
     const [id] = await send(ctx, [me.employee.id], { templateId: (await f.makeTemplate(ctx.employer, { document: ctx.document, type: await db.ContractType.create({ employer_id: ctx.employer.id, name: `O ${h.short()}`, code: `O${h.short()}` }) })).id });
     const res = await myDoc(me.token, id);

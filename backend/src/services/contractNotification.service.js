@@ -23,7 +23,8 @@ const PLAN = {
     ["CONTRACT_EXPIRED", "signer"],
   ],
   REVOKED: [["CONTRACT_REVOKED", "signer"]],
-  REVOKED_AUTO: [["CONTRACT_REVOKED_AUTO", "creator"]],
+  // auto-revoke: same row type, its own wording (plan decision 43)
+  REVOKED_AUTO: [["CONTRACT_REVOKED", "creator", "CONTRACT_REVOKED_AUTO"]],
   COMPLETED: [["CONTRACT_COMPLETED", "signer"]],
 };
 
@@ -45,7 +46,7 @@ const signerUserId = async (recipient) => {
   return (await StaffingCompany.findByPk(recipient.staffing_company_id, { paranoid: false, attributes: ["user_id"] }))?.user_id;
 };
 
-const notifyOne = async ({ contract, recipient, type, role, params }) => {
+const notifyOne = async ({ contract, recipient, type, role, textKey = type, params }) => {
   const userId = role === "creator" ? contract.created_by : await signerUserId(recipient);
   if (!userId) return;
   const account = await currentAccount(userId, contract.employer_id);
@@ -53,7 +54,7 @@ const notifyOne = async ({ contract, recipient, type, role, params }) => {
   const user = await User.findByPk(userId, { attributes: ["id", "email", "lang_key"] });
   if (!user) return;
   const lang = String(user.lang_key).toLowerCase() === "ar" ? "ar" : "en";
-  const text = NOTIFICATIONS[type][lang];
+  const text = NOTIFICATIONS[textKey][lang];
   const title = fill(text.title, params).slice(0, 200);
   const body = fill(text.body, params);
   const path = role === "creator" ? CREATOR_PATH : SIGNER_PATHS[account.access_level] || "/employee/my-contracts";
@@ -80,9 +81,9 @@ const handle = async (event, { contractId, auto, reason }) => {
     recipient: recipient?.recipient_name || "",
     reason: reason || contract.revoke_reason || recipient?.reject_reason || "",
   };
-  for (const [type, role] of steps) {
+  for (const [type, role, textKey] of steps) {
     try {
-      await notifyOne({ contract, recipient, type, role, params });
+      await notifyOne({ contract, recipient, type, role, textKey, params });
     } catch (err) {
       console.error("[contracts] notification failed", { contractId, type, error: err.message });
     }
