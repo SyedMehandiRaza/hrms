@@ -39,24 +39,24 @@ const field = (templateId, key, values) => ({
 const templateFields = () => [
   field(EMPLOYMENT_TEMPLATE, "employee_name", {
     page_no: 1, field_type: "DB_COLUMN", label: "Employee Name", db_source: "EMPLOYEE", db_column: "employee_name",
-    pos_x: 0.3, pos_y: 0.135, width: 0.4, height: 0.03, sort_order: 1,
+    pos_x: 0.3, pos_y: 0.168, width: 0.4, height: 0.03, sort_order: 1,
   }),
   field(EMPLOYMENT_TEMPLATE, "designation", {
     page_no: 1, field_type: "DB_COLUMN", label: "Designation", db_source: "EMPLOYEE", db_column: "designation",
-    pos_x: 0.3, pos_y: 0.168, width: 0.4, height: 0.03, sort_order: 2,
+    pos_x: 0.3, pos_y: 0.201, width: 0.4, height: 0.03, sort_order: 2,
   }),
   field(EMPLOYMENT_TEMPLATE, "signature", {
-    page_no: 3, field_type: "SIGNATURE", label: "Signature", pos_x: 0.25, pos_y: 0.17, width: 0.35, height: 0.06, sort_order: 3,
+    page_no: 3, field_type: "SIGNATURE", label: "Signature", pos_x: 0.25, pos_y: 0.184, width: 0.35, height: 0.06, sort_order: 3,
   }),
   field(EMPLOYMENT_TEMPLATE, "date", {
-    page_no: 3, field_type: "DATE", label: "Date", pos_x: 0.2, pos_y: 0.245, width: 0.25, height: 0.03, sort_order: 4,
+    page_no: 3, field_type: "DATE", label: "Date", pos_x: 0.2, pos_y: 0.235, width: 0.25, height: 0.03, sort_order: 4,
   }),
   field(STAFFING_TEMPLATE, "company_name", {
     page_no: 1, field_type: "DB_COLUMN", label: "Company Name", db_source: "STAFFING_COMPANY", db_column: "company_name",
-    pos_x: 0.3, pos_y: 0.135, width: 0.4, height: 0.03, sort_order: 1,
+    pos_x: 0.3, pos_y: 0.168, width: 0.4, height: 0.03, sort_order: 1,
   }),
   field(STAFFING_TEMPLATE, "signature", {
-    page_no: 3, field_type: "SIGNATURE", label: "Signature", pos_x: 0.25, pos_y: 0.17, width: 0.35, height: 0.06, sort_order: 2,
+    page_no: 3, field_type: "SIGNATURE", label: "Signature", pos_x: 0.25, pos_y: 0.184, width: 0.35, height: 0.06, sort_order: 2,
   }),
 ];
 

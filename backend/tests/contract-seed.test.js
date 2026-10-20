@@ -232,6 +232,28 @@ describe("contract seeder", () => {
     expect(signatures.length).toBeGreaterThanOrEqual(1);
   });
 
+  it("places each seeded field on its line of the sample document", async () => {
+    const { render } = require("../src/services/contractPdf.service");
+    const { openPdf, pageText } = require("./helpers/pdf");
+    const source = fs.readFileSync(path.join(__dirname, "../seed-assets/contracts/sample-contract.pdf"));
+    // seeded field → the start of the document line it fills in
+    const LINE = { employee_name: "Employee name:", company_name: "Employee name:", designation: "Designation:", SIGNATURE: "Signature:", DATE: "Date:" };
+    const fields = await query(
+      "SELECT f.* FROM hrms_contract_template_fields f JOIN hrms_contract_templates t ON t.id = f.template_id WHERE t.employer_id = ? AND t.deleted_at IS NULL",
+      [EMPLOYER]
+    );
+    expect(fields.length).toBeGreaterThanOrEqual(6);
+    for (const f of fields) {
+      const marker = `V${f.id.slice(0, 6)}`;
+      const value = f.field_type === "SIGNATURE" ? { type: "TYPED", text: marker } : marker;
+      const { bytes } = await render({ sourceBytes: source, fields: [{ ...f, value }] });
+      const items = await pageText(await openPdf(bytes), f.page_no);
+      const line = items.find((i) => i.str.startsWith(LINE[f.db_column || f.field_type]));
+      const stamped = items.find((i) => i.str === marker);
+      expect({ field: f.db_column || f.field_type, dy: Math.abs(stamped.y - line.y) <= 3 }).toEqual({ field: f.db_column || f.field_type, dy: true });
+    }
+  });
+
   it("leaves the shared activity seeder file unchanged", () => {
     const text = fs.readFileSync(path.join(SEEDERS_DIR, "20261019100010-activity.js"), "utf8").replace(/\r\n/g, "\n");
     expect(crypto.createHash("sha256").update(text).digest("hex")).toBe("dbee981ecd940dc290e4d5673c701ad5889982a9c900f91122252a8f7169b680");
