@@ -1,5 +1,5 @@
-import { useEffect, useMemo } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import {
   MdOutlineClose,
   MdOutlineError,
@@ -8,14 +8,12 @@ import {
 } from "react-icons/md";
 import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
-import {
-  APPR_EMPLOYEES,
-  APPR_PROJECTS,
-  APPR_MODULES,
-  APPR_projectEmployees,
-  APPR_addGroup,
-} from "../data/groupD";
 import CustomDropdown from "./CustomDropdown";
+import useApiQuery from "../hooks/useApiQuery";
+import { createApprovalGroup, listApproverOptions, MODULE_ALL, toMemberBody } from "../api/approvalGroups";
+import { listProjects } from "../api/projects";
+import { applyFieldErrors } from "../utils/applyFieldErrors";
+import { apiErrorCode, apiErrorMessage } from "../utils/apiError";
 
 const inputCls = (err) =>
   `w-full px-4 py-2.5 border rounded-lg text-sm text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-cyan-500 focus:outline-none focus:border-transparent transition ${
@@ -33,12 +31,12 @@ const FieldErr = ({ error }) =>
     </p>
   ) : null;
 
-const prettyModule = (key = "") =>
-  key
-    .replace(/[_-]/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
 
-const getEmpId = (e) => e?.id ?? e?._id ?? e?.employee_id;
+// API field → form field, so the server's field errors land under the right input.
+const FIELD_MAP = { name: "group_name", code: "group_code", projectId: "project_id", description: "description", moduleKey: "module_key" };
+const CODE_FIELDS = { APPROVAL_GROUP_NAME_TAKEN: "group_name", APPROVAL_GROUP_CODE_TAKEN: "group_code", APPROVAL_GROUP_PROJECT_MISMATCH: "project_id" };
+
+const getEmpId = (e) => e?.id;
 
 const removeEmojis = (e) => {
   const emojiRegex = /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu;
@@ -49,12 +47,11 @@ const removeEmojis = (e) => {
 
 export default function CreateApprovalGroupModal({ isOpen, onClose, onSuccess }) {
   const { t } = useTranslation("approvals");
-  const createLoading = false;
-  const employees = APPR_EMPLOYEES;
-  const loadingEmployees = false;
-  const projects = APPR_PROJECTS;
-
-  const modules = APPR_MODULES;
+  const [createLoading, setCreateLoading] = useState(false);
+  // Error under the approvers (the server's members rules).
+  const [membersError, setMembersError] = useState("");
+  // Groups aren't tied to a module yet: the only one is "All requests" (D17).
+  const modules = [{ module: MODULE_ALL }];
   const loadingModules = false;
 
   const {
@@ -62,14 +59,14 @@ export default function CreateApprovalGroupModal({ isOpen, onClose, onSuccess })
     handleSubmit,
     control,
     reset,
-    watch,
     setValue,
+    setError,
     formState: { errors },
   } = useForm({
     defaultValues: {
       group_name: "",
       group_code: "",
-      module_key: "",
+      module_key: MODULE_ALL,
       scope: "GLOBAL",
       project_id: "",
       description: "",
@@ -79,26 +76,24 @@ export default function CreateApprovalGroupModal({ isOpen, onClose, onSuccess })
     },
   });
 
-  const scope = watch("scope");
-  const projectId = watch("project_id");
+  const scope = useWatch({ control, name: "scope" });
+  const projectId = useWatch({ control, name: "project_id" });
   const isProjectScope = scope === "PROJECT";
-  const moduleKeyValue = watch("module_key");
-  const membersValue = watch("members");
+  const moduleKeyValue = useWatch({ control, name: "module_key" });
+  const membersValue = useWatch({ control, name: "members" });
 
-  const projectEmployees = useMemo(
-    () => (isProjectScope && projectId ? APPR_projectEmployees(projectId) : []),
-    [isProjectScope, projectId],
-  );
+  // Active projects for a project-level group.
+  const { data: projectData } = useApiQuery(() => (isOpen ? listProjects({ limit: 100, status: "ACTIVE" }) : Promise.resolve(null)), [isOpen]);
+  const projects = projectData?.items || [];
 
-  // Approvers can be ANY company employee. For project-level groups we just tag
+  // Approvers can be ANY active company employee. For project-level groups the options say
   // which ones belong to the project (≥1 of them is required).
-  const memberEmployees = employees;
-  const memberLoading = loadingEmployees;
-  const projectEmployeeIds = new Set(
-    (projectEmployees || [])
-      .map((e) => Number(getEmpId(e)))
-      .filter(Boolean),
+  const { data: optionData, loading: memberLoading } = useApiQuery(
+    () => (isOpen ? listApproverOptions({ projectId: isProjectScope ? projectId : "" }) : Promise.resolve(null)),
+    [isOpen, isProjectScope, projectId],
   );
+  const memberEmployees = optionData?.items || [];
+  const projectEmployeeIds = new Set(memberEmployees.filter((e) => e.on_project).map((e) => getEmpId(e)));
 
   const { fields, append, remove } = useFieldArray({ control, name: "members" });
 
@@ -117,14 +112,15 @@ export default function CreateApprovalGroupModal({ isOpen, onClose, onSuccess })
     onClose();
   };
 
-  const onSubmit = (data) => {
+  const onSubmit = async (data) => {
+    setMembersError("");
     if (data.scope === "PROJECT" && !data.project_id) {
-      toast.error(t("createModal.toast.selectProjectForScope"));
+      setError("project_id", { type: "required", message: t("createModal.validation.projectRequired") }, { shouldFocus: true });
       return;
     }
 
     const members = data.members.map((m) => ({
-      employee_id: Number(m.employee_id),
+      employee_id: m.employee_id,
       level_no: Number(m.level_no),
       is_mandatory: !!m.is_mandatory,
       can_skip: !!m.can_skip,
@@ -134,9 +130,7 @@ export default function CreateApprovalGroupModal({ isOpen, onClose, onSuccess })
     const seen = new Set();
     for (const m of members) {
       if (seen.has(m.employee_id)) {
-        toast.error(
-          t("createModal.toast.duplicateEmployee")
-        );
+        setMembersError(t("createModal.toast.duplicateEmployee"));
         return;
       }
       seen.add(m.employee_id);
@@ -145,29 +139,42 @@ export default function CreateApprovalGroupModal({ isOpen, onClose, onSuccess })
     // Project-level groups must include at least one approver from that project.
     if (data.scope === "PROJECT") {
       const hasProjectApprover = members.some((m) =>
-        projectEmployeeIds.has(Number(m.employee_id)),
+        projectEmployeeIds.has(m.employee_id),
       );
       if (!hasProjectApprover) {
-        toast.error(
-          t("createModal.toast.projectApproverRequired"),
-        );
+        setMembersError(t("createModal.toast.projectApproverRequired"));
         return;
       }
     }
 
     const payload = {
-      group_name: data.group_name.trim(),
-      group_code: data.group_code.trim(),
-      module_key: data.module_key,
+      name: data.group_name.trim(),
+      code: data.group_code.trim(),
+      moduleKey: data.module_key || MODULE_ALL,
       scope: data.scope || "GLOBAL",
-      ...(data.scope === "PROJECT" && data.project_id
-        ? { project_id: Number(data.project_id) }
-        : {}),
+      ...(data.scope === "PROJECT" && data.project_id ? { projectId: data.project_id } : {}),
       description: data.description?.trim() || null,
-      members,
+      members: toMemberBody(members),
     };
 
-    const created = APPR_addGroup(payload);
+    setCreateLoading(true);
+    let created;
+    try {
+      created = await createApprovalGroup(payload);
+    } catch (err) {
+      setCreateLoading(false);
+      const code = apiErrorCode(err);
+      if (CODE_FIELDS[code]) {
+        setError(CODE_FIELDS[code], { type: "server", message: apiErrorMessage(err) }, { shouldFocus: true });
+        return;
+      }
+      const fieldMessage = err?.response?.data?.errors?.members;
+      if (fieldMessage) setMembersError(fieldMessage);
+      const { mapped } = applyFieldErrors(err, setError, { fieldMap: FIELD_MAP, knownFields: Object.values(FIELD_MAP) });
+      if (!mapped.length && !fieldMessage) toast.error(apiErrorMessage(err, t("createModal.toast.createFailed")));
+      return;
+    }
+    setCreateLoading(false);
     toast.success(t("createModal.toast.created"));
     onSuccess?.(created);
     handleClose();
@@ -283,7 +290,7 @@ export default function CreateApprovalGroupModal({ isOpen, onClose, onSuccess })
                 options={[
                   { label: loadingModules ? t("createModal.loadingModules") : t("createModal.selectModule"), value: "" },
                   ...modules.map((m) => ({
-                    label: prettyModule(m.module),
+                    label: t("allRequests"),
                     value: m.module
                   }))
                 ]}
@@ -339,7 +346,7 @@ export default function CreateApprovalGroupModal({ isOpen, onClose, onSuccess })
                   options={[
                     { label: t("createModal.selectProject", "Select a project"), value: "" },
                     ...projects.map((p) => ({
-                      label: `${p.project_name}${p.project_code ? ` (${p.project_code})` : ""}`,
+                      label: `${p.name}${p.code ? ` (${p.code})` : ""}`,
                       value: p.id
                     }))
                   ]}
@@ -409,7 +416,7 @@ export default function CreateApprovalGroupModal({ isOpen, onClose, onSuccess })
                         </label>
                         <CustomDropdown
                           {...register(`members.${index}.employee_id`, {
-                            required: t("createModal.validation.required"),
+                            required: t("createModal.validation.selectEmployee"),
                           })}
                           value={membersValue?.[index]?.employee_id}
                           error={!!errors?.members?.[index]?.employee_id}
@@ -418,9 +425,9 @@ export default function CreateApprovalGroupModal({ isOpen, onClose, onSuccess })
                             { label: memberLoading ? t("createModal.loadingEmployees") : t("createModal.selectEmployee"), value: "" },
                             ...memberEmployees.map((e) => {
                               const eid = getEmpId(e);
-                              const inProject = isProjectScope && projectEmployeeIds.has(Number(eid));
+                              const inProject = isProjectScope && projectEmployeeIds.has(eid);
                               return {
-                                label: `${e.full_name || e.name}${e.country_emp_id ? ` (${e.country_emp_id})` : ""}${inProject ? ` • ${t("createModal.inProject", "In project")}` : ""}`,
+                                label: `${e.name}${e.employee_code ? ` (${e.employee_code})` : ""}${inProject ? ` • ${t("createModal.inProject", "In project")}` : ""}`,
                                 value: eid
                               };
                             })
@@ -458,6 +465,8 @@ export default function CreateApprovalGroupModal({ isOpen, onClose, onSuccess })
                       </div>
                     </div>
 
+                    <FieldErr error={errors?.members?.[index]?.employee_id || errors?.members?.[index]?.level_no} />
+
                     <div className="flex items-center gap-5">
                       <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
                         <input
@@ -479,6 +488,12 @@ export default function CreateApprovalGroupModal({ isOpen, onClose, onSuccess })
                   </div>
                 ))}
               </div>
+              {membersError && (
+                <p className="flex items-center gap-1 text-xs text-red-500 mt-1.5">
+                  <MdOutlineError className="flex-shrink-0 text-sm" />
+                  {membersError}
+                </p>
+              )}
               <p className="text-xs text-gray-400 mt-2">
                 {t("createModal.levelsHint")}
               </p>

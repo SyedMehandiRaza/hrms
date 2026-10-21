@@ -157,7 +157,8 @@
       "projectRequired": "Please select a project",
       "max1000": "Must be 1000 characters or less",
       "required": "Required",
-      "min1": "Min 1"
+      "min1": "Min 1",
+      "selectEmployee": "Select an active employee of this company."
     }
   },
   "membersModal": {
@@ -239,7 +240,8 @@
       "LEAVE": "Leave",
       "CORRECTION": "Correction",
       "EXIT_VISA": "Exit Visa"
-    }
+    },
+    "projectMismatch": "This approval group belongs to a different project."
   },
   "rejectModal": {
     "title": "Reject Request",

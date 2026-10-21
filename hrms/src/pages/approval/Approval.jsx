@@ -14,30 +14,33 @@ import Ltr from "../../components/Ltr";
 import CreateApprovalGroupModal from "../../components/CreateApprovalGroupModal";
 import ApprovalSettings from "../../components/ApprovalSettings";
 import Loader from "../../components/Loader";
+import { ScreenError } from "../../components/ScreenState";
 import Can from "../../components/Can";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import { MODULES, ACTIONS } from "../../constants/permissions";
 import CustomDropdown from "../../components/CustomDropdown";
-import { APPR_GROUPS, APPR_removeGroup } from "../../data/groupD";
-import { matches, paginate } from "../../data/common";
+import useApiQuery from "../../hooks/useApiQuery";
+import { listApprovalGroups, setApprovalGroupStatus } from "../../api/approvalGroups";
+import { toastApiError } from "../../utils/apiError";
 
 const PAGE_SIZE = 10;
 
-const prettyModule = (key = "") =>
-  key.replace(/[_-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+const getId = (g) => g?.id;
 
-const getId = (g) => g?.id ?? g?._id;
+const levelsOf = (g) => g?.total_levels ?? 0;
 
-const levelsOf = (g) =>
-  g?.total_levels ?? (Array.isArray(g?.levels) ? g.levels.length : 0);
+// A short, stable reference for a group (its uuid's first block).
+const shortId = (g) => String(getId(g) || "").slice(0, 8).toUpperCase();
 
 function Approval() {
   const navigate = useNavigate();
   const { t } = useTranslation("approvals");
 
-  const [groups, setGroups] = useState(() => [...APPR_GROUPS]);
-  const loading = false;
-  const deleteLoading = false;
+  const prettyModule = (key) => (key === "ALL" ? t("allRequests") : key);
+  // The company's groups (a short list): search, sort and paging on this page.
+  const { data, loading, error, reload } = useApiQuery(() => listApprovalGroups({ limit: 100 }), []);
+  const groups = useMemo(() => data?.items || [], [data]);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("latest");
@@ -45,18 +48,16 @@ function Approval() {
   const [openModal, setOpenModal] = useState(false);
   const [tab, setTab] = useState("groups");
 
-  // Client-side search / sort / paging over the static groups.
   const { rows: list, total, totalPages } = useMemo(() => {
-    const q = search.trim();
-    const filtered = groups.filter((g) =>
-      matches(g, q, ["group_name", "group_code", "module_key"]),
-    );
+    const q = search.trim().toLowerCase();
+    const filtered = groups.filter((g) => !q || [g.name, g.code].some((v) => String(v || "").toLowerCase().includes(q)));
     const sorted = [...filtered].sort((a, b) => {
-      if (sortBy === "name") return String(a.group_name).localeCompare(String(b.group_name));
+      if (sortBy === "name") return String(a.name).localeCompare(String(b.name));
       if (sortBy === "levels") return levelsOf(b) - levelsOf(a);
-      return (Number(getId(b)) || 0) - (Number(getId(a)) || 0);
+      return String(b.created_at).localeCompare(String(a.created_at));
     });
-    return paginate(sorted, currentPage, PAGE_SIZE);
+    const pages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+    return { rows: sorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE), total: sorted.length, totalPages: pages };
   }, [groups, search, sortBy, currentPage]);
 
   const handleSearch = (e) => {
@@ -66,12 +67,18 @@ function Approval() {
 
   const [itemToDelete, setItemToDelete] = useState(null);
 
+  // "Delete" deactivates the group (D20); a group in use can't be (APPROVAL_GROUP_IN_USE).
   const confirmDelete = async () => {
     if (!itemToDelete) return;
-    const id = getId(itemToDelete);
-    APPR_removeGroup(id);
-    setGroups((prev) => prev.filter((g) => String(getId(g)) !== String(id)));
-    toast.success(t("toast.groupDeactivated"));
+    setDeleteLoading(true);
+    try {
+      await setApprovalGroupStatus(getId(itemToDelete), "INACTIVE");
+      toast.success(t("toast.groupDeactivated"));
+      reload();
+    } catch (err) {
+      toastApiError(err, t("toast.deleteGroupFailed"));
+    }
+    setDeleteLoading(false);
     setItemToDelete(null);
   };
 
@@ -188,6 +195,10 @@ function Approval() {
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           {loading ? (
             <Loader label={t("loadingGroups")} />
+          ) : error ? (
+            <div className="p-4">
+              <ScreenError error={error} onRetry={reload} />
+            </div>
           ) : (
             <>
               {/* Desktop Table */}
@@ -232,19 +243,24 @@ function Approval() {
                             {(currentPage - 1) * PAGE_SIZE + index + 1}
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-400 font-medium">
-                            <Ltr>#{String(getId(item)).padStart(3, "0")}</Ltr>
+                            <Ltr>#{shortId(item)}</Ltr>
                           </td>
                           <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                            {item.group_name}
-                            {item.group_code ? (
+                            {item.name}
+                            {item.status === "INACTIVE" && (
+                              <span className="ms-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-500">
+                                {t("view.inactive")}
+                              </span>
+                            )}
+                            {item.code ? (
                               <Ltr className="block text-xs font-normal text-gray-400">
-                                {item.group_code}
+                                {item.code}
                               </Ltr>
                             ) : null}
                           </td>
                           <td className="px-6 py-4">
                             <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-cyan-50 text-cyan-700 border border-cyan-100">
-                              {prettyModule(item.module_key)}
+                              {prettyModule(item.module)}
                             </span>
                           </td>
                           <td className="px-6 py-4">
@@ -294,10 +310,10 @@ function Approval() {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <Ltr className="block text-xs text-gray-400 font-medium mb-0.5">
-                            #{String(getId(item)).padStart(3, "0")}
+                            #{shortId(item)}
                           </Ltr>
                           <p className="text-sm font-semibold text-gray-900">
-                            {item.group_name}
+                            {item.name}
                           </p>
                         </div>
                         <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -324,7 +340,7 @@ function Approval() {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-cyan-50 text-cyan-700 border border-cyan-100">
-                          {prettyModule(item.module_key)}
+                          {prettyModule(item.module)}
                         </span>
                         <span className="text-xs text-gray-600 font-medium">
                           {levelsOf(item)}{" "}
@@ -358,10 +374,7 @@ function Approval() {
         <CreateApprovalGroupModal
           isOpen={openModal}
           onClose={() => setOpenModal(false)}
-          onSuccess={(created) =>
-            created &&
-            setGroups((prev) => [created, ...prev.filter((g) => getId(g) !== getId(created))])
-          }
+          onSuccess={() => reload()}
         />
       )}
 
@@ -371,7 +384,7 @@ function Approval() {
           onClose={() => setItemToDelete(null)}
           onConfirm={confirmDelete}
           title={t("deleteModal.title", "Deactivate Approval Group")}
-          message={`Deactivate approval group "${itemToDelete.group_name}"? Groups with active requests cannot be removed.`}
+          message={`Deactivate approval group "${itemToDelete.name}"? Groups with active requests cannot be removed.`}
           type="delete"
           isLoading={deleteLoading}
           confirmText={t("deleteModal.confirm", "Deactivate")}

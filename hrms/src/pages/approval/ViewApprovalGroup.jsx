@@ -14,45 +14,46 @@ import EditApprovalGroupModal from "../../components/EditApprovalGroupModal";
 import Can from "../../components/Can";
 import { MODULES, ACTIONS } from "../../constants/permissions";
 import { TableLoader } from "../../components/Loader";
-import { APPR_EMPLOYEES, APPR_findGroup, APPR_updateGroup } from "../../data/groupD";
-
-const prettyModule = (key = "") =>
-  key.replace(/[_-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+import { ScreenError } from "../../components/ScreenState";
+import useApiQuery from "../../hooks/useApiQuery";
+import { getApprovalGroup, listApproverOptions, setApprovalGroupStatus, toMemberBody, updateApprovalGroupMembers } from "../../api/approvalGroups";
+import { apiErrorMessage, toastApiError } from "../../utils/apiError";
 
 function ViewApprovalGroup() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation("approvals");
 
-  // Look the group up by URL id; unknown ids render the "not found" state.
-  const [overrides, setOverrides] = useState({});
-  const group = overrides[id] || APPR_findGroup(id);
-  const detailLoading = false;
-  const updateLoading = false;
-  const employees = APPR_EMPLOYEES;
+  const prettyModule = (key) => (key === "ALL" ? t("allRequests") : key);
+  // The group by URL id; an unknown id renders the "not found" state.
+  const { data: group, loading: detailLoading, error, reload, setData } = useApiQuery(() => getApprovalGroup(id), [id]);
+  const [updateLoading, setUpdateLoading] = useState(false);
+  const [membersError, setMembersError] = useState("");
+  // Approvers can be any ACTIVE / IN_NOTICE employee; the group's project marks who is on it.
+  const projectId = group?.project?.id || "";
+  const { data: options } = useApiQuery(() => (group ? listApproverOptions({ projectId }) : Promise.resolve(null)), [group?.id, projectId]);
+  const employees = options?.items || [];
 
   const [search, setSearch] = useState("");
   const [openModal, setOpenModal] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
-  // Flatten active members across levels.
-  const members = useMemo(() => {
-    if (!group?.levels) return [];
-    return group.levels
-      .flatMap((lvl) =>
-        (lvl.members || [])
-          .filter((m) => m.is_active !== false)
-          .map((m) => ({
-            id: m.id,
-            employee_id: m.employee_id,
-            full_name: m.full_name,
-            level_no: lvl.level_no,
-            is_mandatory: m.is_mandatory,
-            can_skip: m.can_skip,
-          }))
-      )
-      .sort((a, b) => a.level_no - b.level_no);
-  }, [group]);
+  // Current members, by level.
+  const members = useMemo(
+    () =>
+      (group?.members || [])
+        .map((m) => ({
+          id: m.id,
+          employee_id: m.employee_id,
+          employee_code: m.employee_code,
+          full_name: m.name,
+          level_no: m.level,
+          is_mandatory: m.is_mandatory,
+          can_skip: m.can_skip,
+        }))
+        .sort((a, b) => a.level_no - b.level_no),
+    [group],
+  );
 
   const filteredMembers = useMemo(() => {
     if (!search) return members;
@@ -60,16 +61,42 @@ function ViewApprovalGroup() {
     return members.filter(
       (m) =>
         (m.full_name || "").toLowerCase().includes(q) ||
-        String(m.employee_id).includes(q)
+        String(m.employee_code || "").toLowerCase().includes(q)
     );
   }, [members, search]);
 
-  const handleSaveMembers = (membersPayload) => {
-    const updated = APPR_updateGroup(id, { members: membersPayload });
-    if (updated) setOverrides((prev) => ({ ...prev, [id]: updated }));
-    toast.success(t("toast.membersUpdated"));
-    setOpenModal(false);
+  const handleSaveMembers = async (rows) => {
+    setMembersError("");
+    setUpdateLoading(true);
+    try {
+      // The whole list replaces the current one; removed members drop out (D22a).
+      setData(await updateApprovalGroupMembers(id, toMemberBody(rows)));
+      toast.success(t("toast.membersUpdated"));
+      setOpenModal(false);
+    } catch (err) {
+      // e.g. 409 APPROVAL_GROUP_HAS_PENDING, or the members rules (levels, duplicates…).
+      const fieldMessage = err?.response?.data?.errors?.members;
+      setMembersError(fieldMessage || apiErrorMessage(err, t("toast.updateMembersFailed")));
+    }
+    setUpdateLoading(false);
   };
+
+  // An inactive group can be made active again (D20).
+  const [statusSaving, setStatusSaving] = useState(false);
+  const activate = async () => {
+    setStatusSaving(true);
+    try {
+      setData(await setApprovalGroupStatus(id, "ACTIVE"));
+      toast.success(t("toast.groupActivated"));
+    } catch (err) {
+      toastApiError(err);
+    }
+    setStatusSaving(false);
+  };
+
+  if (error && error?.response?.status !== 404) {
+    return <ScreenError error={error} onRetry={reload} />;
+  }
 
   if (detailLoading && !group) {
     return (
@@ -107,7 +134,7 @@ function ViewApprovalGroup() {
           </Link>
           <MdOutlineChevronRight className="text-gray-300 rtl:rotate-180" />
           <span className="text-cyan-600 font-semibold">
-            {group.group_name || "—"}
+            {group.name || "—"}
           </span>
         </div>
 
@@ -116,19 +143,19 @@ function ViewApprovalGroup() {
           <div>
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
-                {group.group_name}
+                {group.name}
               </h1>
               <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-cyan-50 text-cyan-700 border border-cyan-100">
-                {prettyModule(group.module_key)}
+                {prettyModule(group.module)}
               </span>
-              {!group.is_active && (
+              {group.status === "INACTIVE" && (
                 <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
                   {t("view.inactive")}
                 </span>
               )}
             </div>
             <p className="text-gray-500 mt-1 text-sm">
-              <Ltr>{group.group_code}</Ltr> • {group.total_levels}{" "}
+              <Ltr>{group.code}</Ltr> • {group.total_levels}{" "}
               {group.total_levels === 1
                 ? t("view.levelSingular")
                 : t("view.levelsPlural")}{" "}
@@ -137,7 +164,23 @@ function ViewApprovalGroup() {
             {group.description && (
               <p className="text-gray-500 mt-1 text-sm">{group.description}</p>
             )}
+            {(group.levels_without_active_approver || []).map((n) => (
+              <p key={n} className="mt-1 text-sm font-semibold text-amber-700">
+                {t("view.levelNoApprover", { n })}
+              </p>
+            ))}
           </div>
+          {group.status === "INACTIVE" && (
+            <Can module={MODULES.APPROVAL_GROUP} action={ACTIONS.UPDATE}>
+              <button
+                onClick={activate}
+                disabled={statusSaving}
+                className="flex items-center gap-2 border border-cyan-600 text-cyan-700 hover:bg-cyan-50 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors me-2 disabled:opacity-50"
+              >
+                {t("view.activate")}
+              </button>
+            </Can>
+          )}
           <Can module={MODULES.APPROVAL_GROUP} action={ACTIONS.UPDATE}>
             <button
               onClick={() => setEditOpen(true)}
@@ -230,7 +273,7 @@ function ViewApprovalGroup() {
                             t("view.employeeFallback", { id: m.employee_id })}
                         </p>
                         <span className="text-xs text-gray-400">
-                          {t("view.idLabel")} <Ltr>{m.employee_id}</Ltr>
+                          {t("view.idLabel")} <Ltr>{m.employee_code}</Ltr>
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -275,7 +318,7 @@ function ViewApprovalGroup() {
                           t("view.employeeFallback", { id: m.employee_id })}
                       </p>
                       <span className="text-xs text-gray-400">
-                        {t("view.idLabel")} <Ltr>{m.employee_id}</Ltr>
+                        {t("view.idLabel")} <Ltr>{m.employee_code}</Ltr>
                       </span>
                     </div>
                     <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-cyan-50 text-cyan-700 text-xs font-semibold border border-cyan-100">
@@ -299,22 +342,26 @@ function ViewApprovalGroup() {
         </div>
       </div>
 
+      {openModal && (
       <AddApprovalMembersModal
         isOpen={openModal}
-        onClose={() => setOpenModal(false)}
+        onClose={() => {
+          setOpenModal(false);
+          setMembersError("");
+        }}
         employees={employees}
         existingMembers={members}
         onSave={handleSaveMembers}
         saving={updateLoading}
+        error={membersError}
       />
+      )}
 
       <EditApprovalGroupModal
         isOpen={editOpen}
         onClose={() => setEditOpen(false)}
         group={group}
-        onSaved={(updated) =>
-          updated && setOverrides((prev) => ({ ...prev, [id]: updated }))
-        }
+        onSaved={(updated) => updated && setData(updated)}
       />
     </>
   );

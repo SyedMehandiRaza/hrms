@@ -4,11 +4,10 @@ import {
   MdOutlineDeleteOutline,
   MdOutlineAdd,
 } from "react-icons/md";
-import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
 import CustomDropdown from "./CustomDropdown";
 
-const getEmpId = (e) => e?.id ?? e?._id;
+const getEmpId = (e) => e?.id;
 
 const blankRow = (level) => ({
   id: null,
@@ -18,8 +17,9 @@ const blankRow = (level) => ({
   can_skip: false,
 });
 
+// employees: approver options [{ id, name, employee_code, on_project }]
 // existingMembers: [{ id, employee_id, level_no, is_mandatory, can_skip }]
-// onSave(members) -> members payload for PUT /approval-groups/:id
+// onSave(rows) -> the full new list of members (form rows); error = the server's message
 function AddApprovalMembersModal({
   isOpen,
   onClose,
@@ -27,32 +27,30 @@ function AddApprovalMembersModal({
   existingMembers = [],
   onSave,
   saving = false,
+  error = "",
 }) {
   const { t } = useTranslation("approvals");
-  const [rows, setRows] = useState([]);
-  const [removed, setRemoved] = useState([]); // original member objects that had an id
-
-  useEffect(() => {
-    if (!isOpen) return;
-    document.body.style.overflow = "hidden";
-    setRemoved([]);
-    if (existingMembers.length) {
-      setRows(
-        existingMembers.map((m) => ({
+  // Mounted while open: the rows start from the current members.
+  const [localError, setLocalError] = useState("");
+  const [rows, setRows] = useState(() =>
+    existingMembers.length
+      ? existingMembers.map((m) => ({
           id: m.id ?? null,
           employee_id: m.employee_id ?? "",
           level_no: m.level_no ?? 1,
           is_mandatory: m.is_mandatory ?? true,
           can_skip: m.can_skip ?? false,
         }))
-      );
-    } else {
-      setRows([blankRow(1)]);
-    }
+      : [blankRow(1)]
+  );
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = "";
     };
-  }, [isOpen, existingMembers]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -64,59 +62,38 @@ function AddApprovalMembersModal({
 
   const addRow = () => setRows((prev) => [...prev, blankRow(prev.length + 1)]);
 
-  const removeRow = (index) => {
-    setRows((prev) => {
-      const row = prev[index];
-      if (row?.id) setRemoved((rm) => [...rm, row]);
-      return prev.filter((_, i) => i !== index);
-    });
-  };
+  const removeRow = (index) => setRows((prev) => prev.filter((_, i) => i !== index));
 
+  // The rule texts of docs/standards.md §7.2 ("Approval group" members), shown under the list.
   const validate = () => {
     if (rows.length === 0) {
-      toast.error(t("membersModal.toast.addAtLeastOne"));
+      setLocalError(t("membersModal.toast.addAtLeastOne"));
       return false;
     }
     const seen = new Set();
     for (const r of rows) {
-      if (!r.employee_id || !r.level_no) {
-        toast.error(t("membersModal.toast.employeeLevelRequired"));
+      if (!r.employee_id) {
+        setLocalError(t("createModal.validation.selectEmployee"));
+        return false;
+      }
+      if (!r.level_no) {
+        setLocalError(t("membersModal.toast.employeeLevelRequired"));
         return false;
       }
       if (seen.has(r.employee_id)) {
-        toast.error(
-          t("membersModal.toast.duplicateEmployee")
-        );
+        setLocalError(t("membersModal.toast.duplicateEmployee"));
         return false;
       }
       seen.add(r.employee_id);
     }
+    setLocalError("");
     return true;
   };
 
   const handleSave = () => {
     if (!validate()) return;
-
-    const active = rows.map((r) => ({
-      ...(r.id ? { id: r.id } : {}),
-      employee_id: Number(r.employee_id),
-      level_no: Number(r.level_no),
-      is_mandatory: !!r.is_mandatory,
-      can_skip: !!r.can_skip,
-      is_active: true,
-    }));
-
-    // Deactivate removed (previously-saved) members.
-    const deactivated = removed.map((r) => ({
-      id: r.id,
-      employee_id: Number(r.employee_id),
-      level_no: Number(r.level_no),
-      is_mandatory: !!r.is_mandatory,
-      can_skip: !!r.can_skip,
-      is_active: false,
-    }));
-
-    onSave([...active, ...deactivated]);
+    // The rows are the whole new list; members left out are removed (D22a).
+    onSave(rows);
   };
 
   return (
@@ -161,7 +138,7 @@ function AddApprovalMembersModal({
                     options={[
                       { label: t("membersModal.selectEmployee"), value: "" },
                       ...employees.map((emp) => ({
-                        label: `${emp.full_name}${emp.country_emp_id ? ` (${emp.country_emp_id})` : ""}`,
+                        label: `${emp.name}${emp.employee_code ? ` (${emp.employee_code})` : ""}`,
                         value: getEmpId(emp)
                       }))
                     ]}
@@ -228,6 +205,7 @@ function AddApprovalMembersModal({
             <MdOutlineAdd />
             {t("membersModal.addAnotherMember")}
           </button>
+          {(localError || error) && <p className="text-xs font-medium text-red-500">{localError || error}</p>}
         </div>
 
         {/* Footer */}

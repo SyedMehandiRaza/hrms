@@ -1,51 +1,83 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { MdClose } from "react-icons/md";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import CustomDropdown from "./CustomDropdown";
-import { APPR_MODULES, APPR_PROJECTS, APPR_updateGroup } from "../data/groupD";
+import useApiQuery from "../hooks/useApiQuery";
+import { MODULE_ALL, updateApprovalGroup } from "../api/approvalGroups";
+import { listProjects } from "../api/projects";
+import { applyFieldErrors } from "../utils/applyFieldErrors";
+import { apiErrorCode, apiErrorMessage } from "../utils/apiError";
 
-const prettyModule = (k = "") => k.replace(/[_-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+// API field → form field, so the server's field errors land under the right input.
+const FIELD_MAP = { name: "group_name", code: "group_code", projectId: "project_id", description: "description", moduleKey: "module_key" };
+const CODE_FIELDS = { APPROVAL_GROUP_NAME_TAKEN: "group_name", APPROVAL_GROUP_CODE_TAKEN: "group_code", APPROVAL_GROUP_PROJECT_MISMATCH: "project_id" };
+
 const inputCls = (err) =>
   `w-full h-[42px] border ${err ? "border-red-400" : "border-gray-200"} rounded-lg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500`;
 const labelCls = "block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5";
 
 export default function EditApprovalGroupModal({ isOpen, onClose, group, onSaved }) {
   const { t } = useTranslation("approvals");
-  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm({
-    defaultValues: { group_name: "", group_code: "", module_key: "", scope: "GLOBAL", project_id: "" },
+  const { register, handleSubmit, setValue, control, reset, setError, formState: { errors } } = useForm({
+    defaultValues: { group_name: "", group_code: "", module_key: MODULE_ALL, scope: "GLOBAL", project_id: "" },
   });
-  const modules = APPR_MODULES;
-  const projects = APPR_PROJECTS;
-  const saving = false;
+  // Groups aren't tied to a module yet: the only one is "All requests" (D17).
+  const modules = [MODULE_ALL];
+  const { data: projectData } = useApiQuery(() => (isOpen ? listProjects({ limit: 100, status: "ACTIVE" }) : Promise.resolve(null)), [isOpen]);
+  const projects = projectData?.items || [];
+  const [saving, setSaving] = useState(false);
 
-  const scope = watch("scope");
-  const moduleKey = watch("module_key");
-  const projectId = watch("project_id");
+  const scope = useWatch({ control, name: "scope" });
+  const moduleKey = useWatch({ control, name: "module_key" });
+  const projectId = useWatch({ control, name: "project_id" });
   const isProject = scope === "PROJECT";
 
   useEffect(() => {
     if (!isOpen || !group) return;
     reset({
-      group_name: group.group_name || "",
-      group_code: group.group_code || "",
-      module_key: group.module_key || "",
+      group_name: group.name || "",
+      group_code: group.code || "",
+      module_key: group.module || MODULE_ALL,
       scope: group.scope || "GLOBAL",
-      project_id: group.project_id ? String(group.project_id) : "",
+      project_id: group.project?.id || "",
     });
   }, [isOpen, group, reset]);
 
-  const onSubmit = (data) => {
-    if (data.scope === "PROJECT" && !data.project_id) return toast.error(t("editModal.selectProjectToast"));
+  // The group's own project stays offered even if it's no longer active.
+  const projectOptions = [...projects];
+  if (group?.project && !projectOptions.some((p) => p.id === group.project.id)) projectOptions.unshift(group.project);
+
+  const onSubmit = async (data) => {
+    if (data.scope === "PROJECT" && !data.project_id) {
+      setError("project_id", { type: "required", message: t("createModal.validation.projectRequired") }, { shouldFocus: true });
+      return;
+    }
     const payload = {
-      group_name: data.group_name.trim(),
-      group_code: data.group_code.trim(),
-      module_key: data.module_key,
+      name: data.group_name.trim(),
+      code: data.group_code.trim(),
+      moduleKey: data.module_key || MODULE_ALL,
       scope: data.scope,
-      project_id: data.scope === "PROJECT" ? Number(data.project_id) : null,
+      ...(data.scope === "PROJECT" ? { projectId: data.project_id } : {}),
+      description: group.description ?? null,
     };
-    const updated = APPR_updateGroup(group.id, payload) || { ...group, ...payload };
+    setSaving(true);
+    let updated;
+    try {
+      updated = await updateApprovalGroup(group.id, payload);
+    } catch (err) {
+      setSaving(false);
+      const code = apiErrorCode(err);
+      if (CODE_FIELDS[code]) {
+        setError(CODE_FIELDS[code], { type: "server", message: apiErrorMessage(err) }, { shouldFocus: true });
+        return;
+      }
+      const { mapped } = applyFieldErrors(err, setError, { fieldMap: FIELD_MAP, knownFields: Object.values(FIELD_MAP) });
+      if (!mapped.length) toast.error(apiErrorMessage(err));
+      return;
+    }
+    setSaving(false);
     toast.success(t("editModal.updated"));
     onSaved?.(updated);
     onClose();
@@ -65,12 +97,12 @@ export default function EditApprovalGroupModal({ isOpen, onClose, group, onSaved
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>{t("editModal.groupName")} <span className="text-red-500">*</span></label>
-              <input {...register("group_name", { required: t("editModal.required"), minLength: { value: 2, message: t("editModal.tooShort") } })} className={inputCls(errors.group_name)} />
+              <input {...register("group_name", { required: t("createModal.validation.groupNameRequired"), maxLength: { value: 100, message: t("createModal.validation.max100") }, validate: (v) => v.trim().length >= 2 || t("createModal.validation.min2") })} maxLength={100} className={inputCls(errors.group_name)} />
               {errors.group_name && <p className="text-red-500 text-xs mt-1">{errors.group_name.message}</p>}
             </div>
             <div>
               <label className={labelCls}>{t("editModal.groupCode")} <span className="text-red-500">*</span></label>
-              <input {...register("group_code", { required: t("editModal.required"), minLength: { value: 2, message: t("editModal.tooShort") } })} className={inputCls(errors.group_code)} />
+              <input {...register("group_code", { required: t("createModal.validation.groupCodeRequired"), maxLength: { value: 50, message: t("createModal.validation.max50") }, validate: (v) => v.trim().length >= 2 || t("createModal.validation.min2") })} maxLength={50} className={inputCls(errors.group_code)} />
               {errors.group_code && <p className="text-red-500 text-xs mt-1">{errors.group_code.message}</p>}
             </div>
           </div>
@@ -81,7 +113,7 @@ export default function EditApprovalGroupModal({ isOpen, onClose, group, onSaved
               {...register("module_key", { required: t("editModal.selectModuleRequired") })}
               value={moduleKey}
               error={!!errors.module_key}
-              options={[{ label: t("createModal.selectModule"), value: "" }, ...modules.map((m) => ({ label: prettyModule(m.module || m.key || m), value: m.module || m.key || m }))]}
+              options={modules.map((m) => ({ label: t("allRequests"), value: m }))}
             />
             {errors.module_key && <p className="text-red-500 text-xs mt-1">{errors.module_key.message}</p>}
           </div>
@@ -109,8 +141,9 @@ export default function EditApprovalGroupModal({ isOpen, onClose, group, onSaved
                 {...register("project_id")}
                 value={projectId}
                 error={!!errors.project_id}
-                options={[{ label: t("editModal.selectProject"), value: "" }, ...projects.map((p) => ({ label: `${p.project_name || p.name}${p.project_code ? ` (${p.project_code})` : ""}`, value: String(p.id) }))]}
+                options={[{ label: t("editModal.selectProject"), value: "" }, ...projectOptions.map((p) => ({ label: `${p.name}${p.code ? ` (${p.code})` : ""}`, value: p.id }))]}
               />
+              {errors.project_id && <p className="text-red-500 text-xs mt-1">{errors.project_id.message}</p>}
             </div>
           )}
 
