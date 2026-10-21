@@ -30,6 +30,26 @@
           }
         ]
       }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -n \"$HRMS_UNATTENDED\" ] || powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$CLAUDE_PROJECT_DIR/scripts/notify.ps1\" \"Claude needs your approval or input\" \"HRMS Claude\" >/dev/null 2>&1; exit 0"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -n \"$HRMS_UNATTENDED\" ] || powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$CLAUDE_PROJECT_DIR/scripts/notify.ps1\" \"Claude finished - your turn\" \"HRMS Claude\" >/dev/null 2>&1; exit 0"
+          }
+        ]
+      }
     ]
   }
 }

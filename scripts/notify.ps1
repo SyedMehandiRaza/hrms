@@ -19,8 +19,11 @@ param(
     [string]$Title   = "HRMS Claude"
 )
 
+# fall back to the saved (setx) value so terminals opened before setx still work
 $topic = $env:HRMS_NTFY_TOPIC
+if (-not $topic) { $topic = [Environment]::GetEnvironmentVariable("HRMS_NTFY_TOPIC", "User") }
 $email = $env:HRMS_NOTIFY_EMAIL
+if (-not $email) { $email = [Environment]::GetEnvironmentVariable("HRMS_NOTIFY_EMAIL", "User") }
 
 if (-not $topic) {
     Write-Host "HRMS_NTFY_TOPIC not set - see setup notes at the top of scripts\notify.ps1" -ForegroundColor Yellow

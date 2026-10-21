@@ -54,6 +54,7 @@ function Test-Internet {
 }
 
 Set-Location $repo
+$env:HRMS_UNATTENDED = "1"   # silences the chat Notification/Stop hooks; this script sends its own notes
 $done = 0; $errors = 0; $inLimit = $false
 
 try {
