@@ -323,6 +323,33 @@ describe("GET /api/exits and /api/exits/:id", () => {
     }
   });
 
+  // The Exit list's tabs (D60, ticket workforce#33): Cancelled also shows Rejected, each tab has a
+  // count, and a rejected row shows its reason.
+  it("status takes a comma-separated list; counts per status follow the other filters; rows carry the reasons", async () => {
+    const { ctx, ea, eb, ec } = await seed();
+    await db.EmployeeExit.update({ status: "REJECTED", reject_reason: "Not enough evidence yet" }, { where: { id: ea.id } });
+    await db.EmployeeExit.update({ status: "CANCELLED", cancel_reason: "Changed their mind" }, { where: { id: eb.id } });
+    const list = async (query) => (await api.get("/api/exits", ctx.token, { query })).body.data;
+
+    const tab = await list({ status: "CANCELLED,REJECTED" });
+    expect(tab.items.map((i) => i.id).sort()).toEqual([ea.id, eb.id].sort());
+    expect(tab.total).toBe(2);
+    expect(tab.items.find((i) => i.id === ea.id)).toMatchObject({ status: "REJECTED", reject_reason: "Not enough evidence yet", cancel_reason: null });
+    expect(tab.items.find((i) => i.id === eb.id)).toMatchObject({ status: "CANCELLED", reject_reason: null, cancel_reason: "Changed their mind" });
+
+    // Counts ignore the status filter (one number per tab) but follow the others.
+    const all = { PENDING_APPROVAL: 0, IN_NOTICE: 1, EXITED: 0, COMPLETED: 0, CANCELLED: 1, REJECTED: 1 };
+    expect(tab.counts).toEqual(all);
+    expect((await list({ status: "IN_NOTICE" })).counts).toEqual(all);
+    expect((await list({ type: "RESIGNATION" })).counts).toEqual({ ...all, IN_NOTICE: 0, REJECTED: 0 });
+    expect((await list({ search: "Chand" })).counts).toEqual({ ...all, CANCELLED: 0, REJECTED: 0 });
+    expect((await list({ status: "IN_NOTICE,PENDING_APPROVAL" })).items.map((i) => i.id)).toEqual([ec.id]);
+
+    for (const status of ["CANCELLED,GONE", "IN_NOTICE,", ","]) {
+      expect((await api.get("/api/exits", ctx.token, { query: { status } })).body).toEqual(validationBody({ status: "VALIDATION_FAILED" }));
+    }
+  });
+
   it("detail returns the terms, settlement choices, approval and events; another company's → 404", async () => {
     const { ctx, ea } = await seed();
     const res = await api.get(`/api/exits/${ea.id}`, ctx.token);
@@ -355,6 +382,79 @@ describe("GET /api/exits and /api/exits/:id", () => {
     expect((await api.get(`/api/exits/${ea.id}`, reader)).status).toBe(200);
     const staffing = (await loginFor(ctx.employer, "STAFFING_COMPANY", { exit: { can_read: true } })).token;
     expect((await api.get("/api/exits", staffing)).body).toEqual(errorBody("FORBIDDEN"));
+  });
+});
+
+// The raise-exit wizard's preview (ticket workforce#32; D62 defaults, D65 handover warnings):
+// warnings only, nothing blocks.
+describe("GET /api/employees/:id/exit-preview", () => {
+  const preview = (token, id) => api.get(`/api/employees/${id}/exit-preview`, token);
+
+  it("returns the Exit settings defaults and the handover warnings: groups, pending approvals, departments headed, projects", async () => {
+    const ctx = await employeeSetup();
+    await api.put("/api/exit-settings", ctx.token, { noticeDays: 45, coolingPeriodDays: 90, allowLeaveDuringNotice: false, encashLeave: true, blockLoansDuringNotice: true });
+    const leaver = await add(ctx, { name: "Hana Lead" });
+    // Made before any group exists (afterwards an employee needs one).
+    const noGroup = await add(ctx, { name: "No Group" });
+    const group = await db.ApprovalGroup.create({ employer_id: ctx.employer.id, group_name: "Exits", group_code: "EX", module_key: "ALL", total_levels: 1 });
+    await db.ApprovalGroupMember.create({ approval_group_id: group.id, employee_id: leaver.id, level_no: 1, is_mandatory: true });
+    const old = await db.ApprovalGroup.create({ employer_id: ctx.employer.id, group_name: "Old", group_code: "OLD", module_key: "ALL", total_levels: 1 });
+    await db.ApprovalGroupMember.create({ approval_group_id: old.id, employee_id: leaver.id, level_no: 1, is_mandatory: true, is_active: false });
+    // Two requests wait on Hana's level; a third is someone else's group.
+    for (const name of ["Waiting One", "Waiting Two"]) {
+      const subject = await add(ctx, { name, approvalGroupId: group.id });
+      expect((await raise(ctx.token, subject, termination())).status).toBe(201);
+    }
+    expect((await raise(ctx.token, noGroup, termination())).status).toBe(201);
+    const dept = await db.Department.create({ employer_id: ctx.employer.id, name: "Finance", code: "FIN", dept_head_id: leaver.id });
+
+    const res = await preview(ctx.token, leaver.id);
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({
+      defaults: { noticeStartDate: TODAY, noticeDays: 45, coolingPeriodDays: 90, allowLeaveDuringNotice: false, encashLeave: true },
+      warnings: {
+        approval_groups: [{ id: group.id, name: "Exits" }],
+        pending_approvals: 2,
+        departments_headed: [{ id: dept.id, name: "Finance" }],
+        projects: [{ id: ctx.project.id, name: ctx.project.project_name, code: ctx.project.project_code }],
+      },
+    });
+  });
+
+  it("an employee with nothing to hand over gets empty warnings; the defaults are 30 / 180 before Exit settings are saved", async () => {
+    const ctx = await employeeSetup();
+    const plain = await add(ctx);
+    await db.EmployeeProject.update({ is_active: false }, { where: { employee_id: plain.id } });
+    const res = await preview(ctx.token, plain.id);
+    expect(res.body.data).toEqual({
+      defaults: { noticeStartDate: TODAY, noticeDays: 30, coolingPeriodDays: 180, allowLeaveDuringNotice: false, encashLeave: true },
+      warnings: { approval_groups: [], pending_approvals: 0, departments_headed: [], projects: [] },
+    });
+  });
+
+  it("the employee themselves ('me' or their id) may preview; others need employee:create + update", async () => {
+    const ctx = await employeeSetup();
+    const self = await add(ctx);
+    const token = await loginOf(self.id);
+    expect((await preview(token, "me")).status).toBe(200);
+    expect((await preview(token, self.id)).status).toBe(200);
+    const other = await add(ctx);
+    expect((await preview(token, other.id)).body).toEqual(errorBody("FORBIDDEN"));
+    const hr = await hrOfficer(ctx);
+    expect((await preview(hr.token, other.id)).status).toBe(200);
+    expect((await preview(ctx.token, "me")).body).toEqual(errorBody("FORBIDDEN"));
+    const staffing = (await loginFor(ctx.employer, "STAFFING_COMPANY", BOTH)).token;
+    expect((await preview(staffing, other.id)).body).toEqual(errorBody("FORBIDDEN"));
+    expect((await preview(ctx.token, other.id)).status).toBe(200);
+  });
+
+  it("unknown, malformed or another company's id → 404; no token → 401", async () => {
+    const ctx = await employeeSetup();
+    const theirs = await add(await employeeSetup());
+    for (const id of [MISSING_ID, "nope", theirs.id]) {
+      expect((await preview(ctx.token, id)).body).toEqual(errorBody("NOT_FOUND"));
+    }
+    expect((await api.get(`/api/employees/${MISSING_ID}/exit-preview`)).status).toBe(401);
   });
 });
 

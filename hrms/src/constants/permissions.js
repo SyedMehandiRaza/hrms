@@ -27,7 +27,7 @@ export const MODULES = {
   CONTRACT: "contract",
   DASHBOARD: "dashboard",
   FINANCIAL_YEAR: "financial_year",
-  SHIFT: "shift",
+  EXIT: "exit",
 };
 
 // The /me/permissions response uses these action keys.

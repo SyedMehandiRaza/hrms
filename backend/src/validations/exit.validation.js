@@ -64,10 +64,15 @@ const listExitsSchema = Joi.object({
     "number.unsafe": INVALID,
   }),
   search: Joi.string().trim().max(150).allow("").default("").messages({ "string.base": INVALID, "string.max": INVALID }),
+  // One status or a comma-separated list (the Cancelled tab also shows Rejected, D60) → an array.
   status: Joi.string()
-    .valid(...STATUSES)
     .allow("")
     .default("")
+    .custom((value, helpers) => {
+      if (value === "") return [];
+      const list = value.split(",");
+      return list.every((s) => STATUSES.includes(s)) ? [...new Set(list)] : helpers.error("any.only");
+    })
     .messages({ "string.base": INVALID, "any.only": INVALID }),
   type: Joi.string()
     .valid(...Object.keys(REASONS))
@@ -141,4 +146,4 @@ const rehireSchema = Joi.object({
   staffingCompanyId: clearable,
 });
 
-module.exports = { rehireSchema, raiseExitSchema, editTermsSchema, withdrawExitSchema, confirmImmediateSchema, listExitsSchema, exitSettingsSchema, REASONS };
+module.exports = { rehireSchema, raiseExitSchema, editTermsSchema, withdrawExitSchema, confirmImmediateSchema, listExitsSchema, exitSettingsSchema, REASONS, STATUSES };

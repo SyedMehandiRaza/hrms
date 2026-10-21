@@ -6,6 +6,10 @@ const raiseExit = async (req, res) => {
   res.status(201).json({ success: true, data: await exitService.getExit(req.auth, id) });
 };
 
+const exitPreview = async (req, res) => {
+  res.json({ success: true, data: await exitService.exitPreview(req.auth, req.params.id) });
+};
+
 const withdrawExit = async (req, res) => {
   const id = await exitService.withdrawExit(req.auth, req.params.id, req.body);
   res.json({ success: true, data: await exitService.getExit(req.auth, id) });
@@ -46,4 +50,4 @@ const saveSettings = async (req, res) => {
   res.json({ success: true, data: await exitService.saveSettings(req.auth, req.body) });
 };
 
-module.exports = { raiseExit, withdrawExit, editTerms, cancelExit, confirmImmediate, rehire, listExits, getExit, getSettings, saveSettings };
+module.exports = { exitPreview, raiseExit, withdrawExit, editTerms, cancelExit, confirmImmediate, rehire, listExits, getExit, getSettings, saveSettings };

@@ -52,13 +52,16 @@
     "MISCONDUCT": "Misconduct",
     "REDUNDANCY": "Redundancy / layoff",
     "CONTRACT_END": "Contract end",
-    "OTHER": "Other"
+    "OTHER": "Other",
+    "ABSCONDING": "Absconding"
   },
   "status": {
     "IN_NOTICE": "In notice",
     "EXITED": "Exited",
     "COMPLETED": "Completed",
-    "CANCELLED": "Cancelled"
+    "CANCELLED": "Cancelled",
+    "PENDING_APPROVAL": "Pending approval",
+    "REJECTED": "Rejected"
   },
   "employmentStatus": {
     "ACTIVE": "Active",
@@ -338,22 +341,25 @@
       "estimatedAmount": "Estimated amount",
       "noSalary": "No salary is configured for this employee, so the encashment amount is 0.",
       "notEncashing": "Remaining leave will not be paid out.",
-      "outstandingLoan": "Outstanding loan balance:"
+      "outstandingLoan": "Outstanding loan balance:",
+      "availableAfterPayroll": "Available after Payroll"
     },
     "handover": {
       "title": "Handover before the last working day",
       "approvalGroups": "Approval groups ({{count}}):",
       "pendingApprovals": "Pending approvals awaiting this employee: {{count}}",
       "projects": "Active projects ({{count}}):",
-      "deployments": "Active deployments ({{count}}):"
+      "deployments": "Active deployments ({{count}}):",
+      "departments": "Departments headed ({{count}}):"
     },
     "immediate": "This takes effect immediately — there is no approval step.",
     "submitResignation": "Record resignation",
     "submitTermination": "Record termination",
     "submitting": "Recording…",
     "toast": {
-      "raised": "Exit recorded successfully"
-    }
+      "raised": "Exit submitted for approval"
+    },
+    "submitForApproval": "Submit for approval"
   },
   "employeeDetail": {
     "raiseButton": "Resignation / Termination",
@@ -371,14 +377,16 @@
       "inNotice": "In notice",
       "exited": "Exited (pending)",
       "completed": "Completed / Former employees",
-      "cancelled": "Cancelled"
+      "cancelled": "Cancelled",
+      "pendingApproval": "Pending approval"
     },
     "empty": {
       "inNotice": "No employees are serving notice.",
       "exited": "No exits are pending completion.",
       "completed": "No completed exits yet.",
       "cancelled": "No cancelled exits.",
-      "filtered": "No exits match the selected filters."
+      "filtered": "No exits match the selected filters.",
+      "pendingApproval": "No exits are waiting for approval."
     },
     "filters": {
       "search": "Search",
@@ -404,7 +412,8 @@
     "extendedChip": "+{{days}} extended",
     "paginationLabel": "exits",
     "unknownEmployee": "Unknown employee",
-    "awaitingConfirmation": "Awaiting confirmation"
+    "awaitingConfirmation": "Awaiting confirmation",
+    "rejectReason": "Reason: {{reason}}"
   },
   "detail": {
     "backToList": "Back to exits",

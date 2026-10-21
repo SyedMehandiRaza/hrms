@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 // only the label is translated.
 
 const EXIT_STYLES = {
+  PENDING_APPROVAL: "bg-cyan-50 text-cyan-700 border-cyan-200",
+  REJECTED: "bg-red-50 text-red-600 border-red-200",
   IN_NOTICE: "bg-amber-50 text-amber-700 border-amber-200",
   EXITED: "bg-rose-50 text-rose-700 border-rose-200",
   COMPLETED: "bg-gray-100 text-gray-700 border-gray-200",

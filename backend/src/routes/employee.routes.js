@@ -38,6 +38,8 @@ router.put("/:id/main-project", ...can("update"), validate(mainProjectSchema), e
 // Raise an exit (D66): own resignation for any company login with an employee record (":id" may be
 // "me"); for someone else employee:create + employee:update. Checked by the service.
 router.post("/:id/exits", ...companyLogin, validate(raiseExitSchema), exitController.raiseExit);
+// The raise-exit wizard's defaults and handover warnings (D62, D65); same access as raising.
+router.get("/:id/exit-preview", ...companyLogin, exitController.exitPreview);
 router.post("/:id/resend-login", ...can("update"), employeeController.resendLogin);
 
 module.exports = router;

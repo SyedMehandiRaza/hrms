@@ -6,14 +6,16 @@ import {
   MdOutlineClear,
   MdOutlineInbox,
   MdOutlineLock,
-  MdOutlineEventBusy,
   MdChevronRight,
 } from "react-icons/md";
 
-import { exitCounts, listExits } from "../../data/groupG";
-import useCanManageExits from "../../hooks/useCanManageExits";
+import { listExits } from "../../api/exits";
+import useApiQuery from "../../hooks/useApiQuery";
+import { useCan } from "../../hooks/usePermission";
+import { MODULES } from "../../constants/permissions";
+import { ScreenError } from "../../components/ScreenState";
 import { useFormat } from "../../hooks/useFormat";
-import { EXIT_STATUSES, EXIT_TYPES, REASON_CATEGORIES } from "../../utils/exitValidation";
+import { EXIT_TYPES, REASON_CATEGORIES, diffDays } from "../../utils/exitValidation";
 import useFiscalYear from "../../hooks/useFiscalYear";
 import CustomMonthPicker from "../../components/CustomMonthPicker";
 import { ExitStatusBadge } from "../../components/exits/ExitBadges";
@@ -24,13 +26,20 @@ import Ltr from "../../components/Ltr";
 
 const LIMIT = 10;
 
+// The tabs (D60): Pending approval is new; Cancelled also shows Rejected (labelled as such).
+const TABS = ["PENDING_APPROVAL", "IN_NOTICE", "EXITED", "COMPLETED", "CANCELLED"];
+const TAB_STATUSES = { CANCELLED: ["CANCELLED", "REJECTED"] };
+const statusesOf = (tab) => TAB_STATUSES[tab] || [tab];
+
 const TAB_LABEL = {
+  PENDING_APPROVAL: "list.tabs.pendingApproval",
   IN_NOTICE: "list.tabs.inNotice",
   EXITED: "list.tabs.exited",
   COMPLETED: "list.tabs.completed",
   CANCELLED: "list.tabs.cancelled",
 };
 const EMPTY_LABEL = {
+  PENDING_APPROVAL: "list.empty.pendingApproval",
   IN_NOTICE: "list.empty.inNotice",
   EXITED: "list.empty.exited",
   COMPLETED: "list.empty.completed",
@@ -63,7 +72,7 @@ function NotAllowedState() {
 }
 
 export default function ExitList() {
-  const canManage = useCanManageExits();
+  const canManage = useCan()(MODULES.EXIT, "read");
   if (!canManage) return <NotAllowedState />;
   return <ExitListInner />;
 }
@@ -72,22 +81,18 @@ function ExitListInner() {
   const { t } = useTranslation("exits");
   const navigate = useNavigate();
 
-  // ?status=EXITED&awaiting=1 (e.g. a year-end readiness "Fix" link) opens
-  // that tab (and the awaiting-confirmation filter).
+  // ?status=EXITED (e.g. a year-end readiness "Fix" link) opens that tab.
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState(() => {
     const s = String(searchParams.get("status") || "").toUpperCase();
-    return EXIT_STATUSES.includes(s) ? s : "IN_NOTICE";
+    return TABS.includes(s) ? s : "PENDING_APPROVAL";
   });
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [exitType, setExitType] = useState("");
   const [reason, setReason] = useState("");
   const [month, setMonth] = useState("");
-  const [awaitingOnly, setAwaitingOnly] = useState(() => searchParams.get("awaiting") === "1");
   const [page, setPage] = useState(1);
-
-  const loading = false;
 
   // The header's financial year: the list (?fy, added by the api client) and
   // the LWD-month filter follow it. A new year clears the month filter.
@@ -107,18 +112,17 @@ function ExitListInner() {
     return () => clearTimeout(id);
   }, [search]);
 
-  const counts = exitCounts(EXIT_STATUSES);
-
-  // Client-side filtering / paging of the static exits.
-  const { data: rows, meta } = useMemo(() => {
-    const params = { status: tab, page, limit: LIMIT };
-    if (debounced) params.search = debounced;
-    if (exitType) params.exit_type = exitType;
-    if (reason) params.reason_category = reason;
-    if (month) params.lwd_month = month;
-    if (tab === "EXITED" && awaitingOnly) params.awaiting_confirmation = true;
-    return listExits(params);
-  }, [tab, page, debounced, exitType, reason, month, awaitingOnly]);
+  // GET /exits: the tab's statuses, filters and page; `counts` (per status) give the tab numbers.
+  const { data, loading: fetching, error, reload } = useApiQuery(
+    () => listExits({ page, limit: LIMIT, search: debounced, status: statusesOf(tab).join(","), type: exitType, reason, lwdMonth: month }),
+    [tab, page, debounced, exitType, reason, month],
+  );
+  const loading = fetching && !data;
+  const rows = data?.items || [];
+  const meta = { total: data?.total || 0, totalPages: Math.ceil((data?.total || 0) / LIMIT) };
+  const counts = Object.fromEntries(
+    TABS.map((s) => [s, data?.counts ? statusesOf(s).reduce((n, st) => n + (data.counts[st] || 0), 0) : null]),
+  );
 
   const reasonOptions = useMemo(() => {
     const list = exitType ? REASON_CATEGORIES[exitType] || [] : ALL_REASONS;
@@ -143,14 +147,13 @@ function ExitListInner() {
     setPage(1);
   };
 
-  const hasFilters = !!(search || exitType || reason || month || (tab === "EXITED" && awaitingOnly));
+  const hasFilters = !!(search || exitType || reason || month);
   const clearFilters = () => {
     setSearch("");
     setDebounced("");
     setExitType("");
     setReason("");
     setMonth("");
-    setAwaitingOnly(false);
     setPage(1);
   };
 
@@ -165,7 +168,7 @@ function ExitListInner() {
 
       {/* tabs */}
       <div className="flex items-center gap-1 border-b border-gray-200 overflow-x-auto">
-        {EXIT_STATUSES.map((s) => (
+        {TABS.map((s) => (
           <button
             key={s}
             type="button"
@@ -236,20 +239,6 @@ function ExitListInner() {
               className="w-full h-[42px] min-w-0"
             />
           </div>
-          {tab === "EXITED" && (
-            <label className="flex items-center gap-2 h-[42px] text-sm text-gray-700 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={awaitingOnly}
-                onChange={(e) => {
-                  setAwaitingOnly(e.target.checked);
-                  setPage(1);
-                }}
-                className="accent-cyan-600 w-4 h-4"
-              />
-              {t("list.filters.awaitingOnly")}
-            </label>
-          )}
           <button
             type="button"
             onClick={clearFilters}
@@ -267,6 +256,10 @@ function ExitListInner() {
         <div className="bg-white border border-gray-200 rounded-xl">
           <Loader label={t("common.loading")} />
         </div>
+      ) : error ? (
+        <div className="bg-white border border-gray-200 rounded-xl">
+          <ScreenError error={error} onRetry={reload} />
+        </div>
       ) : rows.length === 0 ? (
         <div className="bg-white border border-dashed border-gray-300 rounded-xl p-10 flex flex-col items-center text-center">
           <div className="w-12 h-12 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center mb-3">
@@ -281,7 +274,7 @@ function ExitListInner() {
             <table className="w-full text-start min-w-[860px]">
               <thead>
                 <tr className="bg-gray-50/50 border-b border-gray-100">
-                  {["employee", "type", "reason", "lwd", "checklist", "status"].map((h) => (
+                  {["employee", "type", "reason", "lwd", "status"].map((h) => (
                     <th key={h} className="px-5 py-3 text-start text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                       {t(`list.columns.${h}`)}
                     </th>
@@ -302,16 +295,13 @@ function ExitListInner() {
                     <td className="px-5 py-3.5 text-sm text-gray-700">{t(`type.${x.exit_type}`)}</td>
                     <td className="px-5 py-3.5 text-sm text-gray-600">{t(`reason.${x.reason_category}`)}</td>
                     <td className="px-5 py-3.5">
-                      <LwdCell exit={x} />
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <ChecklistProgress progress={x.checklist_progress} />
+                      <LwdCell exit={x} today={fy.today} />
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <ExitStatusBadge status={x.status} />
-                        {x.confirmation?.awaiting && <AwaitingChip />}
                       </div>
+                      <RejectReason exit={x} />
                     </td>
                     <td className="px-3 py-3.5 text-gray-300">
                       <MdChevronRight className="text-xl rtl:rotate-180" />
@@ -335,7 +325,6 @@ function ExitListInner() {
                   <EmployeeCell employee={x.employee} />
                   <div className="flex flex-wrap justify-end items-center gap-1.5">
                     <ExitStatusBadge status={x.status} />
-                    {x.confirmation?.awaiting && <AwaitingChip />}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
@@ -345,13 +334,10 @@ function ExitListInner() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{t("list.columns.lwd")}</p>
-                    <LwdCell exit={x} />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{t("list.columns.checklist")}</p>
-                    <ChecklistProgress progress={x.checklist_progress} />
+                    <LwdCell exit={x} today={fy.today} />
                   </div>
                 </div>
+                <RejectReason exit={x} />
               </button>
             ))}
           </div>
@@ -370,19 +356,26 @@ function ExitListInner() {
   );
 }
 
+// A rejected exit shows why (D59).
+function RejectReason({ exit }) {
+  const { t } = useTranslation("exits");
+  if (exit.status !== "REJECTED" || !exit.reject_reason) return null;
+  return <p className="text-xs text-gray-500 mt-1 max-w-xs line-clamp-2">{t("list.rejectReason", { reason: exit.reject_reason })}</p>;
+}
+
 function EmployeeCell({ employee }) {
   const { t } = useTranslation("exits");
-  const name = employee?.full_name || t("list.unknownEmployee");
+  const name = employee?.name || t("list.unknownEmployee");
   return (
     <div className="flex items-center gap-3 min-w-0">
       <div className="w-9 h-9 rounded-full bg-cyan-100 text-cyan-700 text-xs font-bold flex items-center justify-center shrink-0">
-        {initialsOf(employee?.full_name)}
+        {initialsOf(employee?.name)}
       </div>
       <div className="min-w-0">
         <p className="text-sm font-semibold text-gray-900 truncate">{name}</p>
-        {employee?.country_emp_id && (
+        {employee?.employee_code && (
           <p className="text-xs text-gray-400 truncate">
-            <Ltr>{employee.country_emp_id}</Ltr>
+            <Ltr>{employee.employee_code}</Ltr>
           </p>
         )}
       </div>
@@ -390,58 +383,25 @@ function EmployeeCell({ employee }) {
   );
 }
 
-function LwdCell({ exit }) {
+// LWD, with the days left while in notice (company today → LWD).
+function LwdCell({ exit, today }) {
   const { t } = useTranslation("exits");
   const { fmtDate } = useFormat();
-  const n = exit.notice || {};
-  const left = Number(n.days_left);
-  const ext = Number(n.extended_days || 0);
+  const left = diffDays(exit.last_working_day, today);
   return (
     <div className="space-y-1">
-      <p className="text-sm text-gray-800 font-medium">{fmtDate(n.last_working_day)}</p>
+      <p className="text-sm text-gray-800 font-medium">{fmtDate(exit.last_working_day)}</p>
       <div className="flex flex-wrap items-center gap-1.5">
-        {exit.status === "IN_NOTICE" && Number.isFinite(left) && (
+        {exit.status === "IN_NOTICE" && left !== null && (
           <span className={`text-xs ${left <= 7 ? "text-amber-600 font-semibold" : "text-gray-500"}`}>
             {left > 0
               ? t("list.daysLeft", { days: t("common.days", { count: left }) })
               : t("list.lastDayReached")}
           </span>
         )}
-        {ext > 0 && (
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-600 text-[11px] font-semibold">
-            <MdOutlineEventBusy className="text-xs" />
-            {t("list.extendedChip", { days: t("common.days", { count: ext }) })}
-          </span>
-        )}
       </div>
     </div>
   );
 }
 
-function ChecklistProgress({ progress }) {
-  const total = Number(progress?.required_total || 0);
-  const closed = Number(progress?.required_closed || 0);
-  const pct = total > 0 ? Math.round((closed / total) * 100) : 100;
-  const done = total > 0 && closed >= total;
-  return (
-    <div className="w-28">
-      <p className="text-xs font-semibold text-gray-700 mb-1">
-        <Ltr>
-          {closed}/{total}
-        </Ltr>
-      </p>
-      <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-        <div className={`h-full rounded-full ${done ? "bg-emerald-500" : "bg-cyan-500"}`} style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  );
-}
 
-function AwaitingChip() {
-  const { t } = useTranslation("exits");
-  return (
-    <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap">
-      {t("list.awaitingConfirmation")}
-    </span>
-  );
-}

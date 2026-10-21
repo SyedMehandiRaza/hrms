@@ -36,7 +36,6 @@ import { useCurrentUser } from "../hooks/useSession";
 import { INVITATION_COUNTS } from "../data/groupA";
 import { capitalizeFirstLetter } from "../utils/assets";
 import { useCan } from "../hooks/usePermission";
-import { canManageExits } from "../hooks/useCanManageExits";
 import { MODULES } from "../constants/permissions";
 
 const Sidebar = () => {
@@ -47,8 +46,7 @@ const Sidebar = () => {
   const { t } = useTranslation("nav");
   const can = useCan();
   const approvalModules = STATIC_PERMISSION.approvalModules || [];
-  const permission = STATIC_PERMISSION;
-  const showExits = canManageExits(permission);
+  const showExits = can(MODULES.EXIT, "read");
   const inviteCounts = INVITATION_COUNTS;
   const inviteBadge =
     (inviteCounts.received || 0) + (inviteCounts.approvals || 0);

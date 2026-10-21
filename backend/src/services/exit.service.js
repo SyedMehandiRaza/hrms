@@ -1,5 +1,18 @@
 const { Op } = require("sequelize");
-const { sequelize, ApprovalRequest, Employee, User, EmployeeExit, ExitEvent, ExitSetting } = require("../models");
+const {
+  sequelize,
+  ApprovalGroup,
+  ApprovalGroupMember,
+  ApprovalRequest,
+  Department,
+  Employee,
+  EmployeeProject,
+  Project,
+  User,
+  EmployeeExit,
+  ExitEvent,
+  ExitSetting,
+} = require("../models");
 const ErrorHandler = require("../utils/ErrorHandler");
 const { clock, addDays } = require("../utils/clock");
 const { ACCESS_LEVELS } = require("../constants/accessLevels");
@@ -7,7 +20,7 @@ const { UUID, likePattern } = require("./department.service");
 const { companyToday } = require("./companyTime.service");
 const approvals = require("./approval.service");
 const { processExit } = require("./exitProcess.service");
-const { REASONS } = require("../validations/exit.validation");
+const { REASONS, STATUSES } = require("../validations/exit.validation");
 
 // Raising exits, approval outcomes, withdraw, the exit list/detail and Exit settings
 // (docs/plans/workforce-and-lifecycle.md D58, D59, D61, D62, D66, D68).
@@ -111,6 +124,8 @@ const toListItem = (exit) => ({
   notice_start_date: exit.notice_start_date,
   notice_days: exit.notice_days,
   last_working_day: exit.last_working_day,
+  reject_reason: exit.reject_reason ?? null,
+  cancel_reason: exit.cancel_reason ?? null,
   created_at: exit.createdAt,
 });
 
@@ -168,12 +183,12 @@ const getExit = async (auth, id) => {
   return toDetail(exit, events);
 };
 
-// GET /exits?status=&type=&reason=&lwdMonth=&search= (name, Employee ID), newest first.
+// GET /exits?status=&type=&reason=&lwdMonth=&search= (name, Employee ID), newest first. `status`
+// is a list (one or more). `counts`: exits per status with every filter but the status (the tabs).
 const listExits = async (auth, { page, limit, search, status, type, reason, lwdMonth }) => {
   const where = { employer_id: auth.employerId };
   const hidden = await hiddenFrom(auth);
   if (hidden.length) where.id = { [Op.notIn]: hidden };
-  if (status) where.status = status;
   if (type) where.exit_type = type;
   if (reason) where.reason_category = reason;
   if (lwdMonth) {
@@ -184,8 +199,18 @@ const listExits = async (auth, { page, limit, search, status, type, reason, lwdM
   const employeeWhere = search
     ? { [Op.or]: [{ full_name: { [Op.like]: likePattern(search) } }, { employee_code: { [Op.like]: likePattern(search) } }] }
     : undefined;
-  const { count, rows } = await EmployeeExit.findAndCountAll({
+  const employeeInclude = { model: Employee, as: "employee", attributes: [], where: employeeWhere };
+  const perStatus = await EmployeeExit.findAll({
     where,
+    include: [employeeInclude],
+    attributes: ["status", [sequelize.fn("COUNT", sequelize.col("EmployeeExit.id")), "n"]],
+    group: ["EmployeeExit.status"],
+    raw: true,
+  });
+  const counts = Object.fromEntries(STATUSES.map((s) => [s, 0]));
+  perStatus.forEach((r) => (counts[r.status] = Number(r.n)));
+  const { count, rows } = await EmployeeExit.findAndCountAll({
+    where: status && status.length ? { ...where, status: { [Op.in]: status } } : where,
     include: [{ model: Employee, as: "employee", attributes: ["id", "full_name", "employee_code"], where: employeeWhere }],
     order: [
       ["created_at", "DESC"],
@@ -195,7 +220,7 @@ const listExits = async (auth, { page, limit, search, status, type, reason, lwdM
     offset: (page - 1) * limit,
     distinct: true,
   });
-  return { items: rows.map(toListItem), total: count, page, limit };
+  return { items: rows.map(toListItem), total: count, page, limit, counts };
 };
 
 // ---------- POST /employees/:id/exits ----------
@@ -218,6 +243,60 @@ const resolveSubject = async (auth, id, body, transaction) => {
     : null;
   if (!employee) throw new ErrorHandler("NOT_FOUND");
   return { employee, self, own };
+};
+
+// ---------- GET /employees/:id/exit-preview ----------
+
+// What the raise-exit wizard shows before submitting: the Exit settings defaults (D62) and the
+// handover warnings (D65): active approval groups the employee approves in, pending requests still
+// waiting on one of their levels, departments they head, current projects. Warnings never block.
+// Same access as raising: the employee themselves, or employee:create + employee:update.
+const exitPreview = async (auth, id) => {
+  const own = await Employee.findOne({ where: { user_id: auth.userId, employer_id: auth.employerId } });
+  if (id === "me" && !own) throw new ErrorHandler("FORBIDDEN");
+  const subjectId = id === "me" ? own.id : id;
+  const self = Boolean(own && own.id === subjectId);
+  if (!self && !(can(auth, "create") && can(auth, "update"))) throw new ErrorHandler("FORBIDDEN");
+  const employee = UUID.test(String(subjectId)) ? await Employee.findOne({ where: { id: subjectId, employer_id: auth.employerId } }) : null;
+  if (!employee) throw new ErrorHandler("NOT_FOUND");
+
+  const settings = toSettings(await settingsOf(auth.employerId));
+  const memberships = await ApprovalGroupMember.findAll({
+    where: { employee_id: employee.id, is_active: true },
+    include: [{ model: ApprovalGroup, as: "approvalGroup", where: { is_active: true }, attributes: ["id", "group_name"] }],
+  });
+  const groups = [...new Map(memberships.map((m) => [m.approvalGroup.id, m.approvalGroup])).values()].sort((a, b) =>
+    a.group_name.localeCompare(b.group_name)
+  );
+  const pending = memberships.length
+    ? await ApprovalRequest.findAll({
+        where: { employer_id: auth.employerId, approval_group_id: groups.map((g) => g.id), final_status: ["PENDING", "IN_PROGRESS"] },
+        attributes: ["approval_group_id", "current_level"],
+      })
+    : [];
+  const waiting = pending.filter((r) => memberships.some((m) => m.approval_group_id === r.approval_group_id && m.level_no >= r.current_level));
+  const departments = await Department.findAll({ where: { employer_id: auth.employerId, dept_head_id: employee.id }, attributes: ["id", "name"], order: [["name", "ASC"]] });
+  const assignments = await EmployeeProject.findAll({
+    where: { employee_id: employee.id, is_active: true },
+    include: [{ model: Project, as: "project", attributes: ["id", "project_name", "project_code"] }],
+  });
+  return {
+    defaults: {
+      noticeStartDate: await companyToday(auth.employerId),
+      noticeDays: settings.noticeDays,
+      coolingPeriodDays: settings.coolingPeriodDays,
+      allowLeaveDuringNotice: settings.allowLeaveDuringNotice,
+      encashLeave: settings.encashLeave,
+    },
+    warnings: {
+      approval_groups: groups.map((g) => ({ id: g.id, name: g.group_name })),
+      pending_approvals: waiting.length,
+      departments_headed: departments.map((d) => ({ id: d.id, name: d.name })),
+      projects: assignments
+        .map((a) => ({ id: a.project.id, name: a.project.project_name, code: a.project.project_code }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    },
+  };
 };
 
 // LWD bounds (D62): ≥ the notice start, ≤ start + 365, and in the past only for the owner.
@@ -400,4 +479,4 @@ const confirmImmediate = async (auth, id, { reason }) =>
     return exit.id;
   });
 
-module.exports = { raiseExit, withdrawExit, editTerms, cancelExit, confirmImmediate, listExits, getExit, getSettings, saveSettings, findExit, ENTITY, OPEN };
+module.exports = { exitPreview, raiseExit, withdrawExit, editTerms, cancelExit, confirmImmediate, listExits, getExit, getSettings, saveSettings, findExit, ENTITY, OPEN };

@@ -52,13 +52,16 @@
     "MISCONDUCT": "سوء السلوك",
     "REDUNDANCY": "تقليص الوظائف / تسريح",
     "CONTRACT_END": "انتهاء العقد",
-    "OTHER": "أخرى"
+    "OTHER": "أخرى",
+    "ABSCONDING": "التغيب عن العمل"
   },
   "status": {
     "IN_NOTICE": "في فترة الإشعار",
     "EXITED": "انتهت الخدمة",
     "COMPLETED": "مكتمل",
-    "CANCELLED": "ملغى"
+    "CANCELLED": "ملغى",
+    "PENDING_APPROVAL": "بانتظار الموافقة",
+    "REJECTED": "مرفوض"
   },
   "employmentStatus": {
     "ACTIVE": "نشط",
@@ -346,22 +349,25 @@
       "estimatedAmount": "المبلغ التقديري",
       "noSalary": "لم يتم إعداد راتب لهذا الموظف، لذا فإن مبلغ البدل يساوي 0.",
       "notEncashing": "لن يتم صرف بدل الإجازات المتبقية.",
-      "outstandingLoan": "رصيد القرض المستحق:"
+      "outstandingLoan": "رصيد القرض المستحق:",
+      "availableAfterPayroll": "متاح بعد تفعيل الرواتب"
     },
     "handover": {
       "title": "التسليم قبل آخر يوم عمل",
       "approvalGroups": "مجموعات الموافقة ({{count}}):",
       "pendingApprovals": "الموافقات المعلّقة بانتظار هذا الموظف: {{count}}",
       "projects": "المشاريع النشطة ({{count}}):",
-      "deployments": "عمليات الانتداب النشطة ({{count}}):"
+      "deployments": "عمليات الانتداب النشطة ({{count}}):",
+      "departments": "الأقسام التي يرأسها ({{count}}):"
     },
     "immediate": "يسري هذا الإجراء فورًا — لا توجد خطوة موافقة.",
     "submitResignation": "تسجيل الاستقالة",
     "submitTermination": "تسجيل إنهاء الخدمة",
     "submitting": "جارٍ التسجيل…",
     "toast": {
-      "raised": "تم تسجيل إنهاء الخدمة بنجاح"
-    }
+      "raised": "تم إرسال طلب المغادرة للموافقة"
+    },
+    "submitForApproval": "إرسال للموافقة"
   },
   "employeeDetail": {
     "raiseButton": "الاستقالة / إنهاء الخدمة",
@@ -383,14 +389,16 @@
       "inNotice": "في فترة الإشعار",
       "exited": "غادروا (قيد الإنهاء)",
       "completed": "مكتملة / موظفون سابقون",
-      "cancelled": "ملغاة"
+      "cancelled": "ملغاة",
+      "pendingApproval": "بانتظار الموافقة"
     },
     "empty": {
       "inNotice": "لا يوجد موظفون في فترة الإشعار.",
       "exited": "لا توجد حالات إنهاء خدمة بانتظار الإكمال.",
       "completed": "لا توجد حالات إنهاء خدمة مكتملة بعد.",
       "cancelled": "لا توجد حالات إنهاء خدمة ملغاة.",
-      "filtered": "لا توجد حالات تطابق عوامل التصفية المحددة."
+      "filtered": "لا توجد حالات تطابق عوامل التصفية المحددة.",
+      "pendingApproval": "لا توجد طلبات مغادرة بانتظار الموافقة."
     },
     "filters": {
       "search": "بحث",
@@ -416,7 +424,8 @@
     "extendedChip": "+{{days}} تمديد",
     "paginationLabel": "حالات إنهاء الخدمة",
     "unknownEmployee": "موظف غير معروف",
-    "awaitingConfirmation": "بانتظار التأكيد"
+    "awaitingConfirmation": "بانتظار التأكيد",
+    "rejectReason": "السبب: {{reason}}"
   },
   "detail": {
     "backToList": "العودة إلى حالات إنهاء الخدمة",
