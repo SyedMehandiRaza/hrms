@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { MdClose, MdOutlineHistory, MdOutlineEventRepeat } from "react-icons/md";
 import { useTranslation } from "react-i18next";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, useWatch, Controller } from "react-hook-form";
 import { toast } from "react-toastify";
 import CustomDropdown from "./CustomDropdown";
 import FieldError from "./FieldError";
@@ -10,11 +10,12 @@ import Loader, { Spinner } from "./Loader";
 import useFiscalYear from "../hooks/useFiscalYear";
 import { useFormat } from "../hooks/useFormat";
 import { fyLabel, yearKeyFor } from "../utils/fiscalYear";
-import { LS_LEAVE_TYPES, LS_POLICY_VERSIONS } from "../data/groupD";
+import { createLeaveType, createLeaveTypeVersion, updateLeaveType } from "../api/leaveTypes";
+import { applyFieldErrors } from "../utils/applyFieldErrors";
+import { apiErrorCode, apiErrorMessage } from "../utils/apiError";
 import {
   leaveCheck,
   leaveRule,
-  leaveMsg,
   DEFAULT_POLICY_FY,
   LEAVE_LIMITS,
   YEAR_END_EXCESS,
@@ -79,11 +80,32 @@ const Segmented = ({ value, onChange, options, invalid }) => (
 
 const ymd = (v) => (v ? String(v).slice(0, 10) : "");
 
-// Leave type (+ its primary policy) → form values.
+// API field → form field, so the server's field errors land under the right input.
+const FIELD_MAP = {
+  code: "leave_code",
+  is_paid: "paymentType",
+  allow_half_day: "halfDay",
+  requires_document: "requiresDocument",
+  allow_negative_balance: "allowNegativeBalance",
+  allow_carry_forward: "carryForward",
+  max_carry_forward_days: "maxCarryForwardDays",
+  allow_encashment: "encashment",
+  max_encashment_days: "maxEncashmentDays",
+};
+const FORM_FIELDS = [
+  "name", "leave_code", "description", "is_active", "paymentType", "yearly_quota", "monthly_accrual",
+  "carryForward", "maxCarryForwardDays", "encashment", "maxEncashmentDays", "halfDay", "requiresDocument",
+  "allowNegativeBalance", "effective_from", "effective_to", "carry_forward_expiry_months", "year_end_excess",
+  "accrual_method", "prorate_joiners",
+];
+// 409 codes that belong under one input.
+const CODE_FIELDS = { LEAVE_TYPE_NAME_TAKEN: "name", LEAVE_TYPE_CODE_TAKEN: "leave_code" };
+
+// An API item (the type and its one policy, flat) → form values.
 const toForm = (lt, p, fallbackFrom) => ({
-  name: lt?.leave_name || "",
+  name: lt?.name || "",
   description: lt?.description || "",
-  leave_code: lt?.leave_code || "",
+  leave_code: lt?.code || "",
   is_active: lt?.is_active === false ? "0" : "1",
   paymentType: lt?.is_paid === false ? "UNPAID" : "PAID",
   yearly_quota: p?.yearly_quota != null ? String(Number(p.yearly_quota)) : "",
@@ -122,30 +144,26 @@ export default function CreateLeaveTypeModal({
   const { fmtDate } = useFormat();
   const isEditMode = mode === "edit" && !!initialData;
 
-  // Edit: the type + its primary policy (the row carries it; else the static list).
-  const [detail] = useState(() => {
-    if (!isEditMode) return { loaded: true, leaveType: null, policy: null, error: "" };
-    const lt = initialData?.policy
-      ? initialData
-      : LS_LEAVE_TYPES.find((x) => x.id === initialData?.id) || initialData;
-    return { loaded: true, leaveType: lt, policy: lt?.policy || null, error: "" };
-  });
-  const [versions] = useState(() => (detail.policy?.id ? LS_POLICY_VERSIONS[detail.policy.id] || [] : []));
-  const [createdId, setCreatedId] = useState(null); // created, FY rules still to save
-  const saving = false;
+  // Edit: the list row is the API item (the type and its one policy).
+  const detail = isEditMode
+    ? { loaded: true, leaveType: initialData, policy: initialData.policy_id ? { ...initialData, id: initialData.policy_id } : null, error: "" }
+    : { loaded: true, leaveType: null, policy: null, error: "" };
+  // No versioning yet (D30): edits change the one policy in place.
+  const versions = [];
+  const createdId = null;
+  const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
   const [versionFrom, setVersionFrom] = useState("");
   const [versionError, setVersionError] = useState("");
-  const versionSaving = false;
+  const [versionSaving, setVersionSaving] = useState(false);
 
   const {
     register,
     handleSubmit,
     control,
-    watch,
     setValue,
     trigger,
-    getValues,
+    setError,
     formState: { errors },
   } = useForm({
     mode: "onTouched",
@@ -154,8 +172,8 @@ export default function CreateLeaveTypeModal({
       : toForm(null, null, fy.range?.from),
   });
 
-  const carryForward = watch("carryForward");
-  const encashment = watch("encashment");
+  const carryForward = useWatch({ control, name: "carryForward" });
+  const encashment = useWatch({ control, name: "encashment" });
   const policy = detail.policy;
 
   useEffect(() => {
@@ -165,59 +183,50 @@ export default function CreateLeaveTypeModal({
     };
   }, []);
 
-  const buildPolicy = (data, edit) => ({
-    policy_name: `${data.name.trim()} Policy`,
+  // The form → the POST/PUT body (the type and its one policy).
+  const toBody = (data) => ({
+    name: data.name.trim(),
+    code: data.leave_code,
+    description: data.description?.trim() || null,
+    is_paid: data.paymentType === "PAID",
+    allow_half_day: data.halfDay,
+    requires_document: data.requiresDocument,
+    allow_negative_balance: data.allowNegativeBalance,
+    is_active: data.is_active === "1",
     yearly_quota: data.yearly_quota === "" ? 0 : Number(data.yearly_quota),
     monthly_accrual: data.monthly_accrual === "" ? 0 : Number(data.monthly_accrual),
-    accrual_frequency: policy?.accrual_frequency || "MONTHLY",
-    accrual_day: policy?.accrual_day ?? 1,
+    // Empty = the start of the current financial year / no end date.
+    effective_from: data.effective_from || null,
+    effective_to: data.effective_to || null,
     allow_carry_forward: data.carryForward,
     max_carry_forward_days: data.carryForward ? Number(data.maxCarryForwardDays) : 0,
     allow_encashment: data.encashment,
     max_encashment_days: data.encashment ? Number(data.maxEncashmentDays) : 0,
-    allow_negative_balance: data.allowNegativeBalance,
-    ...(data.effective_from ? { effective_from: data.effective_from } : edit ? { effective_from: null } : {}),
-    // empty = no end date: the policy runs on into the next financial years
-    // (a new version from a FY start replaces it)
-    ...(data.effective_to ? { effective_to: data.effective_to } : edit ? { effective_to: null } : {}),
-    is_active: data.is_active === "1",
+    ...fyRules(data),
   });
 
   const onSubmit = async (data) => {
     if (saving) return;
     setFormError("");
-    const typeId = isEditMode ? initialData?.id : createdId;
-    const payload = {
-      leave_name: data.name.trim(),
-      description: data.description?.trim() || null,
-      leave_code: data.leave_code,
-      is_paid: data.paymentType === "PAID",
-      allow_half_day: data.halfDay,
-      requires_document: data.requiresDocument,
-      is_active: data.is_active === "1",
-      policy: buildPolicy(data, !!typeId),
-    };
-
-    // Static build: hand the saved type (list-row fields + policy) back to the page.
-    const lt = toLeaveType(typeId, payload, fyRules(data));
-    if (!typeId) setCreatedId(lt.id);
+    setSaving(true);
+    let saved;
+    try {
+      saved = isEditMode ? await updateLeaveType(initialData.id, toBody(data)) : await createLeaveType(toBody(data));
+    } catch (err) {
+      setSaving(false);
+      const code = apiErrorCode(err);
+      if (CODE_FIELDS[code]) {
+        setError(CODE_FIELDS[code], { type: "server", message: apiErrorMessage(err) }, { shouldFocus: true });
+        return;
+      }
+      const { mapped, unmapped } = applyFieldErrors(err, setError, { fieldMap: FIELD_MAP, knownFields: FORM_FIELDS });
+      if (!mapped.length || unmapped.length) setFormError(unmapped[0] || apiErrorMessage(err));
+      return;
+    }
+    setSaving(false);
     toast.success(isEditMode ? t("toast.leaveTypeUpdated") : t("toast.leaveTypeCreated"));
-    onSuccess?.(lt);
+    onSuccess?.(saved);
     onClose();
-  };
-
-  const toLeaveType = (typeId, payload, rules) => {
-    const pol = { ...(policy || {}), ...payload.policy, ...rules };
-    return {
-      ...(detail.leaveType || {}),
-      ...payload,
-      id: typeId || null,
-      yearly_quota: pol.yearly_quota,
-      allow_carry_forward: pol.allow_carry_forward,
-      max_carry_forward_days: pol.allow_carry_forward ? pol.max_carry_forward_days : null,
-      allow_encashment: pol.allow_encashment,
-      policy: pol,
-    };
   };
 
   // ── New version from a financial-year start ─────────────────────────────
@@ -232,27 +241,19 @@ export default function CreateLeaveTypeModal({
     return y?.label || fyLabel(fy.startMonth, yearKeyFor(fy.startMonth, d));
   };
 
+  // "Save as new version" stays on screen; the server answers that versions aren't available
+  // yet (D30), shown under the button.
   const saveVersion = async () => {
     if (!policy?.id || versionSaving) return;
     setFormError("");
-    const vErr = leaveMsg(t, leaveCheck.versionFrom(versionFrom, null, { years: fy.years, currentFrom }));
-    setVersionError(vErr || "");
-    const ok = await trigger();
-    if (vErr || !ok) return;
-    const d = getValues();
-    const p = buildPolicy(d, true);
-    // The new version (from the chosen FY start) becomes the type's current policy.
-    const lt = {
-      ...(detail.leaveType || initialData),
-      yearly_quota: p.yearly_quota,
-      allow_carry_forward: p.allow_carry_forward,
-      max_carry_forward_days: p.allow_carry_forward ? p.max_carry_forward_days : null,
-      allow_encashment: p.allow_encashment,
-      policy: { ...policy, ...p, ...fyRules(d), effective_from: versionFrom, effective_to: null },
-    };
-    toast.success(t("fy.policy.versionCreated", { label: labelOfDate(versionFrom) }));
-    onSuccess?.(lt);
-    onClose();
+    setVersionError("");
+    setVersionSaving(true);
+    try {
+      await createLeaveTypeVersion(initialData.id);
+    } catch (err) {
+      setVersionError(apiErrorMessage(err));
+    }
+    setVersionSaving(false);
   };
 
   const blockEmoji = (field) => (e) => {
@@ -682,7 +683,7 @@ export default function CreateLeaveTypeModal({
                   <button
                     type="button"
                     onClick={saveVersion}
-                    disabled={busy || !versionYears.length}
+                    disabled={busy}
                     className="flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-cyan-700 border border-cyan-300 bg-white rounded-lg hover:bg-cyan-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                   >
                     {versionSaving && <Spinner size="sm" />}

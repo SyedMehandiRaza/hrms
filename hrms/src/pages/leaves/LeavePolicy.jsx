@@ -25,8 +25,12 @@ import { toast } from "react-toastify";
 import Can from "../../components/Can";
 import { MODULES, ACTIONS } from "../../constants/permissions";
 import CustomDropdown from "../../components/CustomDropdown";
-import { LS_LEAVE_TYPES, LS_CALENDAR_LEAVES, LS_HOLIDAYS } from "../../data/groupD";
-import { paginate, nextId } from "../../data/common";
+import { LS_CALENDAR_LEAVES, LS_HOLIDAYS } from "../../data/groupD";
+import { TableLoader } from "../../components/Loader";
+import { ScreenError } from "../../components/ScreenState";
+import useApiQuery from "../../hooks/useApiQuery";
+import { listLeaveTypes, removeLeaveType } from "../../api/leaveTypes";
+import { toastApiError } from "../../utils/apiError";
 const TypeBadge = ({ type }) => {
   const { t } = useTranslation("leaves");
   return (
@@ -80,10 +84,9 @@ export default function LeavePolicy() {
   // Year-end review: the year being closed (CLOSING), else the current year.
   const closeYearKey =
     fy.years.find((y) => y.status === "CLOSING")?.year_key ?? fy.current?.year_key ?? fy.selected;
-  const [leaveTypes, setLeaveTypes] = useState(LS_LEAVE_TYPES);
-
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState("All");
+  const [deleting, setDeleting] = useState(false);
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [selectedLeave, setSelectedLeave] = useState(null);
@@ -92,31 +95,30 @@ export default function LeavePolicy() {
   const [modalMode, setModalMode] = useState("create"); // "create" or "edit"
   const [selectedLeaveType, setSelectedLeaveType] = useState(null); // For edit mode
 
-  // Status filter + paging (10 per page), client-side on the static list.
-  const filteredTypes = leaveTypes.filter((row) =>
-    sort === "Active" ? row.is_active : sort === "InActive" ? !row.is_active : true,
-  );
-  const { rows: leaveRows, totalPages, total } = paginate(filteredTypes, page, 10);
-
-  const sorted = [...(leaveRows || [])]
-    .filter((row) => row && row.leave_name) // Filter out undefined or invalid rows
-    .sort((a, b) => {
-      // Sort by status: Active (true) first, then InActive (false)
-      if (a.is_active === b.is_active) {
-        return a.leave_name.localeCompare(b.leave_name);
-      }
-      return a.is_active ? -1 : 1;
-    });
+  // Status filter + paging (10 per page) by the server, by name.
+  const status = sort === "Active" ? "ACTIVE" : sort === "InActive" ? "INACTIVE" : "";
+  const { data, loading, error, reload } = useApiQuery(() => listLeaveTypes({ page, limit: 10, status }), [page, status]);
+  const sorted = data?.items || [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / 10));
 
   const openDeleteModal = (id) => {
     setSelectedLeave(id);
     setShowConfirm(true);
   };
 
-  const handleConfirm = () => {
-    setLeaveTypes((prev) => prev.filter((x) => x.id !== selectedLeave));
-    setPage(1);
-    toast.success(t("policy.deleteSuccess"));
+  const handleConfirm = async () => {
+    setDeleting(true);
+    try {
+      await removeLeaveType(selectedLeave);
+      toast.success(t("policy.deleteSuccess"));
+      setPage(1);
+      reload();
+    } catch (err) {
+      // 409 LEAVE_TYPE_IN_USE: "This leave type is assigned to employees and can't be deleted."
+      toastApiError(err);
+    }
+    setDeleting(false);
     setShowConfirm(false);
   };
 
@@ -133,15 +135,8 @@ export default function LeavePolicy() {
     setShowModal(true);
   };
 
-  // The modal hands back the created / updated leave type.
-  const handleModalSuccess = (saved) => {
-    if (!saved) return;
-    setLeaveTypes((prev) =>
-      saved.id && prev.some((x) => x.id === saved.id)
-        ? prev.map((x) => (x.id === saved.id ? { ...x, ...saved } : x))
-        : [...prev, { ...saved, id: nextId(prev) }],
-    );
-  };
+  // The modal saved a leave type: show the list again from the server.
+  const handleModalSuccess = () => reload();
 
   const today = fy.today;
 
@@ -364,7 +359,21 @@ export default function LeavePolicy() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {(
+                {loading ? (
+                  <TableLoader colSpan={8} />
+                ) : error ? (
+                  <tr>
+                    <td colSpan={8} className="px-5 py-6">
+                      <ScreenError error={error} onRetry={reload} />
+                    </td>
+                  </tr>
+                ) : sorted.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-5 py-12 text-center text-sm text-gray-400">
+                      {t("policy.empty")}
+                    </td>
+                  </tr>
+                ) : (
                   sorted.map((row, index) => {
                   return (
                     <tr
@@ -382,7 +391,7 @@ export default function LeavePolicy() {
                             <Icon className={`${row.iconColor} text-base`} />
                           </div> */}
                           <span className="text-sm font-semibold text-gray-900">
-                            {row?.leave_name}
+                            {row?.name}
                           </span>
                         </div>
                       </td>
@@ -433,14 +442,20 @@ export default function LeavePolicy() {
 
           {/* Mobile Cards */}
           <div className="md:hidden divide-y divide-gray-100">
-            {sorted.map((row) => {
+            {loading ? (
+              <div className="px-4 py-12 text-center text-sm text-gray-400">{t("common:ui.loading")}</div>
+            ) : error ? (
+              <div className="p-4">
+                <ScreenError error={error} onRetry={reload} />
+              </div>
+            ) : sorted.map((row) => {
               return (
                 <div key={row.id} className="px-4 py-4 space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <div>
                         <p className="text-sm font-bold text-gray-900">
-                          {row.leave_name}
+                          {row.name}
                         </p>
                         <TypeBadge type={row?.is_paid ? "PAID" : "UNPAID"} />
                       </div>
@@ -637,7 +652,7 @@ export default function LeavePolicy() {
         title={t("policy.confirm.title")}
         message={t("policy.confirm.message")}
         confirmText={t("policy.confirm.confirmText")}
-        isLoading={false}
+        isLoading={deleting}
       />
     </>
   );

@@ -61,7 +61,7 @@ Workforce tickets 03, 04, 13a, 20, 21, 28a are also blocked by geo tickets (show
 ## Workforce structure + Employee lifecycle (`workforce/`)
 
 Plan: `docs/plans/workforce-and-lifecycle.md`. ADRs 0010 (1:1 head office ↔ project), 0011 (one approval group per
-employee). Builds on Auth + Company (all done). Senior review 2026-10-20 applied (plan §8). Frontier now: **24, 25, 26, 27, 33, 35**.
+employee). Builds on Auth + Company (all done). Senior review 2026-10-20 applied (plan §8). Frontier now: **25, 26, 27, 33, 35**.
 
 ### Backend + tests
 
@@ -100,7 +100,7 @@ employee). Builds on Auth + Company (all done). Senior review 2026-10-20 applied
 | 21 | [Projects page, full list, create/edit](workforce/21-ui-projects-list-create.md) | done | 04, geo 05 |
 | 22 | [Project detail + assign / remove](workforce/22-ui-project-detail.md) | ready-for-agent | 21, 05 |
 | 23 | [Shift list + add/edit, week-offs, copy](workforce/23-ui-shifts.md) | done | 06, 07 |
-| 24 | [Leave policy screen](workforce/24-ui-leave-policy.md) | ready-for-agent | 08 |
+| 24 | [Leave policy screen](workforce/24-ui-leave-policy.md) | done | 08 |
 | 25 | [Salary components screen](workforce/25-ui-salary-components.md) | ready-for-agent | 09 |
 | 26 | [Approval groups list, create/edit, view](workforce/26-ui-approval-groups.md) | ready-for-agent | 10 |
 | 27 | [Approvals inbox](workforce/27-ui-approvals-inbox.md) | ready-for-agent | 11a, 16b |

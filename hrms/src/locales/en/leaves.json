@@ -190,7 +190,8 @@
       "COMPANY": "COMPANY",
       "OPTIONAL": "OPTIONAL",
       "WEEKLY_OFF": "WEEKLY_OFF"
-    }
+    },
+    "empty": "No leave types yet."
   },
   "apply": {
     "breadcrumb": "Apply Leave",
