@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
-import useFiscalYear from "../../hooks/useFiscalYear";
-import useFyResetState from "../../hooks/useFyResetState";
 import Pagination from "../../components/Pagination";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   MdOutlineAdd,
@@ -13,13 +11,15 @@ import {
   MdOutlineClear,
 } from "react-icons/md";
 
-import { HRMS_PROJECTS } from "../../data/groupC";
-import { matches, paginate } from "../../data/common";
 import Ltr from "../../components/Ltr";
+import { TableLoader } from "../../components/Loader";
+import { ScreenError } from "../../components/ScreenState";
+import { assetUrl } from "../../api/client";
+import { listProjects } from "../../api/projects";
+import useApiQuery from "../../hooks/useApiQuery";
 import Can from "../../components/Can";
 import EditProjectModal from "../../components/EditProjectModal";
 import CustomDropdown from "../../components/CustomDropdown";
-import ProjectDetail from "./ProjectDetail";
 import { MODULES, ACTIONS } from "../../constants/permissions";
 
 const STATUS_MAP = {
@@ -31,7 +31,7 @@ const STATUS_MAP = {
     labelKey: "status.completed",
     cls: "bg-blue-50 text-blue-700 border border-blue-200",
   },
-  INACTIVE: {
+  ON_HOLD: {
     labelKey: "status.onHold",
     cls: "bg-amber-50 text-amber-700 border border-amber-200",
   },
@@ -41,11 +41,7 @@ const projectInitial = (name) => (name ? name.charAt(0).toUpperCase() : "P");
 
 export default function ProjectList() {
   const { t } = useTranslation("projects");
-  // Static build: projects + the open-project selection live in local state.
-  const [projects, setProjects] = useState(HRMS_PROJECTS);
-  const [selectedProjectId, setSelectedProject] = useState("ALL");
-  const selection = selectedProjectId || "ALL";
-
+  const navigate = useNavigate();
   const [editProject, setEditProject] = useState(null);
 
   // Filters
@@ -53,9 +49,7 @@ export default function ProjectList() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All Projects");
 
-  // Pagination (back to page 1 when the header year changes)
-  const fyVersion = useFiscalYear().version;
-  const [currentPage, setCurrentPage] = useFyResetState(1, fyVersion);
+  const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   // Values stay English (they drive STATUS_TO_ENUM); only the labels translate.
@@ -69,7 +63,7 @@ export default function ProjectList() {
   const STATUS_TO_ENUM = {
     Active: "ACTIVE",
     Completed: "COMPLETED",
-    "On Hold": "INACTIVE",
+    "On Hold": "ON_HOLD",
   };
 
   useEffect(() => {
@@ -80,17 +74,16 @@ export default function ProjectList() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Client-side pagination + filters over the static rows.
-  const pageData = paginate(
-    projects
-      .filter((p) => matches(p, debouncedSearch, ["project_name", "project_code", "project_location"]))
-      .filter((p) => statusFilter === "All Projects" || p.status === STATUS_TO_ENUM[statusFilter]),
-    currentPage,
-    itemsPerPage,
+  // Search (name, code, location) and status are applied by the server.
+  const status = STATUS_TO_ENUM[statusFilter] || "";
+  const { data, loading, error, reload } = useApiQuery(
+    () => listProjects({ page: currentPage, limit: itemsPerPage, search: debouncedSearch, status }),
+    [currentPage, debouncedSearch, status],
   );
-  const currentItems = pageData.rows;
-  const totalPages = pageData.totalPages;
-  const totalItems = pageData.total;
+  const currentItems = data?.items || [];
+  const totalItems = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const openProject = (project) => navigate(`/admin/projects/project-detail/${project.id}`);
 
   const handleClearFilters = () => {
     setSearchQuery("");
@@ -112,15 +105,6 @@ export default function ProjectList() {
       </span>
     );
   };
-
-  if (selection !== "ALL") {
-    return (
-      <ProjectDetail
-        projectId={selection}
-        onBack={() => setSelectedProject("ALL")}
-      />
-    );
-  }
 
   return (
     <>
@@ -239,7 +223,15 @@ export default function ProjectList() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {currentItems.length === 0 ? (
+                {loading ? (
+                  <TableLoader colSpan={6} />
+                ) : error ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-6">
+                      <ScreenError error={error} onRetry={reload} />
+                    </td>
+                  </tr>
+                ) : currentItems.length === 0 ? (
                   <tr>
                     <td
                       colSpan={6}
@@ -256,24 +248,24 @@ export default function ProjectList() {
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          {project.photo_url ? (
+                          {project.photo ? (
                             <img
-                              src={project.photo_url}
+                              src={assetUrl(project.photo)}
                               alt={t("detail.imageAlt")}
                               className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
                             />
                           ) : (
                             <div className="bg-cyan-50 text-cyan-700 w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-sm font-bold">
-                              {projectInitial(project.project_name)}
+                              {projectInitial(project.name)}
                             </div>
                           )}
                           <div>
                             <p className="text-sm font-semibold text-gray-900">
-                              {project.project_name}
+                              {project.name}
                             </p>
                             <p className="text-xs text-gray-400 mt-0.5">
                               {t("table.idPrefix")}{" "}
-                              <Ltr>{project.project_code || project.id}</Ltr>
+                              <Ltr>{project.code}</Ltr>
                             </p>
                           </div>
                         </div>
@@ -281,7 +273,7 @@ export default function ProjectList() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2 text-sm text-gray-700">
                           <span className="text-gray-400">📍</span>{" "}
-                          {project.project_location || "—"}
+                          {project.location || "—"}
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -323,7 +315,7 @@ export default function ProjectList() {
                       </td>
                       <td className="px-6 py-4">
                         <p className="text-sm text-gray-700">
-                          {t("table.contractors", { count: project.contract_count ?? 0 })}
+                          {t("table.contractors", { count: project.contract_employee_count ?? 0 })}
                         </p>
                       </td>
                       <td className="px-6 py-4">
@@ -332,9 +324,7 @@ export default function ProjectList() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() =>
-                              setSelectedProject(String(project.id))
-                            }
+                            onClick={() => openProject(project)}
                             className="p-2 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors"
                           >
                             <MdVisibility className="text-lg" />
@@ -358,7 +348,13 @@ export default function ProjectList() {
 
           {/* Mobile/Tablet Cards */}
           <div className="md:hidden divide-y divide-gray-100">
-            {currentItems.length === 0 ? (
+            {loading ? (
+              <div className="px-4 py-12 text-center text-sm text-gray-400">{t("common:ui.loading")}</div>
+            ) : error ? (
+              <div className="p-4">
+                <ScreenError error={error} onRetry={reload} />
+              </div>
+            ) : currentItems.length === 0 ? (
               <div className="px-4 py-12 text-center text-sm text-gray-400">
                 {t("list.empty")}
               </div>
@@ -370,23 +366,23 @@ export default function ProjectList() {
                 >
                   <div className="flex items-start justify-between gap-3 mb-4">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      {project.photo_url ? (
+                      {project.photo ? (
                         <img
-                          src={project.photo_url}
+                          src={assetUrl(project.photo)}
                           alt={t("detail.imageAlt")}
                           className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
                         />
                       ) : (
                         <div className="bg-cyan-50 text-cyan-700 w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-sm font-bold">
-                          {projectInitial(project.project_name)}
+                          {projectInitial(project.name)}
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-gray-900 truncate">
-                          {project.project_name}
+                          {project.name}
                         </p>
                         <p className="text-xs text-gray-400">
-                          <Ltr>{project.project_code || project.id}</Ltr>
+                          <Ltr>{project.code}</Ltr>
                         </p>
                       </div>
                     </div>
@@ -396,7 +392,7 @@ export default function ProjectList() {
                     <div>
                       <p className="text-gray-400 font-medium mb-1">{t("table.location")}</p>
                       <p className="text-gray-700">
-                        📍 {project.project_location || "—"}
+                        📍 {project.location || "—"}
                       </p>
                     </div>
                     <div>
@@ -410,13 +406,11 @@ export default function ProjectList() {
                   </div>
                   <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                     <p className="text-xs text-gray-500">
-                      {t("table.contractors", { count: project.contract_count ?? 0 })}
+                      {t("table.contractors", { count: project.contract_employee_count ?? 0 })}
                     </p>
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() =>
-                          setSelectedProject(String(project.id))
-                        }
+                        onClick={() => openProject(project)}
                         className="p-1.5 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors"
                       >
                         <MdVisibility className="text-base" />
@@ -454,7 +448,7 @@ export default function ProjectList() {
         <EditProjectModal
           project={editProject}
           onClose={() => setEditProject(null)}
-          onSaved={(saved) => setProjects((prev) => prev.map((p) => (p.id === saved.id ? saved : p)))}
+          onSaved={() => reload()}
         />
       )}
     </>

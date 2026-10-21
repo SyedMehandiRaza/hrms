@@ -8,17 +8,21 @@ import {
   MdOutlineBarChart,
   MdOutlineAdd,
 } from "react-icons/md";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { HRMS_PROJECTS, projectDashboard, projectRowFrom } from "../../data/groupC";
+import { HRMS_PROJECTS, projectDashboard } from "../../data/groupC";
 import Ltr from "../../components/Ltr";
-import ProjectDetail from "./ProjectDetail";
 import AssignedProjects from "./AssignedProjects";
 import WorkforceCard from "./WorkforceCard";
 import Can from "../../components/Can";
 import EditProjectModal from "../../components/EditProjectModal";
 import { MODULES, ACTIONS } from "../../constants/permissions";
 import AttendanceTodayCard from "../../components/AttendanceTodayCard";
+import { TableLoader } from "../../components/Loader";
+import { ScreenError } from "../../components/ScreenState";
+import { assetUrl } from "../../api/client";
+import { listProjects } from "../../api/projects";
+import useApiQuery from "../../hooks/useApiQuery";
 
 const STATUS_MAP = {
   ACTIVE: {
@@ -29,7 +33,7 @@ const STATUS_MAP = {
     labelKey: "status.completed",
     cls: "bg-blue-50 text-blue-700 border border-blue-200",
   },
-  INACTIVE: {
+  ON_HOLD: {
     labelKey: "status.onHold",
     cls: "bg-amber-50 text-amber-700 border border-amber-200",
   },
@@ -120,15 +124,14 @@ const DonutChart = ({ fullTime = 0, contract = 0, totalLabel = "0", totalStaffLa
 // ── Main Component ──
 export default function Projects() {
   const { t } = useTranslation("projects");
-  // Static build: projects live in local state; the selection is local too.
-  const location = useLocation();
-  const [list, setList] = useState(() => {
-    const created = location.state?.createdProject;
-    return created ? [projectRowFrom(created, HRMS_PROJECTS), ...HRMS_PROJECTS] : HRMS_PROJECTS;
-  });
-  const dashboard = projectDashboard(list);
-  const [selectedProjectId, setSelectedProject] = useState("ALL");
-  const selection = selectedProjectId || "ALL";
+  const navigate = useNavigate();
+  // Stats (company-wide) and the latest projects come from the API (D15).
+  const { data, loading, error, reload } = useApiQuery(() => listProjects({ page: 1, limit: 3 }), []);
+  const apiStats = data?.stats;
+  // The workforce distribution and today's attendance cards belong to other modules and still
+  // use their static data.
+  const dashboard = projectDashboard(HRMS_PROJECTS);
+  const openProject = (project) => navigate(`/admin/projects/project-detail/${project.id}`);
 
   const [editProject, setEditProject] = useState(null);
   const [tab, setTab] = useState("mine"); // "mine" = my own projects | "assigned" = projects assigned to me
@@ -137,7 +140,7 @@ export default function Projects() {
     {
       id: 1,
       label: t("stats.totalProject"),
-      value: dashboard?.total_projects ?? "—",
+      value: apiStats?.total_projects ?? "—",
       icon: MdPeople,
       iconBg: "bg-cyan-50",
       iconColor: "text-cyan-600",
@@ -145,7 +148,7 @@ export default function Projects() {
     {
       id: 2,
       label: t("stats.activeProjects"),
-      value: dashboard?.active_projects ?? "—",
+      value: apiStats?.active_projects ?? "—",
       badge: t("status.active"),
       badgeColor: "text-blue-600",
       icon: MdCheckCircle,
@@ -155,7 +158,7 @@ export default function Projects() {
     {
       id: 3,
       label: t("stats.completeProject"),
-      value: dashboard?.completed_projects ?? "—",
+      value: apiStats?.completed_projects ?? "—",
       icon: MdWarningAmber,
       iconBg: "bg-orange-50",
       iconColor: "text-orange-600",
@@ -163,14 +166,14 @@ export default function Projects() {
     {
       id: 4,
       label: t("stats.totalEmployees"),
-      value: dashboard?.total_employees ?? "—",
+      value: apiStats?.total_employees ?? "—",
       icon: MdPeople,
       iconBg: "bg-green-50",
       iconColor: "text-green-600",
     },
   ];
 
-  const latest = (list || []).slice(0, 3);
+  const latest = data?.items || [];
   const ft = dashboard?.distribution?.full_time ?? 0;
   const ct = dashboard?.distribution?.contract ?? 0;
   const denom = ft + ct;
@@ -191,15 +194,6 @@ export default function Projects() {
       </span>
     );
   };
-
-  if (selection !== "ALL") {
-    return (
-      <ProjectDetail
-        projectId={selection}
-        onBack={() => setSelectedProject("ALL")}
-      />
-    );
-  }
 
   return (
     <>
@@ -311,7 +305,7 @@ export default function Projects() {
               <h2 className="text-base sm:text-lg font-bold text-gray-900">
                 {t("latest.title")}
               </h2>
-              {(list || []).length > 3 && (
+              {(data?.total ?? 0) > 3 && (
                 <Link
                   to="/admin/projects/all"
                   className="text-sm font-medium text-cyan-600 hover:text-cyan-700 transition-colors"
@@ -344,7 +338,15 @@ export default function Projects() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {latest.length === 0 ? (
+                  {loading ? (
+                    <TableLoader colSpan={6} />
+                  ) : error ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-6">
+                        <ScreenError error={error} onRetry={reload} />
+                      </td>
+                    </tr>
+                  ) : latest.length === 0 ? (
                     <tr>
                       <td
                         colSpan={6}
@@ -361,27 +363,27 @@ export default function Projects() {
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            {project.photo_url ? (
-                              <img src={project.photo_url} alt={project.project_name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                            {project.photo ? (
+                              <img src={assetUrl(project.photo)} alt={project.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
                             ) : (
                               <div className="bg-cyan-50 text-cyan-700 w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-sm font-bold">
-                                {projectInitial(project.project_name)}
+                                {projectInitial(project.name)}
                               </div>
                             )}
                             <div>
                               <p className="text-sm font-semibold text-gray-900">
-                                {project.project_name}
+                                {project.name}
                               </p>
                               <p className="text-xs text-gray-400">
                                 {t("table.idPrefix")}{" "}
-                                <Ltr>{project.project_code || project.id}</Ltr>
+                                <Ltr>{project.code}</Ltr>
                               </p>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2 text-sm text-gray-700">
-                            📍 {project.project_location || "—"}
+                            📍 {project.location || "—"}
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -391,14 +393,14 @@ export default function Projects() {
                         </td>
                         <td className="px-6 py-4">
                           <p className="text-sm text-gray-700">
-                            {t("table.contractors", { count: project.contract_count ?? 0 })}
+                            {t("table.contractors", { count: project.contract_employee_count ?? 0 })}
                           </p>
                         </td>
                         <td className="px-6 py-4">{renderStatus(project.status)}</td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => setSelectedProject(String(project.id))}
+                              onClick={() => openProject(project)}
                               title={t("tooltips.viewProject")}
                               className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                             >
@@ -423,7 +425,13 @@ export default function Projects() {
 
             {/* Mobile/Tablet Cards */}
             <div className="md:hidden divide-y divide-gray-100">
-              {latest.length === 0 ? (
+              {loading ? (
+                <div className="px-4 py-12 text-center text-sm text-gray-400">{t("common:ui.loading")}</div>
+              ) : error ? (
+                <div className="p-4">
+                  <ScreenError error={error} onRetry={reload} />
+                </div>
+              ) : latest.length === 0 ? (
                 <div className="px-4 py-12 text-center text-sm text-gray-400">
                   {t("latest.empty")}
                 </div>
@@ -432,19 +440,19 @@ export default function Projects() {
                   <div key={project.id} className="p-4 sm:p-5 hover:bg-gray-50 transition-colors">
                     <div className="flex items-start justify-between gap-3 mb-4">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        {project.photo_url ? (
-                          <img src={project.photo_url} alt={project.project_name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                        {project.photo ? (
+                          <img src={assetUrl(project.photo)} alt={project.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
                         ) : (
                           <div className="bg-cyan-50 text-cyan-700 w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-sm font-bold">
-                            {projectInitial(project.project_name)}
+                            {projectInitial(project.name)}
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold text-gray-900 truncate">
-                            {project.project_name}
+                            {project.name}
                           </p>
                           <p className="text-xs text-gray-400">
-                            <Ltr>{project.project_code || project.id}</Ltr>
+                            <Ltr>{project.code}</Ltr>
                           </p>
                         </div>
                       </div> 
@@ -454,7 +462,7 @@ export default function Projects() {
                       <div>
                         <p className="text-gray-400 font-medium mb-1">{t("card.location")}</p>
                         <p className="text-gray-700">
-                          📍 {project.project_location || "—"}
+                          📍 {project.location || "—"}
                         </p>
                       </div>
                       <div>
@@ -466,11 +474,11 @@ export default function Projects() {
                     </div>
                     <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                       <p className="text-xs text-gray-500">
-                        {t("table.contractors", { count: project.contract_count ?? 0 })}
+                        {t("table.contractors", { count: project.contract_employee_count ?? 0 })}
                       </p>
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => setSelectedProject(String(project.id))}
+                          onClick={() => openProject(project)}
                           className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                         >
                           <MdVisibility className="text-base" />
@@ -498,7 +506,7 @@ export default function Projects() {
         <EditProjectModal
           project={editProject}
           onClose={() => setEditProject(null)}
-          onSaved={(saved) => setList((prev) => prev.map((p) => (p.id === saved.id ? saved : p)))}
+          onSaved={() => reload()}
         />
       )}
     </>

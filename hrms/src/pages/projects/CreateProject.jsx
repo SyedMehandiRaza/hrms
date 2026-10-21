@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import {
   MdOutlinePerson,
   MdOutlineError,
@@ -15,10 +15,14 @@ import { toast } from "react-toastify";
 import LocationPickerModal from "../../components/LocationPickerModal";
 import Ltr from "../../components/Ltr";
 import CustomDropdown from "../../components/CustomDropdown";
-import { HEAD_OFFICES, searchCities } from "../../data/groupC";
+import CountrySelect from "../../components/geo/CountrySelect";
+import CitySelect from "../../components/geo/CitySelect";
 import SuccessModal from "../../components/SuccessModal";
-import useFiscalYear from "../../hooks/useFiscalYear";
-import { fyLabel, yearKeyFor } from "../../utils/fiscalYear";
+import { createProject, listOfficeOptions, uploadProjectImage } from "../../api/projects";
+import useApiQuery from "../../hooks/useApiQuery";
+import { useCurrentUser } from "../../hooks/useSession";
+import { applyFieldErrors } from "../../utils/applyFieldErrors";
+import { apiErrorCode, apiErrorMessage, toastApiError } from "../../utils/apiError";
 import {
   PROJECT_NAME_PATTERN,
   PROJECT_NAME_MIN,
@@ -27,10 +31,17 @@ import {
   RADIUS_MIN,
   RADIUS_MAX,
   PROJECT_STATUS_OPTIONS,
+  PROJECT_FIELDS,
+  PROJECT_FIELD_MAP,
+  PROJECT_CODE_FIELDS,
+  PROJECT_OFFICE_FIELDS,
+  PROJECT_LOCATION_FIELDS,
+  isValidProjectImage,
+  toProjectBody,
+  toProjectFormValues,
 } from "../../utils/projectRules";
 
-// The backend stores three statuses; "Planning" and "In Progress" both used
-// to save as ACTIVE, so the form now offers exactly those three.
+// The backend stores three statuses: Active, On Hold, Completed.
 const STATUS_OPTIONS = PROJECT_STATUS_OPTIONS;
 
 const inputBase =
@@ -54,21 +65,6 @@ const FieldErr = ({ error }) =>
     </p>
   ) : null;
 
-const getOfficeId = (o) => o?.id ?? o?._id ?? o?.office_id;
-
-// Form values are the API values; anything unknown falls back to ACTIVE.
-const formStatusToApi = (s) =>
-  ["ACTIVE", "INACTIVE", "COMPLETED"].includes(s) ? s : "ACTIVE";
-
-// The year part is the financial year the project is created in (today, in
-// company time): "FY 2026" → PRJ-FY26-AB12, "FY 2026-27" → PRJ-FY26-27-AB12.
-const generateProjectCode = (fy) => {
-  const yearKey = fy.current?.year_key ?? yearKeyFor(fy.startMonth, fy.today);
-  const label = (fy.current?.label || fyLabel(fy.startMonth, yearKey)).replace(/^FY\s*/, "");
-  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
-  return `PRJ-FY${label.slice(2)}-${rand}`;
-};
-
 const removeEmojis = (e) => {
   const emojiRegex = /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu;
   if (emojiRegex.test(e.target.value)) {
@@ -78,17 +74,17 @@ const removeEmojis = (e) => {
 
 export default function CreateProject() {
   const { t } = useTranslation("projects");
-  const fy = useFiscalYear();
+  const user = useCurrentUser();
   const photoRef = useRef();
   const [photo, setPhoto] = useState(null);
-  const uploading = false;
+  const [photoFile, setPhotoFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  // Static build: the created project is handed to the list via navigation state.
-  const [createdProject, setCreatedProject] = useState(null);
 
   const navigate = useNavigate();
-  const officeList = HEAD_OFFICES;
-  const createLoading = false;
+  // Head offices without a project (D12): each office has at most one project.
+  const { data: officeList = [] } = useApiQuery(() => listOfficeOptions(), []);
 
   // Location state
   const [position, setPosition] = useState(null);
@@ -96,71 +92,79 @@ export default function CreateProject() {
   const [mapModalOpen, setMapModalOpen] = useState(false);
   const [locationError, setLocationError] = useState(false);
 
-  const [cityQuery, setCityQuery] = useState("");
-  // Tracks the actual selected office_id (form input is for display only)
   const [selectedOfficeId, setSelectedOfficeId] = useState(null);
+  // true → "Please select an office"; a string → the server's message for the office.
   const [officeError, setOfficeError] = useState(false);
-  const [selectedCityId, setSelectedCityId] = useState(null);
-
-
-
-  const list = searchCities(cityQuery);
 
   const {
     register,
     handleSubmit,
+    control,
+    setError,
     formState: { errors },
-    watch,
-    setValue,
-  } = useForm({
-    defaultValues: {
-      projectName: "",
-      status: "ACTIVE",
-      allowOffline: true,
-      startDate: "",
-      endDate: "",
-      description: "",
-      radius: "",
-      city: "",
-      officeName: "",
-    },
-  });
+    getValues,
+  } = useForm({ defaultValues: toProjectFormValues(null, user?.company?.country) });
+  const countryId = useWatch({ control, name: "countryId" });
+
+  const onPhotoSelected = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    // Same rule as the server; an invalid file is never kept.
+    if (!isValidProjectImage(file)) {
+      toast.error(t("create.validation.imageInvalid"));
+      return;
+    }
+    setPhotoFile(file);
+    setPhoto(URL.createObjectURL(file));
+  };
 
   const onSubmit = async (data) => {
-    if (!position) {
-      setLocationError(true);
+    // The map point and the office are checked together (both shown at once).
+    setLocationError(!position);
+    setOfficeError(!selectedOfficeId);
+    if (!position || !selectedOfficeId) return;
+
+    setCreateLoading(true);
+    let project;
+    try {
+      project = await createProject(toProjectBody(data, { officeId: selectedOfficeId, position, address }));
+    } catch (err) {
+      setCreateLoading(false);
+      const code = apiErrorCode(err);
+      if (code === "PROJECT_OFFICE_TAKEN") {
+        setOfficeError(apiErrorMessage(err));
+        return;
+      }
+      if (PROJECT_CODE_FIELDS[code]) {
+        setError(PROJECT_CODE_FIELDS[code], { type: "server", message: apiErrorMessage(err) }, { shouldFocus: true });
+        return;
+      }
+      const { mapped, unmapped } = applyFieldErrors(err, setError, {
+        fieldMap: PROJECT_FIELD_MAP,
+        knownFields: [...PROJECT_FIELDS, ...PROJECT_OFFICE_FIELDS, ...PROJECT_LOCATION_FIELDS],
+      });
+      if (mapped.some((f) => PROJECT_OFFICE_FIELDS.includes(f))) setOfficeError(true);
+      if (mapped.some((f) => PROJECT_LOCATION_FIELDS.includes(f))) setLocationError(true);
+      if (!mapped.length || unmapped.length) toastApiError(err, t("create.toast.createFailed"));
       return;
     }
-    if (!selectedOfficeId) {
-      setOfficeError(true);
-      return;
+
+    let photoOk = true;
+    if (photoFile) {
+      setUploading(true);
+      try {
+        await uploadProjectImage(project.id, photoFile);
+      } catch (err) {
+        // The project exists; only the photo failed (it can be added from Edit). Only this toast
+        // shows, so it isn't queued behind the success one (one toast at a time).
+        photoOk = false;
+        toastApiError(err, t("create.toast.uploadFailed"));
+      }
+      setUploading(false);
     }
-    setLocationError(false);
-    setOfficeError(false);
-
-    // Static build: a picked photo is kept as its local preview URL.
-    const photoUrl = photo || null;
-
-    const payload = {
-      project_name: data.projectName.trim(),
-      project_code: generateProjectCode(fy),
-      description: data.description?.trim() || null,
-      project_location: address || null,
-      start_date: data.startDate || null,
-      end_date: data.endDate || null,
-      office_id: selectedOfficeId,
-      city_id: selectedCityId,
-      lat: position.lat,
-      lng: position.lng,
-      radius_meters: Number(data.radius) || null,
-      allow_offline_attendance: !!data.allowOffline,
-      status: formStatusToApi(data.status),
-      photo_url: photoUrl,
-    };
-
-    const office = officeList.find((o) => getOfficeId(o) == selectedOfficeId);
-    setCreatedProject({ ...payload, office, city_name: watch("city") || null });
-    toast.success(t("create.toast.created"));
+    setCreateLoading(false);
+    if (photoOk) toast.success(t("create.toast.created"));
     setSubmitted(true);
   };
 
@@ -176,17 +180,7 @@ export default function CreateProject() {
     setAddress("");
   };
 
-  const currentOfficeOptions = officeList.map((o) => ({ label: o.office_name, value: getOfficeId(o) }));
-  const initialOfficeName = watch("officeName");
-  if (selectedOfficeId && initialOfficeName && !currentOfficeOptions.some((o) => String(o.value) === String(selectedOfficeId))) {
-    currentOfficeOptions.unshift({ label: initialOfficeName, value: selectedOfficeId });
-  }
-
-  const currentCityOptions = list?.map((c) => ({ label: c.city_name, value: c.id })) || [];
-  const initialCityName = watch("city");
-  if (selectedCityId && initialCityName && !currentCityOptions.some((o) => String(o.value) === String(selectedCityId))) {
-    currentCityOptions.unshift({ label: initialCityName, value: selectedCityId });
-  }
+  const currentOfficeOptions = officeList.map((o) => ({ label: o.name, value: o.id }));
 
   return (
     <>
@@ -194,7 +188,7 @@ export default function CreateProject() {
         isOpen={submitted}
         onClose={() => {
           setSubmitted(false);
-          navigate("/admin/projects", { state: { createdProject } });
+          navigate("/admin/projects");
         }}
         title={t("create.successTitle")}
         message={t("create.successMessage")}
@@ -235,7 +229,7 @@ export default function CreateProject() {
 
         {/* Main Card */}
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <form onSubmit={handleSubmit(onSubmit)}>
+          <form onSubmit={handleSubmit(onSubmit)} noValidate>
             {/* ── Photo Section ── */}
             <div className="px-6 py-6 md:px-8 border-b border-gray-100">
               <div className="flex flex-col sm:flex-row gap-5 items-start">
@@ -270,7 +264,10 @@ export default function CreateProject() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setPhoto(null)}
+                      onClick={() => {
+                        setPhoto(null);
+                        setPhotoFile(null);
+                      }}
                       className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
                     >
                       {t("buttons.remove")}
@@ -279,12 +276,9 @@ export default function CreateProject() {
                   <input
                     ref={photoRef}
                     type="file"
-                    accept="image/*"
+                    accept="image/png,image/jpeg"
                     className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) setPhoto(URL.createObjectURL(file));
-                    }}
+                    onChange={onPhotoSelected}
                   />
                 </div>
               </div>
@@ -330,7 +324,7 @@ export default function CreateProject() {
                   />
                   <FieldErr error={errors.projectName} />
                 </div>
-                {/* Office Dropdown — fed from redux office.list */}
+                {/* Office Dropdown — head offices without a project */}
                 <div className="relative">
                   <label className={labelCls}>
                     {t("create.fields.officeName")}
@@ -339,19 +333,17 @@ export default function CreateProject() {
                     value={selectedOfficeId || ""}
                     onChange={(e) => {
                       setSelectedOfficeId(e.target.value);
-                      const selectedOffice = officeList.find((o) => getOfficeId(o) == e.target.value);
-                      setValue("officeName", selectedOffice?.office_name || "");
                       setOfficeError(false);
                     }}
                     options={currentOfficeOptions}
                     isSearchable={true}
-                    error={officeError}
+                    error={!!officeError}
                     placeholder={t("create.fields.officeSearchPlaceholder")}
                   />
                   {officeError && (
                     <p className="flex items-center gap-1 text-xs text-red-500 mt-1.5">
                       <MdOutlineError className="text-sm flex-shrink-0" />
-                      {t("create.fields.selectOfficeError")}
+                      {typeof officeError === "string" ? officeError : t("create.fields.selectOfficeError")}
                     </p>
                   )}
                 </div>
@@ -406,7 +398,7 @@ export default function CreateProject() {
                     </div>
                   )}
 
-                  {locationError && !position && (
+                  {locationError && (
                     <p className="flex items-center gap-1 text-xs text-red-500 mt-1.5">
                       <MdOutlineError className="text-sm flex-shrink-0" />
                       {t("create.fields.selectLocationError")}
@@ -437,12 +429,14 @@ export default function CreateProject() {
                     <CustomDropdown
                       {...register("status")}
                       className={selectCls(errors.status)}
+                      error={!!errors.status}
                       options={STATUS_OPTIONS.map((item) => ({
                         label: t(item.labelKey),
                         value: item.value
                       }))}
                     />
                   </div>
+                  <FieldErr error={errors.status} />
                 </div>
               </div>
 
@@ -474,7 +468,7 @@ export default function CreateProject() {
                     {...register("endDate", {
                       required: t("create.validation.endRequired"),
                       validate: (value) => {
-                        const startDate = watch("startDate");
+                        const startDate = getValues("startDate");
                         if (!startDate) return true;
                         return (
                           new Date(value) >= new Date(startDate) ||
@@ -488,7 +482,7 @@ export default function CreateProject() {
                 </div>
               </div>
 
-              {/* Row 5: Radius + City */}
+              {/* Row 5: Radius + Country, then City (in the chosen country) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {/* Radius */}
                 <div>
@@ -520,25 +514,21 @@ export default function CreateProject() {
                   <FieldErr error={errors.radius} />
                 </div>
 
-                {/* City Dropdown (UI-only, not sent to API) */}
+                {/* Country (approved UI addition) */}
+                <div className="relative">
+                  <label className={labelCls}>{t("create.fields.country")}</label>
+                  <CountrySelect
+                    {...register("countryId", { required: t("common:geo.countryRequired") })}
+                    error={!!errors.countryId}
+                  />
+                  <FieldErr error={errors.countryId} />
+                </div>
+
+                {/* City — that country's cities */}
                 <div className="relative">
                   <label className={labelCls}>{t("create.fields.city")}</label>
-                  <CustomDropdown
-                    value={selectedCityId || ""}
-                    onChange={(e) => {
-                      setSelectedCityId(e.target.value);
-                      const selectedCity = list?.find((c) => c.id == e.target.value);
-                      setValue("city", selectedCity?.city_name || "");
-                    }}
-                    onSearchChange={(val) => {
-                      setCityQuery(val);
-                    }}
-                    options={currentCityOptions}
-                    isSearchable={true}
-                    error={!!errors.city}
-                    placeholder={t("create.fields.citySearchPlaceholder")}
-                  />
-                  <FieldErr error={errors.city} />
+                  <CitySelect {...register("cityId")} countryId={countryId} error={!!errors.cityId} />
+                  <FieldErr error={errors.cityId} />
                 </div>
               </div>
 

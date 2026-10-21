@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import {
   MdClose,
   MdOutlineError,
@@ -9,10 +9,17 @@ import {
 import { useTranslation } from "react-i18next";
 import OfflineAttendanceToggle from "./projects/OfflineAttendanceToggle";
 import { toast } from "react-toastify";
-import { HEAD_OFFICES, PROJECT_CITIES, searchCities } from "../data/groupC";
 import LocationPickerModal from "./LocationPickerModal";
 import Ltr from "./Ltr";
 import CustomDropdown from "./CustomDropdown";
+import CountrySelect from "./geo/CountrySelect";
+import CitySelect from "./geo/CitySelect";
+import { assetUrl } from "../api/client";
+import { listOfficeOptions, removeProjectImage, updateProject, uploadProjectImage } from "../api/projects";
+import useApiQuery from "../hooks/useApiQuery";
+import { useCurrentUser } from "../hooks/useSession";
+import { applyFieldErrors } from "../utils/applyFieldErrors";
+import { apiErrorCode, apiErrorMessage, toastApiError } from "../utils/apiError";
 import {
   PROJECT_NAME_PATTERN,
   PROJECT_NAME_MIN,
@@ -21,10 +28,17 @@ import {
   RADIUS_MIN,
   RADIUS_MAX,
   PROJECT_STATUS_OPTIONS,
+  PROJECT_FIELDS,
+  PROJECT_FIELD_MAP,
+  PROJECT_CODE_FIELDS,
+  PROJECT_OFFICE_FIELDS,
+  PROJECT_LOCATION_FIELDS,
+  isValidProjectImage,
+  toProjectBody,
+  toProjectFormValues,
 } from "../utils/projectRules";
 
-// The backend stores three statuses; "Planning" and "In Progress" both used
-// to save as ACTIVE, so the form now offers exactly those three.
+// The backend stores three statuses: Active, On Hold, Completed.
 const STATUS_OPTIONS = PROJECT_STATUS_OPTIONS;
 
 const inputBase =
@@ -44,14 +58,6 @@ const FieldErr = ({ error }) =>
     </p>
   ) : null;
 
-const getOfficeId = (o) => o?.id ?? o?._id ?? o?.office_id;
-const getProjectId = (p) => p?.id ?? p?._id ?? p?.project_id;
-
-// Form values are the API values now; anything unknown falls back to ACTIVE.
-const apiStatusToForm = (s) =>
-  ["ACTIVE", "INACTIVE", "COMPLETED"].includes(s) ? s : "ACTIVE";
-const formStatusToApi = apiStatusToForm;
-
 const removeEmojis = (e) => {
   const emojiRegex = /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu;
   if (emojiRegex.test(e.target.value)) {
@@ -59,74 +65,42 @@ const removeEmojis = (e) => {
   }
 };
 
+// `project` is an API item (api/projects.js); onSaved gets the saved item. The modal is mounted
+// for one project at a time, so its state starts from that project.
 export default function EditProjectModal({ project, onClose, onSaved }) {
   const { t } = useTranslation("projects");
+  const user = useCurrentUser();
   const photoRef = useRef();
-  const [photo, setPhoto] = useState(null);
-  const uploading = false;
+  const [photo, setPhoto] = useState(() => assetUrl(project?.photo) || null);
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoRemoved, setPhotoRemoved] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [updateLoading, setUpdateLoading] = useState(false);
 
-  const updateLoading = false;
-  const officeList = HEAD_OFFICES;
+  // Head offices without a project, plus this project's own office (D12).
+  const { data: officeList = [] } = useApiQuery(() => listOfficeOptions(project?.id), [project?.id]);
 
-  const [position, setPosition] = useState(null);
-  const [address, setAddress] = useState("");
+  const [position, setPosition] = useState(() =>
+    project?.latitude != null && project?.longitude != null ? { lat: project.latitude, lng: project.longitude } : null
+  );
+  const [address, setAddress] = useState(() => project?.location || "");
   const [mapModalOpen, setMapModalOpen] = useState(false);
-  const [, setLocationError] = useState(false);
+  const [locationError, setLocationError] = useState(false);
 
-  const [cityQuery, setCityQuery] = useState("");
-
-  const [selectedOfficeId, setSelectedOfficeId] = useState(null);
+  const [selectedOfficeId, setSelectedOfficeId] = useState(() => project?.office?.id || null);
+  // true → "Please select an office"; a string → the server's message for the office.
   const [officeError, setOfficeError] = useState(false);
-  const [selectedCityId, setSelectedCityId] = useState(null);
-
-  const cityList = searchCities(cityQuery);
 
   const {
     register,
     handleSubmit,
+    control,
+    setError,
     formState: { errors },
-    reset,
-    watch,
-    setValue,
-  } = useForm({
-    defaultValues: {
-      projectName: "",
-      status: "ACTIVE",
-      allowOffline: true,
-      startDate: "",
-      endDate: "",
-      description: "",
-      radius: "",
-      city: "",
-      officeName: "",
-    },
-  });
-
-  useEffect(() => {
-    if (project) {
-      reset({
-        projectName: project.project_name || "",
-        status: apiStatusToForm(project.status),
-        startDate: project.start_date ? project.start_date.split("T")[0] : "",
-        endDate: project.end_date ? project.end_date.split("T")[0] : "",
-        radius: project.radius_meters || "",
-        allowOffline: project.allow_offline_attendance !== false,
-        description: project.description || "",
-        officeName: project.office?.office_name || "",
-        city: project.city?.city_name || project.city_name || "",
-      });
-      setPhoto(project.photo_url || null);
-      if (project.lat && project.lng) {
-        setPosition({ lat: project.lat, lng: project.lng });
-      } else {
-        setPosition(null);
-      }
-      setAddress(project.project_location || "");
-      setSelectedOfficeId(project.office_id || getOfficeId(project.office) || null);
-      setSelectedCityId(project.city?.id || project.city_id || null);
-      setCityQuery(project.city?.city_name || project.city_name || "");
-    }
-  }, [project, reset]);
+    getValues,
+  } = useForm({ defaultValues: toProjectFormValues(project, user?.company?.country) });
+  const countryId = useWatch({ control, name: "countryId" });
+  const cityId = useWatch({ control, name: "cityId" });
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -135,48 +109,70 @@ export default function EditProjectModal({ project, onClose, onSaved }) {
     };
   }, []);
 
+  const onPhotoSelected = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    // Same rule as the server; an invalid file is never kept.
+    if (!isValidProjectImage(file)) {
+      toast.error(t("create.validation.imageInvalid"));
+      return;
+    }
+    setPhotoFile(file);
+    setPhotoRemoved(false);
+    setPhoto(URL.createObjectURL(file));
+  };
+
   const onSubmit = async (data) => {
-    // Location editing is disabled, so we don't require it on update if it's not set.
+    // The map point and the office are checked together (both shown at once).
+    setLocationError(!position);
+    setOfficeError(!selectedOfficeId);
+    if (!position || !selectedOfficeId) return;
 
-    if (!selectedOfficeId) {
-      setOfficeError(true);
+    setUpdateLoading(true);
+    let saved;
+    try {
+      saved = await updateProject(project.id, toProjectBody(data, { officeId: selectedOfficeId, position, address }));
+    } catch (err) {
+      setUpdateLoading(false);
+      const code = apiErrorCode(err);
+      if (code === "PROJECT_OFFICE_TAKEN") {
+        setOfficeError(apiErrorMessage(err));
+        return;
+      }
+      if (PROJECT_CODE_FIELDS[code]) {
+        setError(PROJECT_CODE_FIELDS[code], { type: "server", message: apiErrorMessage(err) }, { shouldFocus: true });
+        return;
+      }
+      const { mapped, unmapped } = applyFieldErrors(err, setError, {
+        fieldMap: PROJECT_FIELD_MAP,
+        knownFields: [...PROJECT_FIELDS, ...PROJECT_OFFICE_FIELDS, ...PROJECT_LOCATION_FIELDS],
+      });
+      if (mapped.some((f) => PROJECT_OFFICE_FIELDS.includes(f))) setOfficeError(true);
+      if (mapped.some((f) => PROJECT_LOCATION_FIELDS.includes(f))) setLocationError(true);
+      if (!mapped.length || unmapped.length) toastApiError(err, t("edit.toast.updateFailed"));
       return;
     }
-    setLocationError(false);
-    setOfficeError(false);
 
-    const id = getProjectId(project);
-    if (!id) {
-      toast.error(t("edit.toast.missingId"));
-      return;
+    // The photo is saved separately; the project itself is already saved. Only one toast shows
+    // (one at a time), so a photo error replaces the success one.
+    let photoOk = true;
+    try {
+      if (photoFile) {
+        setUploading(true);
+        saved = await uploadProjectImage(project.id, photoFile);
+      } else if (photoRemoved && project.photo) {
+        setUploading(true);
+        saved = await removeProjectImage(project.id);
+      }
+    } catch (err) {
+      photoOk = false;
+      toastApiError(err, t("edit.toast.uploadPhotoFailed"));
     }
-
-    // Static build: a new photo is kept as its local preview URL.
-    const photoUrl = photo || null;
-
-    const payload = {
-      project_name: data.projectName.trim(),
-      description: data.description?.trim() || null,
-      start_date: data.startDate || null,
-      end_date: data.endDate || null,
-      office_id: selectedOfficeId,
-      city_id: selectedCityId,
-      radius_meters: Number(data.radius) || null,
-      allow_offline_attendance: !!data.allowOffline,
-      status: formStatusToApi(data.status),
-      photo_url: photoUrl,
-    };
-
-    const office = officeList.find((o) => String(getOfficeId(o)) === String(selectedOfficeId));
-    const city = PROJECT_CITIES.find((c) => String(c.id) === String(selectedCityId));
-    toast.success(t("edit.toast.updated"));
-    onSaved?.({
-      ...project,
-      ...payload,
-      office: office || project.office,
-      city: city || project.city,
-      city_name: city?.city_name || project.city_name,
-    });
+    setUploading(false);
+    setUpdateLoading(false);
+    if (photoOk) toast.success(t("edit.toast.updated"));
+    onSaved?.(saved);
     onClose();
   };
 
@@ -192,17 +188,7 @@ export default function EditProjectModal({ project, onClose, onSaved }) {
 
   if (!project) return null;
 
-  const initialOfficeName = watch("officeName");
-  const currentOfficeOptions = officeList.map((o) => ({ label: o.office_name, value: getOfficeId(o) }));
-  if (selectedOfficeId && initialOfficeName && !currentOfficeOptions.some((o) => String(o.value) === String(selectedOfficeId))) {
-    currentOfficeOptions.unshift({ label: initialOfficeName, value: selectedOfficeId });
-  }
-
-  const initialCityName = watch("city");
-  const currentCityOptions = cityList?.map((c) => ({ label: c.city_name, value: c.id })) || [];
-  if (selectedCityId && initialCityName && !currentCityOptions.some((o) => String(o.value) === String(selectedCityId))) {
-    currentCityOptions.unshift({ label: initialCityName, value: selectedCityId });
-  }
+  const currentOfficeOptions = officeList.map((o) => ({ label: o.name, value: o.id }));
 
   return (
     <>
@@ -240,7 +226,7 @@ export default function EditProjectModal({ project, onClose, onSaved }) {
           <hr className="border-gray-100 flex-shrink-0" />
 
           {/* Form */}
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+          <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col flex-1 min-h-0">
             <div
               className="flex-1 overflow-y-auto px-6 py-6 space-y-6 modal-body"
             >
@@ -273,6 +259,8 @@ export default function EditProjectModal({ project, onClose, onSaved }) {
                         type="button"
                         onClick={() => {
                           setPhoto(null);
+                          setPhotoFile(null);
+                          setPhotoRemoved(true);
                           if (photoRef.current) photoRef.current.value = "";
                         }}
                         className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
@@ -284,12 +272,9 @@ export default function EditProjectModal({ project, onClose, onSaved }) {
                   <input
                     ref={photoRef}
                     type="file"
-                    accept="image/*"
+                    accept="image/png,image/jpeg"
                     className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) setPhoto(URL.createObjectURL(file));
-                    }}
+                    onChange={onPhotoSelected}
                   />
                 </div>
               </div>
@@ -331,19 +316,17 @@ export default function EditProjectModal({ project, onClose, onSaved }) {
                     value={selectedOfficeId || ""}
                     onChange={(e) => {
                       setSelectedOfficeId(e.target.value);
-                      const selectedOffice = officeList.find((o) => getOfficeId(o) == e.target.value);
-                      setValue("officeName", selectedOffice?.office_name || "");
                       setOfficeError(false);
                     }}
                     options={currentOfficeOptions}
                     isSearchable={true}
-                    error={officeError}
+                    error={!!officeError}
                     placeholder={t("create.fields.officeSearchPlaceholder")}
                   />
                   {officeError && (
                     <p className="flex items-center gap-1 text-xs text-red-500 mt-1.5">
                       <MdOutlineError className="text-sm flex-shrink-0" />
-                      {t("create.fields.selectOfficeError")}
+                      {typeof officeError === "string" ? officeError : t("create.fields.selectOfficeError")}
                     </p>
                   )}
                 </div>
@@ -378,6 +361,13 @@ export default function EditProjectModal({ project, onClose, onSaved }) {
                     </div>
                   )}
 
+                  {locationError && (
+                    <p className="flex items-center gap-1 text-xs text-red-500 mt-1.5">
+                      <MdOutlineError className="text-sm flex-shrink-0" />
+                      {t("create.fields.selectLocationError")}
+                    </p>
+                  )}
+
                   {/* Coordinates pill shown below when selected (read-only) */}
                   {position && (
                     <p className="text-[10px] text-gray-400 mt-1.5 font-medium">
@@ -397,6 +387,7 @@ export default function EditProjectModal({ project, onClose, onSaved }) {
                       value: item.value
                     }))}
                   />
+                  <FieldErr error={errors.status} />
                 </div>
               </div>
 
@@ -417,7 +408,7 @@ export default function EditProjectModal({ project, onClose, onSaved }) {
                     {...register("endDate", {
                       required: t("edit.validation.endDateRequired"),
                       validate: (value) => {
-                        const startDate = watch("startDate");
+                        const startDate = getValues("startDate");
                         if (!startDate) return true;
                         return new Date(value) >= new Date(startDate) || t("edit.validation.endAfterStart");
                       },
@@ -428,7 +419,7 @@ export default function EditProjectModal({ project, onClose, onSaved }) {
                 </div>
               </div>
 
-              {/* Row 4: Radius + City */}
+              {/* Row 4: Radius + Country, then City (in the chosen country) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className={labelCls}>{t("create.fields.radius")}</label>
@@ -451,24 +442,26 @@ export default function EditProjectModal({ project, onClose, onSaved }) {
                   <FieldErr error={errors.radius} />
                 </div>
 
+                {/* Country (approved UI addition) */}
+                <div className="relative">
+                  <label className={labelCls}>{t("create.fields.country")}</label>
+                  <CountrySelect
+                    {...register("countryId", { required: t("common:geo.countryRequired") })}
+                    error={!!errors.countryId}
+                  />
+                  <FieldErr error={errors.countryId} />
+                </div>
+
                 <div className="relative">
                   <label className={labelCls}>{t("create.fields.city")}</label>
-                  <CustomDropdown
-                    value={selectedCityId || ""}
-                    onChange={(e) => {
-                      setSelectedCityId(e.target.value);
-                      const selectedCity = cityList?.find((c) => c.id == e.target.value);
-                      setValue("city", selectedCity?.city_name || "");
-                    }}
-                    onSearchChange={(val) => {
-                      setCityQuery(val);
-                    }}
-                    options={currentCityOptions}
-                    isSearchable={true}
-                    error={!!errors.city}
-                    placeholder={t("create.fields.citySearchPlaceholder")}
+                  <CitySelect
+                    {...register("cityId")}
+                    countryId={countryId}
+                    // The saved city shows only while it's still the chosen one.
+                    selected={cityId && cityId === project.city?.id ? project.city : null}
+                    error={!!errors.cityId}
                   />
-                  <FieldErr error={errors.city} />
+                  <FieldErr error={errors.cityId} />
                 </div>
               </div>
 

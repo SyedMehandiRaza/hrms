@@ -175,7 +175,8 @@
       "city": "City",
       "citySearchPlaceholder": "Search city...",
       "projectDescription": "Project Description",
-      "descriptionPlaceholder": "Outline the primary objectives, deliverables, and resource requirements..."
+      "descriptionPlaceholder": "Outline the primary objectives, deliverables, and resource requirements...",
+      "country": "Country"
     },
     "toast": {
       "uploadFailed": "Failed to upload photo",
@@ -202,7 +203,8 @@
       "max500": "Maximum 500 characters allowed",
       "invalidChars": "Invalid characters used",
       "min2": "At least 2 characters required",
-      "radiusMax": "Radius cannot exceed 100,000 meters"
+      "radiusMax": "Radius cannot exceed 100,000 meters",
+      "imageInvalid": "Image must be a JPG or PNG up to 2 MB."
     }
   },
   "edit": {
