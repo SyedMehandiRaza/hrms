@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
 import {
@@ -8,19 +8,22 @@ import {
   MdOutlineChevronRight,
   MdOutlineInfo,
 } from "react-icons/md";
-import { getShiftById, saveShift } from "../../data/groupC";
 import FieldError from "../../components/FieldError";
 import Ltr from "../../components/Ltr";
+import Loader from "../../components/Loader";
+import { ScreenError } from "../../components/ScreenState";
 import YearStatusBadge from "../../components/fiscalYear/YearStatusBadge";
-import useFiscalYear from "../../hooks/useFiscalYear";
-import useYearLock from "../../hooks/useYearLock";
 import { useFormat } from "../../hooks/useFormat";
-import { fyLabel, monthsOfFy, yearKeyFor } from "../../utils/fiscalYear";
-import { shiftNameRules, shiftEffectiveFromRule } from "../../utils/fyValidation/ops-time";
+import useApiQuery from "../../hooks/useApiQuery";
+import { createShift, getShift, getWeekOffs, listWeekOffYears, saveWeekOffs, updateShift } from "../../api/shifts";
+import { applyFieldErrors } from "../../utils/applyFieldErrors";
+import { apiErrorCode, apiErrorMessage, toastApiError } from "../../utils/apiError";
+import { shiftNameRules } from "../../utils/fyValidation/ops-time";
 
 // "HH:mm" and "HH:mm:ss" compare equal.
 const hms = (v) => (v ? (String(v).length === 5 ? `${v}:00` : String(v)) : "");
 const fmtTimeShort = (v) => (v ? String(v).slice(0, 5) : "—");
+const hhmm = (v) => (v ? String(v).slice(0, 5) : "");
 
 const MONTHS = [
   "january", "february", "march", "april", "may", "june",
@@ -33,27 +36,63 @@ const pad = (n) => String(n).padStart(2, "0");
 const daysIn = (year, month) => new Date(year, month, 0).getDate(); // month 1–12
 const weekdayOf = (year, month, day) => new Date(year, month - 1, day).getDay();
 
+// The months of a financial year row, in order: [{ year, month, value: "YYYY-MM" }].
+const monthsOf = (fy) => {
+  if (!fy) return [];
+  const out = [];
+  let [year, month] = fy.start_date.split("-").map(Number);
+  const last = fy.end_date.slice(0, 7);
+  while (`${year}-${pad(month)}` <= last) {
+    out.push({ year, month, value: `${year}-${pad(month)}` });
+    month += 1;
+    if (month > 12) {
+      month = 1;
+      year += 1;
+    }
+  }
+  return out;
+};
+
+const SHIFT_FIELDS = ["name", "start_time", "end_time", "effective_from"];
+
+// /admin/shift-management/add-shift and /edit/:id: loads the company's years (and the shift),
+// then shows the form.
 export default function AddShift() {
   const { t } = useTranslation("settings");
-  const navigate = useNavigate();
   const { id } = useParams();
-  const isEdit = !!id;
-  const fy = useFiscalYear();
-  const lock = useYearLock();
+  const years = useApiQuery(() => listWeekOffYears(), []);
+  const shift = useApiQuery(() => (id ? getShift(id) : Promise.resolve(null)), [id]);
+
+  if (years.loading || shift.loading) return <Loader label={t("common:ui.loading")} />;
+  if (years.error || shift.error) {
+    return (
+      <ScreenError
+        error={years.error || shift.error}
+        onRetry={() => {
+          years.reload();
+          shift.reload();
+        }}
+      />
+    );
+  }
+  return <ShiftForm key={id || "new"} shift={shift.data} yearData={years.data} />;
+}
+
+function ShiftForm({ shift: loadedShift, yearData }) {
+  const { t } = useTranslation("settings");
+  const navigate = useNavigate();
+  const isEdit = !!loadedShift;
   const { fmtDate } = useFormat();
+  const today = yearData.today;
+  const years = yearData.years;
 
-  // Edit mode → the shift comes from the static store; prefill name/time + its
-  // off-day calendar. The time inputs take "HH:mm"; the store keeps "HH:mm:ss".
-  const [loadedShift] = useState(() => (isEdit ? getShiftById(id) : null));
-  const hhmm = (v) => (v ? String(v).slice(0, 5) : "");
-
-  const { register, handleSubmit, watch, formState: { errors } } = useForm({
+  const { register, handleSubmit, control, setError, formState: { errors } } = useForm({
     defaultValues: loadedShift
       ? {
           name: loadedShift.name || "",
           start_time: hhmm(loadedShift.start_time),
           end_time: hhmm(loadedShift.end_time),
-          effective_from: fy.today,
+          effective_from: today,
         }
       : {
           name: "",
@@ -63,80 +102,83 @@ export default function AddShift() {
         }
   });
 
-  // Edit mode: the timings in force today (to spot a change), and the
-  // timing history (newest first) from GET /shifts/:id.
-  const original = loadedShift ? { start_time: loadedShift.start_time, end_time: loadedShift.end_time } : null; // { start_time, end_time }
-  const versions = Array.isArray(loadedShift?.versions) ? loadedShift.versions : [];
-  const timingToday = loadedShift?.timing_today || null;
+  // Edit mode: the timings in force today (to spot a change), and the timing history (newest
+  // first) from GET /shifts/:id.
+  const original = loadedShift ? { start_time: loadedShift.start_time, end_time: loadedShift.end_time } : null;
+  const versions = Array.isArray(loadedShift?.history) ? loadedShift.history : [];
 
   const [saving, setSaving] = useState(false);
-  // Error under the weekly-off calendar (server: weekly_off_days — e.g. a
-  // change inside a closed period).
+  // Error under the weekly-off calendar (server: SHIFT_WEEKOFF_LOCKED, a date outside the year…).
   const [offDaysError, setOffDaysError] = useState("");
 
-  // The calendar shows one financial year (its 12 months in FY order). It opens
-  // on the year chosen in the header and follows it when that changes.
-  const initialFy = fy.selected ?? yearKeyFor(fy.startMonth, fy.today);
-  const [viewFy, setViewFy] = useState(initialFy);
-  const [fyVersion, setFyVersion] = useState(fy.version);
-  if (fyVersion !== fy.version) {
-    setFyVersion(fy.version);
-    setViewFy(initialFy);
-  }
+  // The calendar shows one financial year; it opens on the year that contains today.
+  const [viewIdx, setViewIdx] = useState(() => {
+    const i = years.findIndex((y) => y.id === yearData.current_id);
+    return i >= 0 ? i : Math.max(0, years.length - 1);
+  });
+  const viewYear = years[viewIdx] || null;
 
   const [isBulkSelectActive, setIsBulkSelectActive] = useState(false);
-  const loadingShift = false;
-  // Edit mode only: true once the shift (and its off-days) actually loaded.
-  // Saving before that would send an empty calendar and wipe every off-day.
-  const shiftLoaded = !isEdit || !!loadedShift?.id;
 
-  // Set of formatted dates "YYYY-MM-DD"
-  const [selectedOffDays, setSelectedOffDays] = useState(
-    () => new Set(Array.isArray(loadedShift?.weekly_off_days) ? loadedShift.weekly_off_days : []),
-  );
+  // Off days per financial year: { [fyId]: { dates: Set<"YYYY-MM-DD">, loaded, dirty } }. Saving
+  // sends only the years that were changed.
+  const [offDays, setOffDays] = useState({});
+  const current = viewYear ? offDays[viewYear.id] : null;
+  const selectedOffDays = current?.dates || new Set();
+  const yearReady = !viewYear || !isEdit || !!current?.loaded;
+
+  // Edit mode: load the shown year's off days the first time it's shown.
+  useEffect(() => {
+    if (!isEdit || !viewYear || offDays[viewYear.id]) return undefined;
+    let alive = true;
+    getWeekOffs(loadedShift.id, viewYear.id).then(
+      (data) => alive && setOffDays((prev) => ({ ...prev, [viewYear.id]: { dates: new Set(data.dates), loaded: true, dirty: false } })),
+      (err) => alive && setOffDaysError(apiErrorMessage(err, t("shift.add.loadFailed"))),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [isEdit, viewYear, offDays, loadedShift, t]);
 
   // Editing an existing shift's start / end time → ask from which day.
-  const watchStart = watch("start_time");
-  const watchEnd = watch("end_time");
-  const watchFrom = watch("effective_from");
+  const watchStart = useWatch({ control, name: "start_time" });
+  const watchEnd = useWatch({ control, name: "end_time" });
+  const watchFrom = useWatch({ control, name: "effective_from" });
   const timingChanged =
     isEdit &&
     !!original &&
     (hms(watchStart) !== hms(original.start_time) || hms(watchEnd) !== hms(original.end_time));
-  const fromValue = watchFrom || fy.today;
-  const isScheduled = timingChanged && fromValue > fy.today;
-  // Earliest pick: the selected FY's first day (today when that year is locked).
-  const minFrom = fy.range && !lock.locked ? fy.range.from : fy.today;
-  const fromRule = shiftEffectiveFromRule(t, { today: fy.today, lock, years: fy.years });
+  const fromValue = watchFrom || today;
+  const isScheduled = timingChanged && fromValue > today;
+  // Earliest pick: the current year's first day (D36); the server checks closed / locked periods.
+  const currentYear = years.find((y) => y.id === yearData.current_id);
+  const minFrom = currentYear ? currentYear.start_date : today;
   const longDate = (d) => fmtDate(d, { day: "2-digit", month: "short", year: "numeric" });
-  // In force = the newest version that started on/before today.
-  const inForceIdx = versions.findIndex((v) => v.effective_from <= fy.today);
 
   // ── The financial year on screen ──
-  const yearKeys = fy.years.map((y) => y.year_key).sort((a, b) => a - b);
-  const minFy = yearKeys.length ? yearKeys[0] : null;
-  const maxFy = yearKeys.length ? yearKeys[yearKeys.length - 1] : null;
-  const viewYear = fy.years.find((y) => y.year_key === viewFy) || null;
-  const viewLabel = viewYear?.label || fyLabel(fy.startMonth, viewFy);
-  const viewMonths = monthsOfFy(fy.startMonth, viewFy);
-  const canPrevFy = minFy == null || viewFy > minFy;
-  const canNextFy = maxFy == null || viewFy < maxFy;
+  const viewLabel = viewYear?.label || "";
+  const viewMonths = monthsOf(viewYear);
+  const canPrevFy = viewIdx > 0;
+  const canNextFy = viewIdx < years.length - 1;
+  const lockedMonths = new Set(viewYear?.locked_months || []);
 
-  // A day can't be changed when it's in the past (the server keeps past
-  // off-days as they were) or in a closed + locked year.
-  const dayLocked = (dateStr) => dateStr < fy.today || lock.isLockedDate(dateStr);
+  // A day can't be changed when it's in the past (the server keeps past off-days as they were),
+  // in a closed or locked year, or in a locked month.
+  const periodLocked = (dateStr) => !!viewYear?.year_locked || lockedMonths.has(dateStr.slice(0, 7));
+  const dayLocked = (dateStr) => dateStr < today || periodLocked(dateStr);
   const dayTitle = (dateStr) =>
-    lock.isLockedDate(dateStr)
+    periodLocked(dateStr)
       ? t("fiscalYear:locked.tooltip", { label: viewLabel })
-      : dateStr < fy.today
+      : dateStr < today
         ? t("shift.add.pastDayHint")
         : undefined;
 
   const toggleDay = (formattedDate) => {
-    if (dayLocked(formattedDate)) return;
+    if (dayLocked(formattedDate) || !viewYear || !yearReady) return;
     setOffDaysError("");
-    setSelectedOffDays(prev => {
-      const next = new Set(prev);
+    setOffDays((prevAll) => {
+      const prevYear = prevAll[viewYear.id];
+      const next = new Set(prevYear?.dates || []);
 
       if (isBulkSelectActive) {
         // The same weekday across the whole financial year on screen.
@@ -148,7 +190,7 @@ export default function AddShift() {
           for (let day = 1; day <= daysIn(year, month); day++) {
             if (weekdayOf(year, month, day) !== targetDayOfWeek) continue;
             const dateStr = `${year}-${pad(month)}-${pad(day)}`;
-            if (dayLocked(dateStr)) continue;
+            if (dateStr < viewYear.start_date || dateStr > viewYear.end_date || dayLocked(dateStr)) continue;
             if (isCurrentlySelected) next.delete(dateStr);
             else next.add(dateStr);
           }
@@ -160,28 +202,51 @@ export default function AddShift() {
           next.add(formattedDate);
         }
       }
-      return next;
+      return { ...prevAll, [viewYear.id]: { dates: next, loaded: true, dirty: true } };
     });
   };
 
   const onSubmit = async (data) => {
-    // Never save an edit whose shift didn't load — it would erase the calendar.
-    if (isEdit && !shiftLoaded) {
-      toast.error(t("shift.add.loadFailed"));
-      return;
-    }
     setOffDaysError("");
     const payload = {
       name: data.name.trim(),
       start_time: data.start_time,
       end_time: data.end_time,
-      weekly_off_days: Array.from(selectedOffDays).sort(),
     };
     // New timings apply from this day (blank → today, the server's default).
-    if (timingChanged) payload.effective_from = data.effective_from || fy.today;
+    if (timingChanged) payload.effective_from = data.effective_from || today;
 
     setSaving(true);
-    saveShift(isEdit ? id : null, payload);
+    let saved;
+    try {
+      saved = isEdit ? await updateShift(loadedShift.id, payload) : await createShift(payload);
+    } catch (err) {
+      setSaving(false);
+      if (apiErrorCode(err) === "SHIFT_NAME_TAKEN") {
+        setError("name", { type: "server", message: apiErrorMessage(err) }, { shouldFocus: true });
+        return;
+      }
+      const { mapped } = applyFieldErrors(err, setError, { knownFields: SHIFT_FIELDS });
+      if (!mapped.length) toastApiError(err, t("shift.add.saveFailed"));
+      return;
+    }
+
+    // Then the off days of each year that was changed (D38).
+    for (const [fyId, year] of Object.entries(offDays)) {
+      if (!year.dirty) continue;
+      try {
+        await saveWeekOffs(saved.id, fyId, Array.from(year.dates).sort());
+        setOffDays((prev) => ({ ...prev, [fyId]: { ...prev[fyId], dirty: false } }));
+      } catch (err) {
+        setSaving(false);
+        // e.g. 409 SHIFT_WEEKOFF_LOCKED "Week-offs in a closed or past period can't be changed."
+        setOffDaysError(apiErrorMessage(err));
+        // A new shift exists now; keep editing it from its own page.
+        if (!isEdit) navigate(`/admin/shift-management/edit/${saved.id}`, { replace: true });
+        return;
+      }
+    }
+
     toast.success(isEdit ? t("shift.add.updated") : t("shift.add.created"));
     navigate("/admin/shift-management");
     setSaving(false);
@@ -227,7 +292,6 @@ export default function AddShift() {
               </label>
               <input
                 type="time"
-                step="1"
                 {...register("start_time", { required: t("shift.add.startTimeRequired") })}
                 className={`w-full border bg-white rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition ${errors.start_time ? "border-red-300" : "border-gray-200"}`}
               />
@@ -239,7 +303,6 @@ export default function AddShift() {
               </label>
               <input
                 type="time"
-                step="1"
                 {...register("end_time", { required: t("shift.add.endTimeRequired") })}
                 className={`w-full border bg-white rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition ${errors.end_time ? "border-red-300" : "border-gray-200"}`}
               />
@@ -247,7 +310,7 @@ export default function AddShift() {
             </div>
           </div>
 
-          {/* Timing changes are effective-dated (hrms_shift_versions). */}
+          {/* Timing changes are effective-dated (hrms_shift_time_history). */}
           {isEdit && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 -mt-2">
               <div className="lg:col-span-2 space-y-3">
@@ -259,7 +322,7 @@ export default function AddShift() {
                     <input
                       type="date"
                       min={minFrom}
-                      {...register("effective_from", { validate: { rule: fromRule } })}
+                      {...register("effective_from")}
                       className={`w-full border bg-white rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition ${errors.effective_from ? "border-red-300" : "border-gray-200"}`}
                     />
                     <FieldError error={errors.effective_from} />
@@ -283,34 +346,27 @@ export default function AddShift() {
                     {t("shift.add.timingHistory")}
                   </p>
                   <ul className="divide-y divide-gray-100 max-h-48 overflow-y-auto custom-scrollbar">
-                    {versions.map((v, i) => {
-                      const inForce =
-                        i === inForceIdx &&
-                        (!timingToday ||
-                          (hms(timingToday.start_time) === hms(v.start_time) &&
-                            hms(timingToday.end_time) === hms(v.end_time)));
-                      return (
-                        <li key={`${v.effective_from}-${i}`} className="flex items-center gap-2 px-4 py-2 text-xs">
-                          <span className="text-gray-500 min-w-0 truncate">
-                            {v.effective_from <= "2000-01-01"
-                              ? t("shift.add.timingSinceStart")
-                              : <Ltr>{longDate(v.effective_from)}</Ltr>}
+                    {versions.map((v, i) => (
+                      <li key={`${v.effective_from}-${i}`} className="flex items-center gap-2 px-4 py-2 text-xs">
+                        <span className="text-gray-500 min-w-0 truncate">
+                          {v.effective_from <= "2000-01-01"
+                            ? t("shift.add.timingSinceStart")
+                            : <Ltr>{longDate(v.effective_from)}</Ltr>}
+                        </span>
+                        <span className="ms-auto font-semibold text-gray-800 whitespace-nowrap">
+                          <Ltr>{fmtTimeShort(v.start_time)} – {fmtTimeShort(v.end_time)}</Ltr>
+                        </span>
+                        {v.state === "IN_FORCE" ? (
+                          <span className="inline-flex px-1.5 py-0.5 rounded border text-[10px] font-bold text-emerald-700 bg-emerald-50 border-emerald-200 whitespace-nowrap">
+                            {t("shift.add.inForce")}
                           </span>
-                          <span className="ms-auto font-semibold text-gray-800 whitespace-nowrap">
-                            <Ltr>{fmtTimeShort(v.start_time)} – {fmtTimeShort(v.end_time)}</Ltr>
+                        ) : v.state === "SCHEDULED" ? (
+                          <span className="inline-flex px-1.5 py-0.5 rounded border text-[10px] font-bold text-sky-700 bg-sky-50 border-sky-200 whitespace-nowrap">
+                            {t("shift.add.scheduled")}
                           </span>
-                          {inForce ? (
-                            <span className="inline-flex px-1.5 py-0.5 rounded border text-[10px] font-bold text-emerald-700 bg-emerald-50 border-emerald-200 whitespace-nowrap">
-                              {t("shift.add.inForce")}
-                            </span>
-                          ) : v.effective_from > fy.today ? (
-                            <span className="inline-flex px-1.5 py-0.5 rounded border text-[10px] font-bold text-sky-700 bg-sky-50 border-sky-200 whitespace-nowrap">
-                              {t("shift.add.scheduled")}
-                            </span>
-                          ) : null}
-                        </li>
-                      );
-                    })}
+                        ) : null}
+                      </li>
+                    ))}
                   </ul>
                 </div>
               )}
@@ -343,7 +399,7 @@ export default function AddShift() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setViewFy((y) => y - 1)}
+                    onClick={() => setViewIdx((i) => i - 1)}
                     disabled={!canPrevFy}
                     className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-100 transition shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
                   >
@@ -351,11 +407,11 @@ export default function AddShift() {
                   </button>
                   <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 min-w-[110px] justify-center whitespace-nowrap">
                     {viewLabel}
-                    <YearStatusBadge year={viewYear} />
+                    <YearStatusBadge year={viewYear ? { status: viewYear.status, is_locked: viewYear.year_locked } : null} />
                   </span>
                   <button
                     type="button"
-                    onClick={() => setViewFy((y) => y + 1)}
+                    onClick={() => setViewIdx((i) => i + 1)}
                     disabled={!canNextFy}
                     className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-100 transition shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
                   >
@@ -408,7 +464,7 @@ export default function AddShift() {
                           }
                           const formattedDate = `${value}-${pad(day)}`;
                           const isSelected = selectedOffDays.has(formattedDate);
-                          const locked = dayLocked(formattedDate);
+                          const locked = dayLocked(formattedDate) || !yearReady;
                           const dayInitial = t(`shift.add.weekdayInitials.${WEEKDAY_INITIALS[weekdayOf(year, month, day)]}`);
 
                           return (
@@ -462,7 +518,7 @@ export default function AddShift() {
           </button>
           <button
             type="submit"
-            disabled={saving || loadingShift || !shiftLoaded}
+            disabled={saving || !yearReady}
             className="px-6 py-2.5 rounded-lg bg-[#14959a] hover:bg-cyan-700 text-white text-sm font-bold transition shadow-sm flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {saving && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}

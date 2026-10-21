@@ -157,4 +157,17 @@ const copyWeekOffs = async ({ employerId }, { to_fy: toFy, shift_ids: shiftIds }
   return { to_fy: yearRow(years.next), added };
 };
 
-module.exports = { getWeekOffs, saveWeekOffs, copyPreview, copyWeekOffs };
+// GET /shifts/week-offs/years: the years the week-off calendar can show, oldest first, with
+// today (company time) and the year that contains it.
+const listYears = async ({ employerId }) => {
+  const today = await companyToday(employerId);
+  const years = await FinancialYear.findAll({ where: { employer_id: employerId }, order: [["start_date", "ASC"]] });
+  const items = [];
+  for (const fy of years) {
+    items.push({ ...yearRow(fy), year_locked: yearClosed(fy), locked_months: await lockedMonths(employerId, fy) });
+  }
+  const current = years.find((fy) => fy.start_date <= today && fy.end_date >= today);
+  return { today, current_id: current ? current.id : null, years: items };
+};
+
+module.exports = { getWeekOffs, saveWeekOffs, copyPreview, copyWeekOffs, listYears };

@@ -13,12 +13,13 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import ConfirmationModal from "../../components/ConfirmationModal";
-import { getShifts, deleteShiftById } from "../../data/groupC";
-import { matches, paginate } from "../../data/common";
 import Loader, { TableLoader } from "../../components/Loader";
+import { ScreenError } from "../../components/ScreenState";
 import { useCan } from "../../hooks/usePermission";
 import { MODULES, ACTIONS } from "../../constants/permissions";
-import useFiscalYear from "../../hooks/useFiscalYear";
+import useApiQuery from "../../hooks/useApiQuery";
+import { listShifts, listWeekOffYears, removeShift } from "../../api/shifts";
+import { toastApiError } from "../../utils/apiError";
 import WeekOffCopyModal from "../../components/fiscalYear/WeekOffCopyModal";
 
 const PAGE_SIZE = 10;
@@ -30,17 +31,16 @@ export default function ShiftManagement() {
   const canCreateShift = can(MODULES.SHIFT, ACTIONS.CREATE);
   const canUpdateShift = can(MODULES.SHIFT, ACTIONS.UPDATE);
   const canDeleteShift = can(MODULES.SHIFT, ACTIONS.DELETE);
-  // Shifts aren't year-scoped: a locked header year doesn't make them
-  // read-only — the backend refuses only off-dates / back-dated timings that
+  // Shifts aren't year-scoped: the backend refuses only off-dates / back-dated timings that
   // fall in a closed period (shown under their inputs on the form).
-  const fy = useFiscalYear();
   const [copyOpen, setCopyOpen] = useState(false);
-  // "Copy week-offs to next year" targets the FY right after the one shown.
-  const baseYear = fy.selected ?? fy.current?.year_key ?? null;
-  const nextYear = baseYear != null ? fy.years.find((y) => y.year_key === baseYear + 1) || null : null;
-  const canCopyWeekOffs = canUpdateShift && !!nextYear && !nextYear.is_locked;
-  // Static build: shifts come from the in-memory store (shared with the form).
-  const [allShifts, setAllShifts] = useState(getShifts);
+  // "Copy week-offs to next year" targets the company's year right after today's (D39), when it
+  // exists and isn't closed.
+  const { data: yearData } = useApiQuery(() => listWeekOffYears(), []);
+  const years = yearData?.years || [];
+  const currentIdx = years.findIndex((y) => y.id === yearData?.current_id);
+  const nextYear = currentIdx >= 0 ? years[currentIdx + 1] || null : null;
+  const canCopyWeekOffs = canUpdateShift && !!nextYear && !nextYear.year_locked;
   const [searchTerm, setSearchTerm] = useState("");
   const [debounced, setDebounced] = useState("");
   const [page, setPage] = useState(1);
@@ -48,8 +48,6 @@ export default function ShiftManagement() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [shiftToDelete, setShiftToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
-
-  const isLoading = false;
 
 
   useEffect(() => {
@@ -60,14 +58,14 @@ export default function ShiftManagement() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Client-side search + paging.
-  const { rows: shifts, total: count, totalPages } = paginate(
-    allShifts.filter((s) => matches(s, debounced, ["name"])),
-    page,
-    PAGE_SIZE,
+  // Search (by name) and paging are done by the server.
+  const { data, loading: isLoading, error, reload: load } = useApiQuery(
+    () => listShifts({ page, limit: PAGE_SIZE, search: debounced.trim() }),
+    [page, debounced],
   );
-
-  const load = () => setAllShifts(getShifts());
+  const shifts = data?.items || [];
+  const count = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
 
   const handleEditClick = (shift) => {
     navigate(`/admin/shift-management/edit/${shift.id}`);
@@ -92,12 +90,17 @@ export default function ShiftManagement() {
     }
 
     setDeleting(true);
-    deleteShiftById(idToDelete);
-    toast.success(t("shift.list.deleted"));
+    try {
+      await removeShift(idToDelete);
+      toast.success(t("shift.list.deleted"));
+      load();
+    } catch (err) {
+      // 409 SHIFT_IN_USE: "This shift is assigned to employees and can't be deleted."
+      toastApiError(err, t("shift.list.deleteFailed"));
+    }
     setShowDeleteConfirm(false);
     setShiftToDelete(null);
     setDeleting(false);
-    load();
   };
 
   return (
@@ -189,6 +192,12 @@ export default function ShiftManagement() {
               <tbody className="divide-y divide-gray-50">
                 {isLoading ? (
                   <TableLoader colSpan={5} label={t("shift.list.loading")} />
+                ) : error ? (
+                  <tr>
+                    <td colSpan={5} className="px-5 py-6">
+                      <ScreenError error={error} onRetry={load} />
+                    </td>
+                  </tr>
                 ) : shifts.length === 0 ? (
                   <tr>
                     <td
@@ -247,6 +256,10 @@ export default function ShiftManagement() {
           <div className="md:hidden divide-y divide-gray-100">
             {isLoading ? (
               <Loader label={t("shift.list.loading")} />
+            ) : error ? (
+              <div className="p-4">
+                <ScreenError error={error} onRetry={load} />
+              </div>
             ) : shifts.length === 0 ? (
               <div className="py-12 text-center text-sm text-gray-400">
                 {t("shift.list.empty")}
@@ -320,7 +333,7 @@ export default function ShiftManagement() {
       <WeekOffCopyModal
         open={copyOpen}
         onClose={() => setCopyOpen(false)}
-        toFy={nextYear?.year_key}
+        toFy={nextYear?.id}
         onDone={() => {
           setCopyOpen(false);
           load();

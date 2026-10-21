@@ -19,6 +19,8 @@ const companyLogin = [
 const can = (action) => [...companyLogin, requirePermission("shift", action)];
 
 router.get("/", ...can("read"), validate(listShiftsSchema, "query"), shiftController.listShifts);
+// The years the week-off calendar can show; before /:id.
+router.get("/week-offs/years", ...can("read"), weekOffController.listYears);
 // Copy week-offs to the next year (D39); before /:id.
 router.get("/week-offs/copy-preview", ...can("update"), validate(copyPreviewSchema, "query"), weekOffController.copyPreview);
 router.post("/week-offs/copy", ...can("update"), validate(copySchema), weekOffController.copyWeekOffs);

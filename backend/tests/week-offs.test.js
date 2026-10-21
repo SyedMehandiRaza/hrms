@@ -173,3 +173,38 @@ describe("permissions", () => {
     expect((await api.get(`/api/shifts/${ctx.shift.id}/week-offs`, none)).status).toBe(403);
   });
 });
+
+// The years the week-off calendar can show (ticket workforce#23 wiring): the company's financial
+// years with their lock state, oldest first.
+describe("GET /api/shifts/week-offs/years", () => {
+  it("lists the company's years with today, the closed/locked flag and the locked months; never another company's", async () => {
+    const ctx = await setup();
+    const other = await ownerCompany();
+    const next = await createFinancialYear(ctx.employer, YEAR + 1, { status: "PLANNED" });
+    const old = await createFinancialYear(ctx.employer, YEAR - 1, { status: "CLOSED", is_locked: true });
+    await db.PeriodLock.create({ employer_id: ctx.employer.id, financial_year_id: ctx.fy.id, period_year: YEAR, period_month: 3, module: "ATTENDANCE", locked_at: new Date() });
+    const res = await api.get("/api/shifts/week-offs/years", ctx.token);
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({
+      today: TODAY,
+      current_id: ctx.fy.id,
+      years: [
+        { id: old.id, label: old.label, start_date: `${YEAR - 1}-01-01`, end_date: `${YEAR - 1}-12-31`, status: "CLOSED", year_locked: true, locked_months: expect.any(Array) },
+        { id: ctx.fy.id, label: ctx.fy.label, start_date: `${YEAR}-01-01`, end_date: `${YEAR}-12-31`, status: "OPEN", year_locked: false, locked_months: [`${YEAR}-03`] },
+        { id: next.id, label: next.label, start_date: `${YEAR + 1}-01-01`, end_date: `${YEAR + 1}-12-31`, status: "PLANNED", year_locked: false, locked_months: [] },
+      ],
+    });
+    expect((await api.get("/api/shifts/week-offs/years", other.token)).body.data.years.map((y) => y.id)).not.toContain(ctx.fy.id);
+  });
+
+  it("needs shift:read; staffing → 403; no token → 401", async () => {
+    const ctx = await setup();
+    const none = (await loginFor(ctx.employer, "SUB_ADMIN", { shift: NO_FLAGS })).token;
+    expect((await api.get("/api/shifts/week-offs/years", none)).body).toEqual(errorBody("FORBIDDEN"));
+    const reader = (await loginFor(ctx.employer, "EMPLOYEE", { shift: { can_read: true } })).token;
+    expect((await api.get("/api/shifts/week-offs/years", reader)).status).toBe(200);
+    const staffing = (await loginFor(ctx.employer, "STAFFING_COMPANY", { shift: { can_read: true } })).token;
+    expect((await api.get("/api/shifts/week-offs/years", staffing)).body).toEqual(errorBody("FORBIDDEN"));
+    expect((await api.get("/api/shifts/week-offs/years", null)).status).toBe(401);
+  });
+});

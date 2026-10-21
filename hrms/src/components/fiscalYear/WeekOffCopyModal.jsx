@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   MdClose,
   MdOutlineContentCopy,
@@ -15,10 +15,9 @@ import Loader, { Spinner } from "../Loader";
 import FieldError from "../FieldError";
 import Ltr from "../Ltr";
 import { useFormat } from "../../hooks/useFormat";
-import useFiscalYear from "../../hooks/useFiscalYear";
-import { fyLabel } from "../../utils/fiscalYear";
-import { validateWeekOffCopy } from "../../utils/fyValidation/ops-time";
-import { weekOffCopyPreview } from "../../data/groupA";
+import useApiQuery from "../../hooks/useApiQuery";
+import { apiErrorMessage } from "../../utils/apiError";
+import { copyWeekOffs, weekOffCopyPreview } from "../../api/shifts";
 
 const WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]; // 0 = Sunday (backend weekdayOf)
 
@@ -28,33 +27,38 @@ const REASON_KEYS = {
   "No regular weekly pattern found in the previous financial year": "noPattern",
 };
 
-// Copy each shift's weekly-off pattern from the previous FY into `toFy` (BE-17).
-//   <WeekOffCopyModal open onClose={fn} toFy={yearKey} onDone={fn} />
-// GET  /shifts/week-offs/copy-preview?to_fy → per shift: the pattern found in
-//      the FY before (weekdays off ≥ 80% of the time), the dates it would add,
-//      dates already there, and dates skipped (past / closed months); shifts
-//      without a regular pattern come back in `irregular`.
+// Copy each shift's weekly-off pattern from the current FY into the next one, `toFy` (D39).
+//   <WeekOffCopyModal open onClose={fn} toFy={financialYearId} onDone={fn} />
+// GET  /shifts/week-offs/copy-preview?to_fy → per shift: the pattern found this year (weekdays
+//      off ≥ 80% of the time) and how many dates it would add; a shift without a regular pattern
+//      has no weekdays (listed as "irregular").
 // POST /shifts/week-offs/copy { to_fy, shift_ids } — only ADDS missing dates.
 export default function WeekOffCopyModal({ open, onClose, toFy, onDone }) {
   const { t } = useTranslation("settings");
   const { fmtDate } = useFormat();
-  const fy = useFiscalYear();
   const reqKey = open && toFy ? String(toFy) : null;
 
-  // Static preview for the requested year; row ticks live in local state.
-  const preview = useMemo(() => {
-    if (!reqKey) return null;
-    const data = weekOffCopyPreview(Number(reqKey));
-    // Shifts with something to add start ticked; the rest start unticked.
-    const rows = (data.shifts || []).map((s) => ({ ...s, include: (s.dates_to_add || 0) > 0 }));
-    return { data, rows };
-  }, [reqKey]);
+  const query = useApiQuery(() => (reqKey ? weekOffCopyPreview(reqKey) : Promise.resolve(null)), [reqKey]);
+  const preview = query.data
+    ? {
+        data: {
+          ...query.data,
+          irregular: query.data.shifts
+            .filter((x) => !x.weekdays.length)
+            .map((x) => ({ shift_id: x.shift_id, name: x.name, reason: "No regular weekly pattern found in the previous financial year" })),
+        },
+        // Shifts with something to add start ticked; the rest start unticked.
+        rows: query.data.shifts
+          .filter((x) => x.weekdays.length)
+          .map((x) => ({ ...x, pattern: x.weekdays, include: (x.dates_to_add || 0) > 0 })),
+      }
+    : null;
   const [edited, setState] = useState({ key: null, rows: [] });
   const state = {
     key: reqKey,
     data: preview?.data || null,
     rows: edited.key === reqKey ? edited.rows : preview?.rows || [],
-    error: "",
+    error: query.error ? apiErrorMessage(query.error) : "",
   };
   const [errors, setErrors] = useState({}); // { to_fy, shift_ids }
   const [saving, setSaving] = useState(false);
@@ -69,16 +73,15 @@ export default function WeekOffCopyModal({ open, onClose, toFy, onDone }) {
 
   if (!open) return null;
 
-  const loading = false;
+  const loading = query.loading;
   const data = state.key === reqKey ? state.data : null;
   const rows = state.key === reqKey ? state.rows : [];
   const irregular = data?.irregular || [];
 
-  const labelOf = (key) =>
-    key ? fy.years.find((y) => y.year_key === Number(key))?.label || fyLabel(fy.startMonth, key) : "";
-  const toLabel = labelOf(toFy);
-  const fromLabel = labelOf(data?.from_fy ?? (toFy ? Number(toFy) - 1 : null));
-  const targetLocked = !!fy.years.find((y) => y.year_key === Number(toFy))?.is_locked;
+  const toLabel = data?.to_fy?.label || "";
+  const fromLabel = data?.from_fy?.label || "";
+  // The server refuses a closed next year (SHIFT_WEEKOFF_NO_NEXT_FY, shown as the load error).
+  const targetLocked = false;
 
   const actionable = rows.filter((r) => (r.dates_to_add || 0) > 0);
   const selected = rows.filter((r) => r.include);
@@ -102,14 +105,21 @@ export default function WeekOffCopyModal({ open, onClose, toFy, onDone }) {
     onClose?.();
   };
 
-  const submit = () => {
-    if (saving || targetLocked) return;
-    const payload = { to_fy: Number(toFy), shift_ids: selected.map((r) => r.shift_id) };
-    const errs = validateWeekOffCopy(t, payload);
-    setErrors(errs);
-    if (Object.keys(errs).length) return;
+  const submit = async () => {
+    if (saving || targetLocked || !selected.length) return;
+    setErrors({});
+    setSaving(true);
+    let out;
+    try {
+      out = await copyWeekOffs(toFy, selected.map((r) => r.shift_id));
+    } catch (err) {
+      setSaving(false);
+      setErrors({ form: apiErrorMessage(err) });
+      return;
+    }
     setSaving(false);
-    const res = { added_total: selectedDays, shifts_updated: selected.length };
+    const counts = Object.values(out.added || {});
+    const res = { added_total: counts.reduce((n, c) => n + c, 0), shifts_updated: counts.filter((c) => c > 0).length };
     toast.success(
       t("shift.weekOffCopy.success", {
         count: res.added_total,

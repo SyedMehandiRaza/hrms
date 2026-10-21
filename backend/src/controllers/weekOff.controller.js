@@ -16,4 +16,9 @@ const copyWeekOffs = async (req, res) => {
   res.json({ success: true, data: await weekOffService.copyWeekOffs(req.auth, req.body) });
 };
 
-module.exports = { getWeekOffs, saveWeekOffs, copyPreview, copyWeekOffs };
+const listYears = async (req, res) => {
+  res.json({ success: true, data: await weekOffService.listYears(req.auth) });
+};
+
+module.exports = {
+  listYears, getWeekOffs, saveWeekOffs, copyPreview, copyWeekOffs };
