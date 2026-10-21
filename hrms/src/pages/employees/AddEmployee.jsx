@@ -29,21 +29,23 @@ import { toast } from "react-toastify";
 import CustomDropdown from "../../components/CustomDropdown";
 import { useTranslation, Trans } from "react-i18next";
 import { NAME_PATTERN, NAME_STRIP } from "../../utils/nameRules";
-import { addEmployeeRecord } from "../../data/groupB";
 import CountrySelect from "../../components/geo/CountrySelect";
 import CitySelect from "../../components/geo/CitySelect";
 import PhoneCountrySelect from "../../components/geo/PhoneCountrySelect";
 import useApiQuery from "../../hooks/useApiQuery";
 import { useCurrentUser } from "../../hooks/useSession";
 import { DEFAULT_PHONE_COUNTRY, phoneRule } from "../../utils/phone";
-import { apiErrorMessage } from "../../utils/apiError";
+import { parsePhoneNumberFromString } from "libphonenumber-js/max";
+import { getCities, getCountries } from "../../api/geo";
+import { apiErrorCode, apiErrorMessage } from "../../utils/apiError";
+import { serverErrors } from "../../utils/applyFieldErrors";
 import {
   checkEmployeeUnique,
+  createEmployee,
   createEmployeeDraft,
   getEmployeeDraft,
   listRoles,
   listStaffingCompanies,
-  removeEmployeeDraft,
   updateEmployeeDraft,
 } from "../../api/employees";
 import { listProjects } from "../../api/projects";
@@ -94,16 +96,6 @@ const getIqamaErrors = (doc) => {
   else if (doc.expiryDate <= today)
     errors.expiryDate = "add.toast.iqamaExpired";
   return errors;
-};
-
-// Form label → API document_type enum
-const DOC_TYPE_TO_API = {
-  Passport: "PASSPORT",
-  "National ID": "NATIONAL_ID",
-  [IQAMA_DOC_TYPE]: "IQAMA",
-  "Driver's License": "DRIVER_LICENSE",
-  "Work Permit": "WORK_PERMIT",
-  "Tax Form": "OTHER",
 };
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -1928,9 +1920,34 @@ function StepReview({
   projects = [],
   salaryCatalog = [],
   docs = [],
+  departments = [],
+  shifts = [],
+  leavePolicies = [],
+  staffingCompanies = [],
 }) {
   const { t } = useTranslation("employees");
   const { fmtDate } = useFormat();
+  // Names for the ids the steps picked (countries, city, designation).
+  const { data: countries } = useApiQuery(() => listOrEmpty(() => getCountries()), []);
+  const { data: cities } = useApiQuery(
+    () => (data.residenceCountryId ? listOrEmpty(() => getCities(data.residenceCountryId, { limit: 100 })) : Promise.resolve(null)),
+    [data.residenceCountryId],
+  );
+  const { data: designationData } = useApiQuery(
+    () => (data.departmentId ? listOrEmpty(() => designationDropdown(data.departmentId)) : Promise.resolve(null)),
+    [data.departmentId],
+  );
+  const countryList = Array.isArray(countries) ? countries : countries?.items || [];
+  const countryName = (id) => countryList.find((c) => String(c.id) === String(id))?.name || "";
+  const cityName = (cities?.items || []).find((c) => String(c.id) === String(data.residenceCityId))?.name || "";
+  const nameOf = (list, id) => list.find((x) => String(x.id) === String(id))?.name || "";
+  const phoneText =
+    parsePhoneNumberFromString(String(data.phone || ""), data.phoneCountry)?.formatInternational() || data.phone;
+  const policyNames = (data.leavePolicyIds || [])
+    .map((id) => leavePolicies.find((lt) => String(lt.policy_id) === String(id))?.name)
+    .filter(Boolean)
+    .join(", ");
+  const isContract = data.employmentType === "Contract";
   const roleName =
     roles.find((r) => String(r.id) === String(data.designatedRole))?.name || "";
   const projectNames =
@@ -1981,9 +1998,16 @@ function StepReview({
               />
               <InfoRow
                 label={t("add.review.phoneNumber")}
-                value={<Ltr>{`${data.countryCode || "+1"} ${data.phone}`}</Ltr>}
+                value={<Ltr>{phoneText}</Ltr>}
+              />
+              <InfoRow label={t("add.basic.countryEmpId")} value={data.countryEmpId ? <Ltr>{data.countryEmpId}</Ltr> : undefined} />
+              <InfoRow label={t("add.basic.nationality")} value={countryName(data.nationalityCountryId)} />
+              <InfoRow
+                label={t("add.basic.residenceCountry")}
+                value={[countryName(data.residenceCountryId), cityName].filter(Boolean).join(", ")}
               />
               <InfoRow label={t("add.review.address")} value={data.address} />
+              <InfoRow label={t("add.basic.accommodation")} value={data.accommodation} />
             </div>
           </div>
         </Card>
@@ -2024,7 +2048,13 @@ function StepReview({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card title={t("add.review.jobDetails")} onEdit={() => onEditStep(2)}>
           <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-            <InfoRow label={t("add.review.designation")} value={roleName} />
+            <InfoRow label={t("add.job.designatedRole")} value={roleName} />
+            <InfoRow label={t("add.job.employmentType")} value={isContract ? t("add.job.contract") : t("add.job.fullTime")} />
+            <InfoRow label={t("add.job.department")} value={nameOf(departments, data.departmentId)} />
+            <InfoRow label={t("add.job.designation")} value={nameOf(designationData?.items || [], data.designationId)} />
+            <InfoRow label={t("add.job.shift")} value={nameOf(shifts, data.shiftId)} />
+            <InfoRow label={t("add.job.leavePolicies")} value={policyNames} />
+            {isContract && <InfoRow label={t("add.job.staffingCompany")} value={nameOf(staffingCompanies, data.staffingCompanyId)} />}
             <div>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">
                 {t("add.job.dateOfJoining")}
@@ -2174,7 +2204,7 @@ export default function AddEmployee({ onCancel, onComplete }) {
   // missing fields are highlighted from then on.
   const [docsTouched, setDocsTouched] = useState(false);
   const [approvalRouting, setApprovalRouting] = useState([]);
-  const [uploading, setUploading] = useState(false);
+  const [routingError, setRoutingError] = useState("");
 
   // ── Draft state ──
   // `?draft=<id>` resumes a saved draft. photoUrl is the already-uploaded
@@ -2191,7 +2221,6 @@ export default function AddEmployee({ onCancel, onComplete }) {
   const navigate = useNavigate();
   const user = useCurrentUser();
   const isOwner = user?.accessLevel === "ADMIN";
-  const createLoading = false;
 
   // Lookups (each one is empty when the caller can't read it).
   const projectsQ = useApiQuery(() => listOrEmpty(() => listProjects({ limit: 100, status: "ACTIVE" })), []);
@@ -2341,7 +2370,7 @@ export default function AddEmployee({ onCancel, onComplete }) {
   };
 
   const saveDraft = async () => {
-    if (savingDraft || uploading || loadingDraft) return;
+    if (savingDraft || creating || loadingDraft) return;
     setSavingDraft(true);
     try {
       const { profileUrl, uploadedDocs } = await uploadPendingFiles();
@@ -2387,147 +2416,126 @@ export default function AddEmployee({ onCancel, onComplete }) {
     }
   };
 
+  // Server field → wizard field, and the step it's on (a failed create goes back there, ticket 28b).
+  const SERVER_FIELD = {
+    name: "fullName",
+    country_emp_id: "countryEmpId",
+    roleId: "designatedRole",
+    joiningDate: "dateOfJoining",
+    currency: "salaryCurrency",
+    salaryMode: "salaryCalcMode",
+    workingHours: "salaryWorkingHours",
+    hourlyRate: "salaryHourlyRate",
+    minHours: "salaryMinHours",
+    components: "salaryComponents",
+  };
+  const CODE_FIELD = {
+    EMPLOYEE_EMAIL_TAKEN: "email",
+    ACCOUNT_EMAIL_IN_OTHER_COMPANY: "email",
+    EMPLOYEE_PHONE_TAKEN: "phone",
+    EMPLOYEE_ID_NUMBER_TAKEN: "countryEmpId",
+    ACCOUNT_ADMIN_EXISTS: "accessLevel",
+    PROJECT_GENERAL_EMPLOYEE_SINGLE: "projectIds",
+  };
+  const ROUTING_CODES = ["APPROVAL_GROUP_PROJECT_MISMATCH", "APPROVAL_ROUTING_PER_MODULE_DISABLED"];
+  const stepOfField = (field) => {
+    const found = Object.keys(STEP_FIELDS).find((st) => (STEP_FIELDS[st] || []).includes(field));
+    return found ? Number(found) : 5;
+  };
+
+  // The wizard → POST /employees (workforce 13a/13b). Documents and the photo aren't saved yet (D44).
+  const toCreateBody = (data) => {
+    const isContract = data.employmentType === "Contract";
+    const mode = data.salaryCalcMode || "MONTHLY_FIXED";
+    const routing = approvalRouting.find((x) => x.module_key === "ALL") || approvalRouting[0];
+    const num = (v) => (v === "" || v === null || v === undefined ? undefined : Number(v));
+    return {
+      name: data.fullName.trim(),
+      country_emp_id: data.countryEmpId.trim(),
+      email: data.email.trim(),
+      phone: data.phone.trim(),
+      phoneCountry: data.phoneCountry,
+      nationalityCountryId: data.nationalityCountryId,
+      residenceCountryId: data.residenceCountryId || null,
+      residenceCityId: data.residenceCityId || null,
+      address: (data.address || "").trim() || null,
+      accommodation: (data.accommodation || "").trim() || null,
+      employmentType: isContract ? "CONTRACT" : "FULL_TIME",
+      accessLevel: data.accessLevel,
+      roleId: data.designatedRole || null,
+      projectIds: data.projectIds || [],
+      mainProjectId: data.mainProjectId,
+      joiningDate: data.dateOfJoining || null,
+      departmentId: data.departmentId || null,
+      designationId: data.designationId || null,
+      staffingCompanyId: isContract && data.staffingCompanyId ? data.staffingCompanyId : null,
+      leavePolicyIds: data.leavePolicyIds || [],
+      shiftId: data.shiftId || null,
+      approvalGroupId: routing ? routing.approval_group_id : null,
+      moduleKey: routing ? routing.module_key : "ALL",
+      currency: data.salaryCurrency || "SAR",
+      salaryMode: mode,
+      overtimeRate: num(data.overtimeRate),
+      ...(mode === "MONTHLY_HOURLY" ? { workingHours: num(data.salaryWorkingHours) } : {}),
+      ...(mode === "HOURLY"
+        ? { hourlyRate: num(data.salaryHourlyRate), minHours: num(data.salaryMinHours) }
+        : {
+            components: (data.salaryComponents || [])
+              .filter((row) => row.salary_component_id)
+              .map((row) => ({
+                componentId: String(row.salary_component_id),
+                calculationType: row.calculation_type || "FIXED",
+                amount: row.amount === "" || row.amount === null ? NaN : Number(row.amount),
+              })),
+          }),
+      // Resumed from a draft → the server deletes it with the create.
+      ...(draftId ? { draft_id: draftId } : {}),
+    };
+  };
+
+  // One create at a time: a double click sends one request.
+  const creatingRef = useRef(false);
+  const [creating, setCreating] = useState(false);
   const submitEmployee = async (data) => {
+    if (creatingRef.current) return;
     if (!validateDocs()) {
       setStep(4);
       return;
     }
-    setUploading(true);
-    let profileUrl;
-    let uploadedDocs;
-
+    creatingRef.current = true;
+    setCreating(true);
+    setRoutingError("");
+    let created;
     try {
-      const pending = await uploadPendingFiles();
-      profileUrl = pending.profileUrl;
-      uploadedDocs = pending.uploadedDocs.map((doc) => ({
-        document_type: DOC_TYPE_TO_API[doc.docType] || "OTHER",
-        document_number: doc.docNumber?.trim() || null,
-        issuing_authority: doc.authority?.trim() || null,
-        issue_date: doc.issueDate || null,
-        expiry_date: doc.expiryDate || null,
-        file_url: doc.fileUrl,
-      }));
+      created = await createEmployee(toCreateBody(data));
     } catch (err) {
-      setUploading(false);
-      toast.error(
-        err?.response?.data?.message ||
-        err?.message ||
-        t("add.toast.uploadFailed"),
-      );
+      creatingRef.current = false;
+      setCreating(false);
+      const code = apiErrorCode(err);
+      if (ROUTING_CODES.includes(code)) {
+        setRoutingError(apiErrorMessage(err));
+        return;
+      }
+      if (CODE_FIELD[code]) {
+        setError(CODE_FIELD[code], { type: "server", message: apiErrorMessage(err) }, { shouldFocus: true });
+        setStep(stepOfField(CODE_FIELD[code]));
+        return;
+      }
+      const rows = serverErrors(err);
+      const routing = rows.find((row) => row.field === "approvalGroupId" || row.field === "moduleKey");
+      if (routing) setRoutingError(routing.message);
+      const fields = rows
+        .filter((row) => row !== routing)
+        .map((row) => ({ field: SERVER_FIELD[row.field] || row.field, message: row.message }));
+      fields.forEach(({ field, message }, i) => setError(field, { type: "server", message }, { shouldFocus: i === 0 }));
+      if (fields.length) setStep(Math.min(...fields.map(({ field }) => stepOfField(field))));
+      else if (!routing) toast.error(apiErrorMessage(err));
       return;
     }
-    setUploading(false);
-
-    const isContract = data.employmentType === "Contract";
-    const projectIds = (data.projectIds || []).map(Number);
-
-    // Salary is built per calculation mode. HOURLY uses the locked "Hourly"
-    // component (rate) + minimum hours; monthly modes use the component grid,
-    // and MONTHLY_HOURLY additionally carries working-hours/day.
-    const mode = data.salaryCalcMode || "MONTHLY_FIXED";
-    const hourlyComp = (salaryCatalog || []).find(
-      (c) => String(c.code || "").toUpperCase() === "HOURLY",
-    );
-
-    let salaryComponents;
-    const salaryExtra = { salary_calc_mode: mode };
-
-    if (mode === "HOURLY") {
-      salaryComponents = hourlyComp
-        ? [
-            {
-              salary_component_id: Number(hourlyComp.id),
-              calculation_type: "FIXED",
-              amount: Number(data.salaryHourlyRate) || 0,
-            },
-          ]
-        : [];
-      salaryExtra.min_hours =
-        data.salaryMinHours !== "" && data.salaryMinHours != null
-          ? Number(data.salaryMinHours)
-          : 0;
-    } else {
-      salaryComponents = (data.salaryComponents || [])
-        .filter((r) => r.salary_component_id && r.amount !== "" && r.amount !== null)
-        .map((r) => ({
-          salary_component_id: Number(r.salary_component_id),
-          calculation_type: r.calculation_type || "FIXED",
-          amount: Number(r.amount),
-        }));
-      if (mode === "MONTHLY_HOURLY") {
-        salaryExtra.working_hours = Number(data.salaryWorkingHours) || null;
-      }
-    }
-
-    const payload = {
-      full_name: data.fullName.trim(),
-      email: data.email.trim(),
-      phone_number: `${data.countryCode}${data.phone}`,
-      address: (data.address || "").trim(),
-      country_emp_id: data.countryEmpId.trim(),
-      ...(data.accommodation?.trim()
-        ? { accommodation: data.accommodation.trim() }
-        : {}),
-      role_id: Number(data.designatedRole),
-      ...(data.dateOfJoining ? { date_of_joining: data.dateOfJoining } : {}),
-      nationality: data.nationality,
-      employment_type: isContract ? "CONTRACT" : "FULL_TIME",
-      overtime_rate:
-        Number(data.overtimeRate) ||
-        (isContract && data.staffingCompanyId ? 1 : 1.5),
-      access_level: data.accessLevel,
-      project_ids: projectIds,
-      leave_policy_ids: (data.leavePolicyIds || []).map(Number),
-      salary: {
-        currency: data.salaryCurrency || "INR",
-        ...salaryExtra,
-        components: salaryComponents,
-      },
-      profile_url: profileUrl,
-      documents: uploadedDocs,
-      // Resumed from a draft → the backend deletes it once the employee exists.
-      ...(draftId ? { draft_id: Number(draftId) } : {}),
-      ...(approvalRouting.length ? { approval_routing: approvalRouting } : {}),
-      ...(projectIds.length && data.mainProjectId
-        ? { main_project_id: Number(data.mainProjectId) }
-        : {}),
-      ...(data.shiftId ? { shift_id: Number(data.shiftId) } : {}),
-      ...(isContract && data.staffingCompanyId
-        ? { staffing_company_id: Number(data.staffingCompanyId) }
-        : {}),
-      ...(data.departmentId ? { department_id: Number(data.departmentId) } : {}),
-      ...(data.designationId
-        ? { designation_id: Number(data.designationId) }
-        : {}),
-    };
-
-    // Static build: the employee is added to the in-memory list.
-    const role = roles.find((r) => String(r.id) === String(data.designatedRole));
-    const department = departments.find((d) => String(d.id) === String(data.departmentId));
-    const designation = null;
-    const staffing = payload.staffing_company_id
-      ? staffingCompanies.find((c) => c.id === payload.staffing_company_id)
-      : null;
-    const iqamaDoc = docs.find((d) => d.docType === IQAMA_DOC_TYPE);
-    const created = addEmployeeRecord({
-      ...payload,
-      name: payload.full_name,
-      first_name: payload.full_name.split(" ")[0],
-      last_name: payload.full_name.split(" ").slice(1).join(" "),
-      iqama_number: iqamaDoc?.docNumber?.trim() || null,
-      roles: role ? [{ id: role.id, name: role.name }] : [],
-      projects: projects.filter((p) => projectIds.includes(p.id)),
-      staffingCompany: staffing,
-      department_name: department?.name,
-      designation_name: designation?.name,
-      shift: shifts.find((s) => String(s.id) === String(data.shiftId)) || null,
-      date_of_joining: data.dateOfJoining || new Date().toISOString().slice(0, 10),
-    });
-    if (draftId) removeEmployeeDraft(draftId).catch(() => {});
     toast.success(t("add.toast.created"));
     setUnsaved(false);
     onComplete?.(created);
-    navigate("/admin/employees");
+    navigate(`/admin/employees/${created.id}`);
   };
 
   // Every uploaded document must have a type selected before leaving step 4
@@ -2664,11 +2672,15 @@ export default function AddEmployee({ onCancel, onComplete }) {
         projects={projects}
         salaryCatalog={salaryCatalog}
         docs={docs}
+        departments={departments}
+        shifts={shifts}
+        leavePolicies={leavePolicies}
+        staffingCompanies={staffingCompanies}
       />
     );
   };
 
-  const submitting = uploading || createLoading;
+  const submitting = creating;
 
   const featureCards = FEATURE_CARDS_BY_STEP[step];
 
@@ -2678,7 +2690,7 @@ export default function AddEmployee({ onCancel, onComplete }) {
       submitting ? (
         <span className="flex items-center gap-2">
           <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          {uploading ? t("add.buttons.uploading") : t("add.buttons.creating")}
+          {t("add.buttons.creating")}
         </span>
       ) : (
         <span className="flex items-center gap-2">
@@ -2807,7 +2819,12 @@ export default function AddEmployee({ onCancel, onComplete }) {
           <div className="mt-6">
             <ApprovalRoutingSection
               value={approvalRouting}
-              onChange={setApprovalRoutingTracked}
+              projectId={getValues("mainProjectId")}
+              error={routingError}
+              onChange={(next) => {
+                setApprovalRoutingTracked(next);
+                setRoutingError("");
+              }}
             />
           </div>
         )}
