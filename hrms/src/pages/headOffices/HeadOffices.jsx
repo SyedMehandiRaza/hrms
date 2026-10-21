@@ -1,6 +1,6 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Pagination from "../../components/Pagination";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import { toast } from "react-toastify";
 import {
@@ -19,10 +19,13 @@ import {
   MdOutlineAssignmentTurnedIn,
 } from "react-icons/md";
 import EditHeadOfficeModal from "../../components/EditHeadOfficeModal";
-import { HEAD_OFFICES } from "../../data/groupC";
-import { matches, nextId, paginate } from "../../data/common";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import { TableLoader } from "../../components/Loader";
+import { ScreenError } from "../../components/ScreenState";
+import { assetUrl } from "../../api/client";
+import { listOffices, removeOffice } from "../../api/offices";
+import useApiQuery from "../../hooks/useApiQuery";
+import { toastApiError } from "../../utils/apiError";
 import Ltr from "../../components/Ltr";
 import Can from "../../components/Can";
 import { MODULES, ACTIONS } from "../../constants/permissions";
@@ -36,10 +39,8 @@ const STATUS_COLORS = {
 
 const PAGE_SIZE = 10;
 
-const getOfficeId = (office) => office?.id ?? office?._id ?? office?.office_id;
-
 // Icon/background are visual only; the workforce numbers and status come from
-// the API (employees assigned to the office's project).
+// the API (employees assigned to the office's project, D6).
 const ICON_BGS = [
   { icon: "🔄", bg: "bg-blue-100" },
   { icon: "🛡️", bg: "bg-purple-100" },
@@ -49,28 +50,19 @@ const ICON_BGS = [
   { icon: "💳", bg: "bg-teal-100" },
 ];
 
-const initialsOf = (name) =>
-  String(name || "")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0].toUpperCase())
-    .join("") || "?";
-
+// An API item → the fields the rows render. An office is Active while it has a project (D3).
 const decorate = (office, index) => {
   const visual = ICON_BGS[index % ICON_BGS.length];
-  const projects = Array.isArray(office.project) ? office.project : [];
   return {
     ...office,
     _icon: visual.icon,
     _iconBg: visual.bg,
-    _avatars: (office.members_preview || []).map(initialsOf),
+    _image: assetUrl(office.image),
+    _avatars: [],
     _extraCount: office.employee_count ?? 0,
-    _contractEmployees: office.contract_count ?? 0,
-    // An office is Active while it serves a live project.
-    _status: projects.length ? "Active" : "Unassigned",
-    _projectName: projects.map((p) => p.project_name).join(", "),
+    _contractEmployees: office.contract_employee_count ?? 0,
+    _status: office.status === "ACTIVE" ? "Active" : "Unassigned",
+    _projectName: office.project?.name || "",
   };
 };
 
@@ -119,30 +111,31 @@ function StatCard({ icon, title, value, badge, iconBg, iconColor }) {
 
 function HeadOffices() {
   const { t } = useTranslation("offices");
-  const location = useLocation();
-  // Static build: offices live in local state (a just-created one arrives via
-  // the navigation state from the create page).
-  const [offices, setOffices] = useState(() => {
-    const created = location.state?.createdOffice;
-    return created
-      ? [{ project: [], members_preview: [], employee_count: 0, contract_count: 0, ...created, id: nextId(HEAD_OFFICES) }, ...HEAD_OFFICES]
-      : HEAD_OFFICES;
-  });
-  const loading = false;
-
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
-  const filteredOffices = offices.filter((o) =>
-    matches(o, search.trim(), ["office_name", "office_location", "office_email"]),
+  // Search is sent once typing pauses; a new term starts again at page 1.
+  useEffect(() => {
+    const term = searchInput.trim();
+    if (term === search) return undefined;
+    const timer = setTimeout(() => {
+      setSearch(term);
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchInput, search]);
+
+  const { data, loading, error, reload } = useApiQuery(
+    () => listOffices({ page, limit: PAGE_SIZE, search }),
+    [page, search],
   );
-  const { rows: list, total, totalPages } = paginate(filteredOffices, page, PAGE_SIZE);
-  const summary = {
-    total_offices: offices.length,
-    active_offices: offices.filter((o) => (o.project || []).length > 0).length,
-    total_locations: new Set(offices.map((o) => o.office_location)).size,
-    total_projects: offices.reduce((s, o) => s + (o.project || []).length, 0),
-  };
+
+  const list = useMemo(() => data?.items || [], [data]);
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  // Company-wide stats (independent of the search and the page).
+  const summary = data?.stats;
 
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -151,24 +144,14 @@ function HeadOffices() {
   const [officeToDelete, setOfficeToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Merge an edited office back into the local list.
-  const reloadOffices = (saved) => {
-    if (!saved) return;
-    setOffices((prev) => prev.map((o) => (getOfficeId(o) === getOfficeId(saved) ? { ...o, ...saved } : o)));
-  };
-
   // Decorate the current backend page with visual-only fields.
   const decorated = useMemo(
     () => list.map((office, index) => decorate(office, index)),
     [list],
   );
 
-  const handleFilter = (setter) => (e) => {
-    setter(e.target.value);
-    setPage(1);
-  };
-
   const handleClearFilters = () => {
+    setSearchInput("");
     setSearch("");
     setPage(1);
   };
@@ -191,14 +174,21 @@ function HeadOffices() {
   const confirmDelete = async () => {
     if (!officeToDelete) return;
     setIsDeleting(true);
-    const deleteId = getOfficeId(officeToDelete);
-    setOffices((prev) => prev.filter((o) => getOfficeId(o) !== deleteId));
-    toast.success(t("list.toast.deleteSuccess"));
-    setIsDeleteModalOpen(false);
-    setOfficeToDelete(null);
-    // Step back a page if this one emptied.
-    if (list.length === 1 && page > 1) setPage((p) => p - 1);
-    setIsDeleting(false);
+    try {
+      await removeOffice(officeToDelete.id);
+      toast.success(t("list.toast.deleteSuccess"));
+      // Deleting the last row of a page → step back a page.
+      if (list.length === 1 && page > 1) setPage((p) => p - 1);
+      else reload();
+    } catch (err) {
+      // e.g. 409 "This head office has a project and can't be deleted."
+      toastApiError(err, t("list.toast.deleteFailed"));
+      reload();
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteModalOpen(false);
+      setOfficeToDelete(null);
+    }
   };
 
   return (
@@ -272,8 +262,8 @@ function HeadOffices() {
                 <MdOutlineSearch className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg" />
                 <input
                   type="text"
-                  value={search}
-                  onChange={handleFilter(setSearch)}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
                   placeholder={t("list.filters.searchPlaceholder")}
                   className="w-full h-full rounded-lg ps-9 pe-3 py-2 text-sm bg-transparent focus:outline-none text-gray-700 placeholder-gray-400"
                 />
@@ -319,8 +309,14 @@ function HeadOffices() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {loading && decorated.length === 0 ? (
+                {loading ? (
                   <TableLoader colSpan={7} label={t("list.loading")} />
+                ) : error ? (
+                  <tr>
+                    <td colSpan={7}>
+                      <ScreenError error={error} onRetry={reload} />
+                    </td>
+                  </tr>
                 ) : decorated.length === 0 ? (
                   <tr>
                     <td
@@ -332,7 +328,7 @@ function HeadOffices() {
                   </tr>
                 ) : (
                   decorated.map((office, index) => {
-                    const officeId = getOfficeId(office);
+                    const officeId = office.id;
                     return (
                       <tr
                         key={officeId}
@@ -343,10 +339,10 @@ function HeadOffices() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            {office.office_image ? (
+                            {office._image ? (
                               <img
-                                src={office.office_image}
-                                alt={office.office_name}
+                                src={office._image}
+                                alt={office.name}
                                 className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
                               />
                             ) : (
@@ -357,11 +353,11 @@ function HeadOffices() {
                               </div>
                             )}
                             <div>
-                              <p className="text-sm font-semibold text-gray-900">
-                                {office?.office_name
-                                  ? office.office_name.length > 20
-                                    ? `${office.office_name.substring(0, 20)}...`
-                                    : office.office_name
+                              <p className="text-sm font-semibold text-gray-900" title={office.name}>
+                                {office?.name
+                                  ? office.name.length > 20
+                                    ? `${office.name.substring(0, 20)}...`
+                                    : office.name
                                   : "—"}
                               </p>
                               <p className="text-xs text-gray-400">
@@ -374,10 +370,10 @@ function HeadOffices() {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-1.5 text-sm text-gray-600">
                             <MdOutlineLocationOn className="text-gray-400 flex-shrink-0" />
-                            {office?.office_location
-                              ? office.office_location.length > 20
-                                ? `${office.office_location.slice(0, 20)}...`
-                                : office.office_location
+                            {office?.location
+                              ? office.location.length > 20
+                                ? `${office.location.slice(0, 20)}...`
+                                : office.location
                               : "—"}
                           </div>
                           {office._projectName && (
@@ -448,21 +444,23 @@ function HeadOffices() {
               <div className="px-4 py-12 text-center text-gray-400 text-sm">
                 {t("list.loadingMobile")}
               </div>
+            ) : error ? (
+              <ScreenError error={error} onRetry={reload} />
             ) : decorated.length === 0 ? (
               <div className="px-4 py-12 text-center text-gray-400 text-sm">
                 {t("list.empty")}
               </div>
             ) : (
               decorated.map((office) => {
-                const officeId = getOfficeId(office);
+                const officeId = office.id;
                 return (
                   <div key={officeId} className="p-4 space-y-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        {office.office_image ? (
+                        {office._image ? (
                           <img
-                            src={office.office_image}
-                            alt={office.office_name}
+                            src={office._image}
+                            alt={office.name}
                             className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
                           />
                         ) : (
@@ -474,7 +472,7 @@ function HeadOffices() {
                         )}
                         <div>
                           <p className="text-sm font-semibold text-gray-900">
-                            {office.office_name || "—"}
+                            {office.name || "—"}
                           </p>
                           <p className="text-xs text-gray-400">
                             {t("list.idLabel")} <Ltr>{officeId}</Ltr>
@@ -491,7 +489,7 @@ function HeadOffices() {
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-gray-500">
                       <MdOutlineLocationOn className="text-gray-400" />
-                      {office.office_location || "—"}
+                      {office.location || "—"}
                     </div>
                     {office._projectName && (
                       <p className="text-xs text-gray-400">
@@ -656,7 +654,7 @@ function HeadOffices() {
         <EditHeadOfficeModal
           office={selectedOffice}
           isViewMode={isViewOpen}
-          onSaved={reloadOffices}
+          onSaved={reload}
           onClose={() => {
             setIsEditOpen(false);
             setIsViewOpen(false);
@@ -672,10 +670,9 @@ function HeadOffices() {
         }}
         onConfirm={confirmDelete}
         title={t("list.deleteModal.title")}
-        message={t("list.deleteModal.message", { name: officeToDelete?.office_name })}
+        message={t("list.deleteModal.message", { name: officeToDelete?.name })}
         confirmText={isDeleting ? t("list.deleteModal.deleting") : t("list.deleteAction")}
-        confirmVariant="danger"
-        loading={isDeleting}
+        isLoading={isDeleting}
       />
     </>
   );

@@ -1,25 +1,23 @@
 import { useEffect, useState, useRef } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { MdClose, MdOutlineError, MdOutlinePerson } from "react-icons/md";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
-import { CALLING_COUNTRIES, searchCallingCountries } from "../data/groupC";
-import CustomDropdown from "./CustomDropdown";
-
-// Split a stored phone like "+919876543210" back into ("+91", "9876543210").
-// The code is the LONGEST known calling code the number starts with — the old
-// "+ up to 4 digits" guess took "+9198" out of "+919876543210".
-const splitPhone = (raw, knownCodes = []) => {
-  if (!raw) return { countryCode: "+1", phone: "" };
-  const value = String(raw).replace(/[\s-]/g, "");
-  const code = [...knownCodes]
-    .sort((a, b) => b.length - a.length)
-    .find((c) => c && value.startsWith(c) && value.length > c.length);
-  if (code) return { countryCode: code, phone: value.slice(code.length) };
-  const match = value.match(/^(\+\d{1,3})(\d+)$/);
-  if (match) return { countryCode: match[1], phone: match[2] };
-  return { countryCode: "+1", phone: value };
-};
+import PhoneCountrySelect from "./geo/PhoneCountrySelect";
+import CountrySelect from "./geo/CountrySelect";
+import CitySelect from "./geo/CitySelect";
+import { assetUrl } from "../api/client";
+import { removeOfficeImage, updateOffice, uploadOfficeImage } from "../api/offices";
+import { useCurrentUser } from "../hooks/useSession";
+import { applyFieldErrors } from "../utils/applyFieldErrors";
+import { apiErrorCode, apiErrorMessage, toastApiError } from "../utils/apiError";
+import {
+  OFFICE_FIELDS,
+  isValidOfficeImage,
+  officeRules,
+  toOfficeBody,
+  toOfficeFormValues,
+} from "../utils/officeRules";
 
 const inputBase =
   "w-full px-4 py-2.5 border rounded-lg text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition bg-white";
@@ -36,49 +34,31 @@ const FieldErr = ({ error }) =>
     </p>
   ) : null;
 
-// Every calling code, used to split the stored phone correctly.
-const allCodes = CALLING_COUNTRIES.map((c) => c.calling_code);
-
-const getOfficeId = (office) => office?.id ?? office?._id ?? office?.office_id;
-
-
-
+// Edit (or view) one head office from the list (D5). `office` is the list item; on save the
+// details are sent first, then the photo is uploaded or removed if it changed.
 export default function EditHeadOfficeModal({ office, onClose, onSaved, isViewMode = false }) {
   const { t } = useTranslation("offices");
-  const updateLoading = false;
+  const user = useCurrentUser();
+  const [updateLoading, setUpdateLoading] = useState(false);
 
   const photoRef = useRef();
-  const [photo, setPhoto] = useState(null);
-  const [, setPhotoFile] = useState(null);
-  const isUploading = false;
-  const [countries, setCountries] = useState(() => searchCallingCountries(""));
-
-  const handleCountrySearch = (val) => {
-    setCountries(searchCallingCountries(val));
-  };
+  const [photo, setPhoto] = useState(() => assetUrl(office?.image));
+  const [photoFile, setPhotoFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const {
     register,
     handleSubmit,
-    reset,
-    watch,
-    setValue,
+    control,
+    getValues,
+    setError,
     formState: { errors },
-  } = useForm();
-
-  useEffect(() => {
-    if (!office) return;
-    const { countryCode, phone } = splitPhone(office.office_phone, allCodes);
-    reset({
-      headOfficeName: office.office_name || "",
-      email: office.office_email || "",
-      countryCode,
-      phone,
-      location: office.office_location || "",
-    });
-    setPhoto(office.office_image || null);
-    setPhotoFile(null);
-  }, [office, reset]);
+  } = useForm({
+    defaultValues: toOfficeFormValues(office, user?.company?.country),
+  });
+  const rules = officeRules(t, getValues);
+  const countryId = useWatch({ control, name: "countryId" });
+  const cityId = useWatch({ control, name: "cityId" });
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -87,26 +67,59 @@ export default function EditHeadOfficeModal({ office, onClose, onSaved, isViewMo
     };
   }, []);
 
+  const onPhotoSelected = (e) => {
+    const f = e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    // Same rule as the server; an invalid file is never kept.
+    if (!isValidOfficeImage(f)) {
+      toast.error(t("validation.imageInvalid"));
+      return;
+    }
+    setPhotoFile(f);
+    setPhoto(URL.createObjectURL(f));
+  };
+
   const onSubmit = async (data) => {
-    const id = getOfficeId(office);
+    const id = office?.id;
     if (id == null) {
       toast.error(t("toast.missingId"));
       return;
     }
 
-    // Static build: a picked file is kept as its local preview URL.
-    const uploadedPhotoUrl = photo;
+    setUpdateLoading(true);
+    try {
+      await updateOffice(id, toOfficeBody(data));
+    } catch (err) {
+      setUpdateLoading(false);
+      // 409 OFFICE_NAME_TAKEN belongs under the name.
+      if (apiErrorCode(err) === "OFFICE_NAME_TAKEN") {
+        setError("name", { type: "server", message: apiErrorMessage(err) }, { shouldFocus: true });
+        return;
+      }
+      const { mapped } = applyFieldErrors(err, setError, { knownFields: OFFICE_FIELDS });
+      if (!mapped.length) toastApiError(err, t("toast.updateFailed"));
+      return;
+    }
 
-    const payload = {
-      office_name: data.headOfficeName.trim(),
-      office_email: data.email.trim(),
-      office_phone: `${data.countryCode}${data.phone}`,
-      office_location: data.location.trim(),
-      ...(uploadedPhotoUrl && { office_image: uploadedPhotoUrl }),
-    };
+    // The photo: a new file is uploaded; a removed one is deleted.
+    let photoOk = true;
+    if (photoFile || (!photo && office.image)) {
+      setIsUploading(true);
+      try {
+        if (photoFile) await uploadOfficeImage(id, photoFile);
+        else await removeOfficeImage(id);
+      } catch (err) {
+        photoOk = false;
+        toastApiError(err, t("toast.uploadImageFailed"));
+      } finally {
+        setIsUploading(false);
+      }
+    }
 
-    toast.success(t("toast.updated"));
-    if (onSaved) onSaved({ ...office, ...payload });
+    setUpdateLoading(false);
+    if (photoOk) toast.success(t("toast.updated"));
+    if (onSaved) onSaved();
     onClose();
   };
 
@@ -115,12 +128,6 @@ export default function EditHeadOfficeModal({ office, onClose, onSaved, isViewMo
   };
 
   if (!office) return null;
-
-  const currentCountryCode = watch("countryCode");
-  const countryOptions = countries.map((c) => ({ label: c.calling_code, value: c.calling_code }));
-  if (currentCountryCode && !countryOptions.some((o) => o.value === currentCountryCode)) {
-    countryOptions.unshift({ label: currentCountryCode, value: currentCountryCode });
-  }
 
   return (
     <div
@@ -210,15 +217,9 @@ export default function EditHeadOfficeModal({ office, onClose, onSaved, isViewMo
                 <input
                   ref={photoRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/png,image/jpeg"
                   className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files[0];
-                    if (f) {
-                      setPhotoFile(f);
-                      setPhoto(URL.createObjectURL(f));
-                    }
-                  }}
+                  onChange={onPhotoSelected}
                 />
               </div>
             </div>
@@ -229,25 +230,15 @@ export default function EditHeadOfficeModal({ office, onClose, onSaved, isViewMo
                   {t("edit.nameLabel")} <span className="text-red-500">*</span>
                 </label>
                 <input
-                  {...register("headOfficeName", {
-                    required: t("validation.nameRequiredShort"),
-                    validate: {
-                      noSpaces: (v) => v.trim() !== "" || t("validation.cannotBeEmpty"),
-                      minLen: (v) =>
-                        v.trim().length >= 2 || t("validation.min2"),
-                      validChars: (v) =>
-                        /^[A-Za-z0-9\s\-&,()]+$/.test(v.trim()) ||
-                        t("validation.invalidChars"),
-                    },
-                  })}
+                  {...register("name", rules.name)}
                   placeholder={t("edit.namePlaceholder")}
-                  className={inputCls(errors.headOfficeName)}
+                  className={inputCls(errors.name)}
                   onInput={(e) => {
                     e.target.value = e.target.value.replace(/^\s+/, "");
                   }}
                   disabled={isViewMode}
                 />
-                <FieldErr error={errors.headOfficeName} />
+                <FieldErr error={errors.name} />
               </div>
 
               <div>
@@ -256,14 +247,7 @@ export default function EditHeadOfficeModal({ office, onClose, onSaved, isViewMo
                 </label>
                 <input
                   type="email"
-                  {...register("email", {
-                    required: t("validation.emailRequired"),
-                    pattern: {
-                      value:
-                        /^[a-zA-Z0-9._+-]+@[a-zA-Z0-9-]+(\.[a-zA-Z]{2,})+$/,
-                      message: t("validation.emailValid"),
-                    },
-                  })}
+                  {...register("email", rules.email)}
                   placeholder={t("edit.emailPlaceholder")}
                   className={inputCls(errors.email)}
                   onInput={(e) => {
@@ -283,36 +267,25 @@ export default function EditHeadOfficeModal({ office, onClose, onSaved, isViewMo
                 </label>
                 <div className="flex gap-2">
                   <div className="shrink-0 min-w-[100px]">
-                    <CustomDropdown
-                      {...register("countryCode")}
-                      value={watch("countryCode")}
-                      onChange={(val) => setValue("countryCode", val, { shouldValidate: true })}
-                      isSearchable={true}
-                      onSearchChange={handleCountrySearch}
-                      options={countryOptions}
+                    <PhoneCountrySelect
+                      {...register("phoneCountry", rules.phoneCountry)}
+                      error={!!errors.phoneCountry}
                       disabled={isViewMode}
                     />
                   </div>
                   <input
                     type="tel"
                     inputMode="numeric"
-                    maxLength={15}
-                    {...register("phone", {
-                      required: t("validation.phoneRequired"),
-                      pattern: {
-                        value: /^[0-9]{6,15}$/,
-                        message: t("validation.phoneValid"),
-                      },
-                    })}
+                    {...register("phone", rules.phone)}
                     placeholder={t("edit.phonePlaceholder")}
                     className={inputCls(errors.phone)}
                     onInput={(e) => {
-                      e.target.value = e.target.value.replace(/\D/g, "");
+                      e.target.value = e.target.value.replace(/[^\d\s+()-]/g, "");
                     }}
                     disabled={isViewMode}
                   />
                 </div>
-                <FieldErr error={errors.phone} />
+                <FieldErr error={errors.phone || errors.phoneCountry} />
               </div>
               <div>
                 <label className={labelCls}>
@@ -320,17 +293,7 @@ export default function EditHeadOfficeModal({ office, onClose, onSaved, isViewMo
                   {!isViewMode && <span className="text-red-500">*</span>}
                 </label>
                 <input
-                  {...register("location", {
-                    required: t("validation.locationRequired"),
-                    validate: {
-                      noSpaces: (v) => v.trim() !== "" || t("validation.cannotBeEmpty"),
-                      minLen: (v) =>
-                        v.trim().length >= 3 || t("validation.min3"),
-                      validChars: (v) =>
-                        /^[A-Za-z0-9,\s-]+$/.test(v.trim()) ||
-                        t("validation.locationFormat"),
-                    },
-                  })}
+                  {...register("location", rules.location)}
                   placeholder={t("edit.locationPlaceholder")}
                   className={inputCls(errors.location)}
                   onInput={(e) => {
@@ -339,6 +302,34 @@ export default function EditHeadOfficeModal({ office, onClose, onSaved, isViewMo
                   disabled={isViewMode}
                 />
                 <FieldErr error={errors.location} />
+              </div>
+            </div>
+
+            {/* Row 3: Country + City */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>
+                  {t("edit.countryLabel")} {!isViewMode && <span className="text-red-500">*</span>}
+                </label>
+                <CountrySelect
+                  {...register("countryId", rules.countryId)}
+                  error={!!errors.countryId}
+                  disabled={isViewMode}
+                />
+                <FieldErr error={errors.countryId} />
+              </div>
+              <div>
+                <label className={labelCls}>{t("edit.cityLabel")}</label>
+                <CitySelect
+                  {...register("cityId")}
+                  countryId={countryId}
+                  // The saved city shows only while it's still the chosen one (a country round trip
+                  // clears it, and the field must then show that).
+                  selected={cityId && cityId === office.city?.id ? office.city : null}
+                  error={!!errors.cityId}
+                  disabled={isViewMode}
+                />
+                <FieldErr error={errors.cityId} />
               </div>
             </div>
           </div>

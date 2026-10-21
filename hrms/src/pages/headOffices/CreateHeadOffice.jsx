@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import {
   MdOutlineArrowForward,
   MdOutlinePerson,
@@ -10,10 +10,20 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
-import { searchCallingCountries } from "../../data/groupC";
-import CustomDropdown from "../../components/CustomDropdown";
-
-// ── Constants ─────────────────────────────────────────────────────────────────
+import PhoneCountrySelect from "../../components/geo/PhoneCountrySelect";
+import CountrySelect from "../../components/geo/CountrySelect";
+import CitySelect from "../../components/geo/CitySelect";
+import { createOffice, uploadOfficeImage } from "../../api/offices";
+import { useCurrentUser } from "../../hooks/useSession";
+import { applyFieldErrors } from "../../utils/applyFieldErrors";
+import { apiErrorCode, apiErrorMessage, toastApiError } from "../../utils/apiError";
+import {
+  OFFICE_FIELDS,
+  isValidOfficeImage,
+  officeRules,
+  toOfficeBody,
+  toOfficeFormValues,
+} from "../../utils/officeRules";
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const inputBase =
@@ -43,54 +53,71 @@ export default function CreateHeadOffice() {
   const { t } = useTranslation("offices");
   const photoRef = useRef();
   const [photo, setPhoto] = useState(null);
-  const [, setPhotoFile] = useState(null);
-  const isUploading = false;
-  const [countries, setCountries] = useState(() => searchCallingCountries(""));
-
-  const handleCountrySearch = (val) => {
-    setCountries(searchCallingCountries(val));
-  };
+  const [photoFile, setPhotoFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const user = useCurrentUser();
 
   const navigate = useNavigate();
-  const createLoading = false;
 
   const {
     register,
     handleSubmit,
-    watch,
+    control,
+    getValues,
+    setError,
     formState: { errors },
   } = useForm({
-    defaultValues: {
-      headOfficeName: "",
-      email: "",
-      countryCode: "+1",
-      phone: "",
-      location: "",
-    },
+    defaultValues: toOfficeFormValues(null, user?.company?.country),
   });
+  const rules = officeRules(t, getValues);
+  const countryId = useWatch({ control, name: "countryId" });
 
-  const onSubmit = async (data) => {
-    // Static build: a picked file is kept as its local preview URL.
-    const uploadedPhotoUrl = photo;
-
-    const payload = {
-      office_name: data.headOfficeName.trim(),
-      office_email: data.email.trim(),
-      office_phone: `${data.countryCode}${data.phone}`,
-      office_location: data.location.trim(),
-      ...(uploadedPhotoUrl && { office_image: uploadedPhotoUrl }),
-    };
-
-    toast.success(t("toast.created"));
-    // The list picks the new office up from the navigation state.
-    navigate("/admin/head-offices", { state: { createdOffice: payload } });
+  const onPhotoSelected = (e) => {
+    const f = e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    // Same rule as the server; an invalid file is never kept.
+    if (!isValidOfficeImage(f)) {
+      toast.error(t("validation.imageInvalid"));
+      return;
+    }
+    setPhotoFile(f);
+    setPhoto(URL.createObjectURL(f));
   };
 
-  const currentCountryCode = watch("countryCode");
-  const countryOptions = countries.map((c) => ({ label: c.calling_code, value: c.calling_code }));
-  if (currentCountryCode && !countryOptions.some((o) => o.value === currentCountryCode)) {
-    countryOptions.unshift({ label: currentCountryCode, value: currentCountryCode });
-  }
+  const onSubmit = async (data) => {
+    setCreateLoading(true);
+    let office;
+    try {
+      office = await createOffice(toOfficeBody(data));
+    } catch (err) {
+      setCreateLoading(false);
+      // 409 OFFICE_NAME_TAKEN belongs under the name.
+      if (apiErrorCode(err) === "OFFICE_NAME_TAKEN") {
+        setError("name", { type: "server", message: apiErrorMessage(err) }, { shouldFocus: true });
+        return;
+      }
+      const { mapped } = applyFieldErrors(err, setError, { knownFields: OFFICE_FIELDS });
+      if (!mapped.length) toastApiError(err, t("toast.createFailed"));
+      return;
+    }
+
+    let photoOk = true;
+    if (photoFile) {
+      setIsUploading(true);
+      try {
+        await uploadOfficeImage(office.id, photoFile);
+      } catch (err) {
+        // The office exists; only the photo failed (it can be added from Edit). Only this toast
+        // shows, so it isn't queued behind the success one (one toast at a time).
+        photoOk = false;
+        toastApiError(err, t("toast.uploadImageFailed"));
+      }
+    }
+    if (photoOk) toast.success(t("toast.created"));
+    navigate("/admin/head-offices");
+  };
 
   return (
     <div className="space-y-6">
@@ -166,15 +193,9 @@ export default function CreateHeadOffice() {
             <input
               ref={photoRef}
               type="file"
-              accept="image/*"
+              accept="image/png,image/jpeg"
               className="hidden"
-              onChange={(e) => {
-                const f = e.target.files[0];
-                if (f) {
-                  setPhotoFile(f);
-                  setPhoto(URL.createObjectURL(f));
-                }
-              }}
+              onChange={onPhotoSelected}
             />
           </div>
         </div>
@@ -187,35 +208,15 @@ export default function CreateHeadOffice() {
               {t("create.nameLabel")} <span className="text-red-500">*</span>
             </label>
             <input
-              {...register("headOfficeName", {
-                required: t("validation.nameRequired"),
-
-                validate: {
-                  noOnlySpaces: (value) =>
-                    value.trim() !== "" || t("validation.nameEmpty"),
-
-                  noDoubleSpaces: (value) =>
-                    !/\s{2,}/.test(value) || t("validation.multipleSpaces"),
-
-                  validName: (value) =>
-                    /^[A-Za-z0-9']+(?:\s[A-Za-z0-9']+)*$/.test(value.trim()) ||
-                    t("validation.nameChars"),
-
-                  minLength: (value) =>
-                    value.trim().length >= 2 ||
-                    t("validation.min2Required"),
-                  maxLength: (value) =>
-                    value.trim().length <= 100 || t("validation.nameMax"),
-                },
-              })}
+              {...register("name", rules.name)}
               placeholder={t("create.namePlaceholder")}
-              className={inputCls(errors.headOfficeName)}
+              className={inputCls(errors.name)}
               onInput={(e) => {
                 removeEmojis(e);
                 e.target.value = e.target.value.replace(/^\s+/, "");
               }}
             />
-            <FieldErr error={errors.headOfficeName} />
+            <FieldErr error={errors.name} />
           </div>
 
           {/* Email Address */}
@@ -224,28 +225,7 @@ export default function CreateHeadOffice() {
               {t("create.emailLabel")} <span className="text-red-500">*</span>
             </label>
             <input
-              {...register("email", {
-                required: t("validation.emailRequired"),
-
-                pattern: {
-                  value: /^[a-zA-Z0-9._+-]+@[a-zA-Z0-9-]+(\.[a-zA-Z]{2,})+$/,
-                  message: t("validation.emailValidAddress"),
-                },
-
-                validate: {
-                  noSpaces: (value) =>
-                    !/\s/.test(value) || t("validation.noSpaces"),
-
-                  noDoubleDots: (value) =>
-                    !value.includes("..") || t("validation.emailFormat"),
-
-                  noStartDot: (value) =>
-                    !value.startsWith(".") || t("validation.emailStartDot"),
-
-                  noEndDot: (value) =>
-                    !value.endsWith(".") || t("validation.emailEndDot"),
-                },
-              })}
+              {...register("email", rules.email)}
               type="email"
               placeholder={t("create.emailPlaceholder")}
               className={inputCls(errors.email)}
@@ -267,33 +247,24 @@ export default function CreateHeadOffice() {
             </label>
             <div className="flex gap-2">
               <div className="relative flex-shrink-0 min-w-[100px]">
-                <CustomDropdown
-                  {...register("countryCode")}
-                  isSearchable={true}
-                  onSearchChange={handleCountrySearch}
-                  options={countryOptions}
+                <PhoneCountrySelect
+                  {...register("phoneCountry", rules.phoneCountry)}
+                  error={!!errors.phoneCountry}
                 />
               </div>
               <input
-                {...register("phone", {
-                  required: t("validation.phoneNumberRequired"),
-                  pattern: {
-                    value: /^[0-9]{6,15}$/,
-                    message: t("validation.phoneValid"),
-                  },
-                })}
+                {...register("phone", rules.phone)}
                 type="tel"
                 inputMode="numeric"
-                maxLength={15}
                 placeholder={t("create.phonePlaceholder")}
                 className={inputCls(errors.phone)}
                 onInput={(e) => {
                   removeEmojis(e);
-                  e.target.value = e.target.value.replace(/\D/g, "");
+                  e.target.value = e.target.value.replace(/[^\d\s+()-]/g, "");
                 }}
               />
             </div>
-            <FieldErr error={errors.phone} />
+            <FieldErr error={errors.phone || errors.phoneCountry} />
           </div>
 
           {/* Location */}
@@ -303,24 +274,7 @@ export default function CreateHeadOffice() {
               <span className="text-red-500">*</span>
             </label>
             <input
-              {...register("location", {
-                required: t("validation.locationRequired"),
-
-                validate: {
-                  noOnlySpaces: (value) =>
-                    value.trim() !== "" || t("validation.locationEmpty"),
-
-                  noDoubleSpaces: (value) =>
-                    !/\s{2,}/.test(value) || t("validation.multipleSpaces"),
-
-                  validLocation: (value) =>
-                    /^[A-Za-z0-9,\s-]+$/.test(value.trim()) ||
-                    t("validation.locationFormat"),
-
-                  minLength: (value) => value.trim().length >= 3 || t("validation.tooShort"),
-                  maxLength: (value) => value.trim().length <= 255 || t("validation.max255"),
-                },
-              })}
+              {...register("location", rules.location)}
               maxLength={255}
               placeholder={t("create.locationPlaceholder")}
               className={inputCls(errors.location)}
@@ -330,6 +284,22 @@ export default function CreateHeadOffice() {
               }}
             />
             <FieldErr error={errors.location} />
+          </div>
+
+          {/* Country */}
+          <div>
+            <label className={labelCls}>
+              {t("create.countryLabel")} <span className="text-red-500">*</span>
+            </label>
+            <CountrySelect {...register("countryId", rules.countryId)} error={!!errors.countryId} />
+            <FieldErr error={errors.countryId} />
+          </div>
+
+          {/* City */}
+          <div>
+            <label className={labelCls}>{t("create.cityLabel")}</label>
+            <CitySelect {...register("cityId")} countryId={countryId} error={!!errors.cityId} />
+            <FieldErr error={errors.cityId} />
           </div>
         </div>
 
