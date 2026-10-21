@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import {
   MdOutlineSearch,
@@ -11,8 +11,10 @@ import { TableLoader } from "../../components/Loader";
 import Ltr from "../../components/Ltr";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import Pagination from "../../components/Pagination";
-import { EMPLOYEE_DRAFTS, deleteDraft } from "../../data/groupB";
-import { paginate, matches } from "../../data/common";
+import { ScreenError } from "../../components/ScreenState";
+import useApiQuery from "../../hooks/useApiQuery";
+import { listEmployeeDrafts, removeEmployeeDraft } from "../../api/employees";
+import { toastApiError } from "../../utils/apiError";
 
 const LIMIT = 10;
 const TOTAL_STEPS = 5;
@@ -38,13 +40,11 @@ export default function EmployeeDrafts({ onCountChange }) {
   const { t } = useTranslation("employees");
   const navigate = useNavigate();
 
-  const loading = false;
   const [page, setPage] = useState(1);
-  const [version, setVersion] = useState(0);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [deleting, setDeleting] = useState(null);
-  const [busy] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   // Debounce the search box; reset to page 1 when the term settles.
   useEffect(() => {
@@ -55,26 +55,32 @@ export default function EmployeeDrafts({ onCountChange }) {
     return () => clearTimeout(id);
   }, [searchInput]);
 
-  // Static drafts, searched and paged client-side.
-  const block = useMemo(
-    () => paginate(EMPLOYEE_DRAFTS.filter((d) => matches(d, search, ["full_name", "email"])), page, LIMIT),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [page, search, version],
-  );
+  // The company's drafts (newest saved first, D53); the search box filters them by name / email.
+  const { data, loading, error, reload: load } = useApiQuery(() => listEmployeeDrafts({ limit: 100 }), []);
+  const block = useMemo(() => {
+    const q = search.toLowerCase();
+    const all = (data?.items || []).filter((d) => !q || [d.full_name, d.email].some((v) => String(v || "").toLowerCase().includes(q)));
+    return { rows: all.slice((page - 1) * LIMIT, page * LIMIT), total: all.length, totalPages: Math.ceil(all.length / LIMIT) };
+  }, [data, search, page]);
   const rows = block.rows;
   const total = block.total;
   const totalPages = Math.max(1, block.totalPages);
-  const load = useCallback(() => setVersion((v) => v + 1), []);
 
   // Keep the tab badge on the Employees page in sync.
   useEffect(() => {
     if (!search) onCountChange?.(total);
   }, [search, total, onCountChange]);
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleting) return;
-    deleteDraft(deleting.id);
-    toast.success(t("drafts.deleted"));
+    setBusy(true);
+    try {
+      await removeEmployeeDraft(deleting.id);
+      toast.success(t("drafts.deleted"));
+    } catch (err) {
+      toastApiError(err);
+    }
+    setBusy(false);
     setDeleting(null);
     // Step back a page if the last row of this page was removed.
     if (rows.length === 1 && page > 1) setPage((p) => p - 1);
@@ -84,7 +90,6 @@ export default function EmployeeDrafts({ onCountChange }) {
   const resume = (draft) =>
     navigate(`/admin/employees/add-employee?draft=${draft.id}`);
 
-  const actorName = (a) => a?.name || a?.email || "—";
 
   return (
     <div className="space-y-4">
@@ -123,8 +128,14 @@ export default function EmployeeDrafts({ onCountChange }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {loading && rows.length === 0 ? (
+              {loading ? (
                 <TableLoader colSpan={5} label={t("drafts.loading")} />
+              ) : error ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-6">
+                    <ScreenError error={error} onRetry={load} />
+                  </td>
+                </tr>
               ) : rows.length === 0 ? (
                 <tr>
                   <td
@@ -166,10 +177,10 @@ export default function EmployeeDrafts({ onCountChange }) {
                         </div>
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-600 whitespace-nowrap">
-                        {formatDateTime(d.updated_at)}
+                        {formatDateTime(d.last_saved_at)}
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-600 whitespace-nowrap">
-                        {actorName(d.updated_by || d.created_by)}
+                        {d.saved_by?.name || "—"}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
