@@ -27,7 +27,9 @@ Notes (2026-10-21):
 - `POST /exits/:id/withdraw { reason }` returns 200 with the exit detail. Any company login may call it; the
   service allows the raiser, the owner, or `employee:create` + `employee:update`. The reason is saved as
   `cancel_reason` and on the WITHDRAWN event's payload; past approval logs are kept.
-- At final approval the APPROVED event currently has no actor (the engine's hook doesn't pass one).
+- At final approval the APPROVED event records the final approver (or the owner on an override); null only when
+  the system completes the request (e.g. a group change). Fixed 2026-10-21 after review; test in
+  `exits-outcomes.test.js`.
 - Email templates: `exit-approval-needed`, `exit-approved` (raiser), `exit-rejected` (raiser, with the reason),
   `exit-approved-employee` (the leaving employee, when someone else raised the exit — so also a resignation raised
   on their behalf). Only the "needs your approval" text comes from the plan; the other wordings are new, and the

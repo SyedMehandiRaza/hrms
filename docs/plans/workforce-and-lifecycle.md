@@ -224,6 +224,8 @@ Out of scope: salary calculation, payroll runs, attendance screens, employee doc
     editable, ≥ start and ≤ start + 365; start
     within ±90 days of today; LWD in the past only for the owner. Exit settings tab in scope (defaults only; the checklist
     template is deferred). Settlement choices are saved; the preview shows "Available after Payroll".
+    Decided 2026-10-21: the rehire cooling period is 0–1095 days ("Cooling period must be 0–1095 days"; default
+    from Exit settings, 180), in the wizard, edit terms and Exit settings.
 63. **LWD job** (daily, just after midnight in company TZ) for IN_NOTICE exits with LWD < today, one transaction each:
     exit and employee → `EXITED`, `exit_date` = LWD; account → `INACTIVE` (ended, ADR 2) + all sessions revoked;
     all assignments and the main period end at LWD with `REMOVED` rows; approval-group memberships deactivated;
@@ -242,6 +244,10 @@ Out of scope: salary calculation, payroll runs, attendance screens, employee doc
     they can't resign and nobody can raise an exit for them. A termination for yourself → field `employeeId`
     "You cannot raise an exit for yourself". Raising for someone else (resignation or termination), editing terms and cancelling needs
     `employee:create` **and** `employee:update`.
+    Decided 2026-10-21: an own resignation takes today as the notice start and the company defaults (notice days and
+    settlement choices from Exit settings); the employee gives only the reason and an optional preferred last day. An
+    employee already IN_NOTICE (they have an open exit) who raises again gets `EXIT_ALREADY_OPEN` "This employee
+    already has an open exit." rather than `FORBIDDEN`.
 67. **Rehire** (`employee:create`): same employee record and Employee ID. Needs exit EXITED (`EXIT_INVALID_STATE`),
     `rehire_eligible` (`REHIRE_NOT_ELIGIBLE`), rehire date ≥ `rehire_allowed_from` (`REHIRE_NOT_ALLOWED`) and
     ≤ today + 90 days (field "Rehire date cannot be more than 90 days ahead"; empty = today), and no current account
@@ -253,6 +259,10 @@ Out of scope: salary calculation, payroll runs, attendance screens, employee doc
     Main project = the chosen one or the last main if it's ACTIVE, otherwise required ("Select an active main project.").
     Approval group, shift, salary (new row from the rehire date) and leave policies are kept if still active; balances
     start fresh.
+    Decided 2026-10-21: the old salary and leave-policy assignments end on the exit date; the old leave balance of a
+    kept leave type in the rehire FY is soft-deleted so a fresh one starts; a PROJECT approval group whose project
+    isn't the new main project is dropped (D51); the rehire date can't be before the main project's start (D49, field
+    `rehireDate`); an exit already used for a rehire can't be used again (`EXIT_INVALID_STATE`).
 
 ### Notifications (email only)
 68. Current-level approvers: "An exit request for {employee} needs your approval." Raiser: approved/rejected

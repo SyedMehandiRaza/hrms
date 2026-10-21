@@ -33,7 +33,7 @@ Field texts: `docs/standards.md` §7.2 "Exit (raise, edit terms)" and "Exit sett
 
 Notes (2026-10-21):
 - `POST /employees/:id/exits` returns 201 with the exit detail. `:id` may be `me` for your own resignation.
-- An own resignation takes today as the notice start, the default notice days and the default settlement choices.
+- An own resignation takes today as the notice start, the default notice days and the default settlement choices (approved 2026-10-21, plan D66).
   Only the reason, category and preferred last day are taken from the body.
 - `GET /exits?status=&type=&reason=&lwdMonth=YYYY-MM&search=` and `GET /exits/:id` need `exit:read`.
 - `GET/PUT /exit-settings { noticeDays, coolingPeriodDays, allowLeaveDuringNotice, encashLeave,

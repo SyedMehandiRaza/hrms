@@ -91,6 +91,24 @@ describe("final approval", () => {
     expect(detail.events.map((e) => e.event_type)).toEqual(["RAISED", "APPROVED"]);
   });
 
+  it("the APPROVED event records who gave the final approval (the owner's override too)", async () => {
+    const ctx = await setup();
+    const exit = await raise(ctx.token, ctx.leaver, termination());
+    await approve(ctx.l1.token, exit);
+    await approve(ctx.l2.token, exit);
+    const approved = await db.ExitEvent.findOne({ where: { exit_id: exit.id, event_type: "APPROVED" } });
+    expect(approved.actor_user_id).toBe(ctx.l2.user.id);
+    const detail = (await api.get(`/api/exits/${exit.id}`, ctx.token)).body.data;
+    expect(detail.events.find((e) => e.event_type === "APPROVED").actor_user_id).toBe(ctx.l2.user.id);
+
+    const other = await employeeSetup();
+    const leaver = await add(other, { name: "No Group" });
+    const ownerOnly = await raise(other.token, leaver, termination());
+    await approve(other.token, ownerOnly, { reason: "Approved after review" });
+    const byOwner = await db.ExitEvent.findOne({ where: { exit_id: ownerOnly.id, event_type: "APPROVED" } });
+    expect(byOwner.actor_user_id).toBe(other.owner.id);
+  });
+
   it("an owner-only request approved by the owner → IN_NOTICE", async () => {
     const ctx = await employeeSetup();
     const leaver = await add(ctx, { name: "No Group" });

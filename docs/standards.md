@@ -33,6 +33,9 @@ Module-specific rules live in `docs/plans/`; terms in `docs/CONTEXT.md`; reasons
 - Validation failures are **400**. Other statuses: 401 not logged in / session invalid, 403 not allowed,
   404 not found **or belongs to another company**, 409 conflict, 423 account locked, 429 rate limited,
   500 unexpected (never leaks details).
+- A request with a revoked session of an **ended (INACTIVE) account** (e.g. after an exit, ADR 0002) gets 403
+  `AUTH_ACCOUNT_INACTIVE`, not 401, so the UI shows the Access ended screen. Every other revoked session (including
+  a SUSPENDED account from bulk deactivate) stays 401. Decided 2026-10-21.
 - One catalog: `backend/src/constants/messages.js` (`code → { status, en, ar }`). Field messages reuse the
   UI's existing i18n strings so client and server validation say the same thing.
 - New Arabic strings are drafted with the code and marked for native review.

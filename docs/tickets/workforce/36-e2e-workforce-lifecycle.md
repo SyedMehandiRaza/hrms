@@ -19,7 +19,8 @@ Verified by the ui-tester agent, in one fresh company (signed up during the run,
 - [x] Owner raises a termination: Pending approval; no email reaches the employee while it's pending.
 - [x] L1 approver rejects with a reason → Rejected; owner raises it again.
 - [x] L1 approves → L2's inbox; L2 approves → In notice; the employee is emailed.
-- [x] Owner edits the terms to an LWD of yesterday → Exited at once; the employee's next request shows "Your account is
+- [x] The termination is raised with a backdated notice start (a few days ago); owner edits the terms to an LWD of
+      yesterday → Exited at once; the employee's next request shows "Your account is
       inactive. Contact your administrator." Then `npm run job:lwd` runs and changes nothing more.
 - [x] Owner rehires today → Active, same Employee ID, new setup link works.
 - [x] A second company never sees any of this data.

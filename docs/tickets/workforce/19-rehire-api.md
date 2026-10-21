@@ -33,7 +33,7 @@ Field texts: `docs/standards.md` §7.2 "Rehire" (and "Employee (create, edit)" f
 **Implementation notes (2026-10-21):** `POST /exits/:id/rehire` body (all optional): `rehireDate`, `mainProjectId`,
 and the job-field overrides `employmentType`, `accessLevel`, `roleId`, `departmentId`, `designationId`,
 `staffingCompanyId` (null/"" clears an optional one). Response: the employee summary (as `POST /employees`).
-Choices made where the plan is silent: an exit already used for a rehire → `EXIT_INVALID_STATE`; the old salary and
+Choices made where the plan is silent (approved 2026-10-21, recorded in plan D67): an exit already used for a rehire → `EXIT_INVALID_STATE`; the old salary and
 leave assignments end on the exit date; the old balance for a kept leave type in the rehire FY is soft-deleted so a
 fresh one can start; a PROJECT approval group for a different main project is dropped (D51); the rehire date must
 not be before the main project's start (D49, field `rehireDate`); the employee's `exit_date` is cleared (the exit

@@ -116,14 +116,15 @@ const openLevel = async (request, transaction) => {
   }
 };
 
-const approveRequest = async (request, transaction) => {
+// `actorUserId`: whose decision completed the request (null when the system did, e.g. a group change).
+const approveRequest = async (request, transaction, actorUserId = null) => {
   await request.update({ final_status: "APPROVED", completed_at: clock.now() }, { transaction });
-  await entityOf(request.entity_type).onApproved(request, { transaction });
+  await entityOf(request.entity_type).onApproved(request, { transaction, actorUserId });
 };
 
 // From the current level: while nobody can act, skip it (if skippable) or stop there (blocked).
 // When the last level is skipped the request is approved. Notifies the level it stops at.
-const settle = async (request, transaction) => {
+const settle = async (request, transaction, actorUserId = null) => {
   while (PENDING.includes(request.final_status)) {
     if ((await actorsAt(request, request.current_level, transaction)).length) {
       await notifyCurrentLevel(request, transaction);
@@ -132,7 +133,7 @@ const settle = async (request, transaction) => {
     if (!(await skippable(request, request.current_level, transaction))) return; // blocked: the owner decides
     await log(request, { status: "SKIPPED", acted_at: clock.now() }, transaction);
     if (request.current_level >= request.total_levels) {
-      await approveRequest(request, transaction);
+      await approveRequest(request, transaction, actorUserId);
       return;
     }
     await request.update({ current_level: request.current_level + 1, final_status: "IN_PROGRESS" }, { transaction });
@@ -141,14 +142,14 @@ const settle = async (request, transaction) => {
 };
 
 // Moves a request whose current level is done to the next level, or approves it (D23).
-const advance = async (request, transaction) => {
+const advance = async (request, transaction, actorUserId = null) => {
   if (request.current_level >= request.total_levels) {
-    await approveRequest(request, transaction);
+    await approveRequest(request, transaction, actorUserId);
     return;
   }
   await request.update({ current_level: request.current_level + 1, final_status: "IN_PROGRESS" }, { transaction });
   await openLevel(request, transaction);
-  await settle(request, transaction);
+  await settle(request, transaction, actorUserId);
 };
 
 // Raises a request for `subjectEmployeeId` (inside the caller's transaction). The subject's group
@@ -242,7 +243,7 @@ const override = async (auth, request, decision, reason, transaction) => {
   const status = decision === "REJECT" ? "REJECTED" : "APPROVED";
   await log(request, { status, comments: reason.trim(), acted_at: clock.now(), actor_user_id: auth.userId, is_override: true }, transaction);
   if (status === "REJECTED") await rejectRequest(request, reason.trim(), transaction);
-  else await advance(request, transaction);
+  else await advance(request, transaction, auth.userId);
 };
 
 // POST /approvals/:id/approve and /reject. A rejection needs a reason (5–500).
@@ -283,7 +284,7 @@ const decide = async (auth, requestId, { decision, reason, comment }) => {
       return;
     }
     await writeDecision(request, member, "APPROVED", comment, transaction);
-    if (await levelComplete(request, transaction)) await advance(request, transaction);
+    if (await levelComplete(request, transaction)) await advance(request, transaction, auth.userId);
   });
   return { id: requestId };
 };

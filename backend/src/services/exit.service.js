@@ -37,13 +37,13 @@ const exitOfRequest = (request, transaction) =>
 
 // D59, D68: final approval → exit and employee IN_NOTICE; the raiser is emailed, and so is the
 // leaving employee when someone else raised it. An LWD already past is processed at once (D63).
-const onApproved = async (request, { transaction }) => {
+const onApproved = async (request, { transaction, actorUserId = null }) => {
   const exit = await exitOfRequest(request, transaction);
   if (!exit || exit.status !== "PENDING_APPROVAL") return;
   const employee = await Employee.findByPk(exit.employee_id, { transaction, lock: transaction.LOCK.UPDATE });
   await exit.update({ status: "IN_NOTICE" }, { transaction });
   await employee.update({ employment_status: "IN_NOTICE" }, { transaction });
-  await ExitEvent.create({ exit_id: exit.id, event_type: "APPROVED" }, { transaction });
+  await ExitEvent.create({ exit_id: exit.id, event_type: "APPROVED", actor_user_id: actorUserId }, { transaction });
   if (exit.last_working_day < (await companyToday(exit.employer_id, { transaction }))) await processExit(exit, { transaction });
 
   const mails = [];
