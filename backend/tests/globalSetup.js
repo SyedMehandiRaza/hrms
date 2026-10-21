@@ -15,7 +15,7 @@ module.exports = async () => {
       execSync(command, opts);
     } catch (err) {
       const output = [err.stdout, err.stderr].filter(Boolean).map(String).join("\n");
-      throw new Error(`${command} failed:\n${output.split("\n").slice(-40).join("\n")}`);
+      throw new Error(`${command} failed:\n${output.split("\n").slice(-40).join("\n")}`, { cause: err });
     }
   };
   run("npx sequelize-cli db:migrate:undo:all");
