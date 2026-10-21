@@ -54,11 +54,13 @@
     "yes": "Yes",
     "no": "No",
     "mandatoryLabel": "Mandatory:",
-    "canSkipLabel": "Can skip:"
+    "canSkipLabel": "Can skip:",
+    "levelNoApprover": "Level {{n}} has no active approver.",
+    "activate": "Activate"
   },
   "inbox": {
     "title": "My Approvals",
-    "subtitle": "Leave requests waiting for your approval.",
+    "subtitle": "Requests waiting for your approval.",
     "table": {
       "sn": "S.N",
       "employee": "Employee",
@@ -222,7 +224,7 @@
   "routing": {
     "title": "Approval Routing",
     "optional": "(optional)",
-    "hint": "Which group approves this employee's requests. Leave blank to use the company/project default.",
+    "hint": "This group approves all of this employee's requests.",
     "modes": {
       "ALL": "Same group for all",
       "PER": "Per module"
@@ -256,7 +258,9 @@
     "groupDeactivated": "Approval group deactivated",
     "deleteGroupFailed": "Failed to delete approval group",
     "membersUpdated": "Approval members updated",
-    "updateMembersFailed": "Failed to update members"
+    "updateMembersFailed": "Failed to update members",
+    "groupActivated": "Approval group activated"
   },
-  "paginationLabel": "groups"
+  "paginationLabel": "groups",
+  "allRequests": "All requests"
 }

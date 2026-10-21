@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { toast } from "react-toastify";
 import * as XLSX from "xlsx";
 import {
   MdOutlineDownload,
@@ -23,6 +22,10 @@ import Ltr from "../../components/Ltr";
 import { useFormat } from "../../hooks/useFormat";
 import useFiscalYear from "../../hooks/useFiscalYear";
 import { DASHBOARD } from "../../data/groupA";
+import useApiQuery from "../../hooks/useApiQuery";
+import { getInbox } from "../../api/approvals";
+import { ScreenError } from "../../components/ScreenState";
+import ApprovalDecisionModal from "../../components/ApprovalDecisionModal";
 
 // Every widget keeps its own state shape ({ loading, denied, failed, ...data })
 // so each block can render its own empty / no-access variant.
@@ -129,7 +132,8 @@ const DonutChart = ({ segments, total, totalStaffLabel, fmtNumber }) => {
   );
 };
 
-const WidgetState = ({ state, t, children, className = "" }) => {
+// onRetry: a failed API-backed widget shows the server's message with a Retry button.
+const WidgetState = ({ state, t, children, className = "", onRetry }) => {
   if (state.loading) {
     return (
       <p className={`py-10 text-center text-sm text-gray-400 ${className}`}>
@@ -142,6 +146,13 @@ const WidgetState = ({ state, t, children, className = "" }) => {
       <p className={`py-10 text-center text-sm text-gray-400 ${className}`}>
         {t("errors.noAccess")}
       </p>
+    );
+  }
+  if (state.failed && onRetry) {
+    return (
+      <div className={className}>
+        <ScreenError error={state.error} onRetry={onRetry} />
+      </div>
     );
   }
   if (state.failed) {
@@ -165,11 +176,15 @@ function Dashboard() {
   const [docs] = useState(() =>
     ok({ rows: DASHBOARD.docs.expiringDocuments, summary: DASHBOARD.docs.summary }),
   );
-  const [approvals, setApprovals] = useState(() => ok({ rows: DASHBOARD.approvals }));
+  // Requests waiting for the signed-in approver (the owner also sees owner-only and blocked ones).
+  const inbox = useApiQuery(() => getInbox(), []);
+  const approvals = inbox.error
+    ? { failed: true, error: inbox.error, rows: [] }
+    : ok({ rows: (inbox.data?.items || []).map((r) => ({ ...r, approval_request_id: r.id, employee_name: r.employee?.name, can_act: true })) });
+  const [decision, setDecision] = useState(null); // { request, action }
   const [payroll] = useState(() => ok({ runs: DASHBOARD.payrollRuns }));
   const [projects] = useState(() => ok({ rows: DASHBOARD.projects }));
   const [activity] = useState(() => ok({ rows: DASHBOARD.activity }));
-  const [actingId, setActingId] = useState(null);
   const [showAllActions, setShowAllActions] = useState(false);
 
   // The day the dashboard reports on: today (company time) when the header's
@@ -273,16 +288,8 @@ function Dashboard() {
   ];
 
   // ── actions ────────────────────────────────────────────────────────────────
-  const act = (item, action) => {
-    setActingId(null);
-    setApprovals((s) => ({
-      ...s,
-      rows: asArray(s.rows).filter((r) => r.approval_request_id !== item.approval_request_id),
-    }));
-    toast.success(
-      action === "APPROVE" ? t("actionCenter.approved") : t("actionCenter.rejected"),
-    );
-  };
+  // Approve / reject through the shared dialog (a reason when the owner decides on someone's behalf).
+  const act = (item, action) => setDecision({ request: item, action });
 
   const exportReport = () => {
     const wb = XLSX.utils.book_new();
@@ -368,10 +375,12 @@ function Dashboard() {
     if (item.entity_type === "LEAVE_REQUEST")
       return item.leave_type || t("actionCenter.types.leave");
     if (item.entity_type === "OVERTIME_REQUEST") return t("actionCenter.types.overtime");
-    if (item.entity_type === "ATTENDANCE_CORRECTION")
+    if (["ATTENDANCE_CORRECTION", "CORRECTION_REQUEST"].includes(String(item.entity_type).toUpperCase()))
       return t("actionCenter.types.correction");
+    if (String(item.entity_type).toUpperCase() === "LEAVE_REQUEST") return t("actionCenter.types.leave");
+    if (String(item.entity_type).toUpperCase() === "OVERTIME_REQUEST") return t("actionCenter.types.overtime");
     if (item.entity_type === "LEAVE_ENCASHMENT") return t("actionCenter.types.leaveEncashment");
-    return item.module_key || "";
+    return item.type || item.module_key || "";
   };
 
   return (
@@ -563,11 +572,12 @@ function Dashboard() {
           <WidgetState
             state={{ ...approvals, loading }}
             t={t}
+            onRetry={inbox.reload}
             className="bg-white border border-gray-200 rounded-xl"
           >
             <div className="space-y-3">
               {visibleActions.map((item) => {
-                const busy = actingId === item.approval_request_id;
+                const busy = false;
                 return (
                   <div
                     key={item.approval_request_id}
@@ -575,7 +585,7 @@ function Dashboard() {
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div
-                        className={`w-10 h-10 rounded-full ${AVATAR_COLORS[item.approval_request_id % AVATAR_COLORS.length]} text-white text-xs font-bold flex items-center justify-center flex-shrink-0`}
+                        className={`w-10 h-10 rounded-full ${AVATAR_COLORS[String(item.approval_request_id).charCodeAt(0) % AVATAR_COLORS.length]} text-white text-xs font-bold flex items-center justify-center flex-shrink-0`}
                       >
                         {initialsOf(item.employee_name)}
                       </div>
@@ -898,6 +908,18 @@ function Dashboard() {
           )}
         </WidgetState>
       </div>
+
+      {decision && (
+        <ApprovalDecisionModal
+          request={decision.request}
+          action={decision.action}
+          onClose={() => setDecision(null)}
+          onDone={() => {
+            setDecision(null);
+            inbox.reload();
+          }}
+        />
+      )}
     </div>
   );
 }
