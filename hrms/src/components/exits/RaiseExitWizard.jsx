@@ -20,8 +20,10 @@ import Ltr from "../Ltr";
 import FieldError from "../FieldError";
 import CustomDropdown from "../CustomDropdown";
 import { useFormat } from "../../hooks/useFormat";
-import { previewExit, raiseExit } from "../../data/groupG";
-import { STATIC_PERMISSION } from "../../data/session";
+import { getExitPreview, raiseExit } from "../../api/exits";
+import { useCurrentUser } from "../../hooks/useSession";
+import { serverErrors } from "../../utils/applyFieldErrors";
+import { apiErrorMessage } from "../../utils/apiError";
 import {
   exitRules,
   EXIT_TYPES,
@@ -37,8 +39,25 @@ import {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Raise a resignation / termination — 4-step wizard (one form across steps).
-// No approval step: the exit takes effect as soon as it is submitted.
+// Submitting sends the exit for approval (D58); the employee stays Active until then.
+// Defaults and handover warnings come from GET /employees/:id/exit-preview (D62, D65).
 // ─────────────────────────────────────────────────────────────────────────────
+
+// API field → form field, and the step it lives on.
+const SERVER_FIELDS = {
+  exitType: "exit_type",
+  reasonCategory: "reason_category",
+  reason: "reason",
+  noticeStartDate: "notice_start_date",
+  noticeDays: "notice_days",
+  lastWorkingDay: "last_working_day",
+  preferredLastDay: "preferred_last_day",
+  allowLeaveDuringNotice: "allow_leave_during_notice",
+  encashLeave: "encash_leave",
+  rehireEligible: "rehire_eligible",
+  coolingPeriodDays: "cooling_period_days",
+};
+const stepOf = (field) => Number(Object.keys(STEP_FIELDS).find((s) => STEP_FIELDS[s].includes(field)) || 4);
 
 const STEP_FIELDS = {
   1: ["exit_type", "reason_category", "reason"],
@@ -116,31 +135,45 @@ export default function RaiseExitWizard({ isOpen, onClose, employeeId, employeeN
   const { fmtDate, fmtNumber } = useFormat();
 
   const [preview, setPreview] = useState(null);
-  const loading = false;
+  const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const [loadNonce, setLoadNonce] = useState(0);
   const [step, setStep] = useState(1);
   const [topError, setTopError] = useState("");
   const [lwdManual, setLwdManual] = useState(false);
 
-  // Load the static preview (defaults + settlement + handover warnings) on open.
-  const openKey = isOpen && employeeId ? String(employeeId) : null;
+  // Load the preview (defaults + handover warnings) on open.
+  const openKey = isOpen && employeeId ? `${employeeId}:${loadNonce}` : null;
   const [shownKey, setShownKey] = useState(null);
   if (openKey !== shownKey) {
     setShownKey(openKey);
     if (openKey) {
-      const p = previewExit(employeeId);
-      setPreview(p || null);
-      setLoadError(p ? "" : t("common.genericError"));
+      setPreview(null);
+      setLoadError("");
+      setLoading(true);
       setStep(1);
       setTopError("");
       setLwdManual(false);
     }
   }
+  useEffect(() => {
+    if (!openKey) return undefined;
+    let alive = true;
+    getExitPreview(employeeId).then(
+      (p) => alive && (setPreview(p), setLoading(false)),
+      (err) => alive && (setLoadError(apiErrorMessage(err)), setLoading(false)),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [openKey, employeeId]);
+  const retryLoad = () => setLoadNonce((n) => n + 1);
 
-  // Only the company owner may backdate the last working day (V7b).
-  const isOwner = !!STATIC_PERMISSION.isSuper;
-  const outstandingLoan = Number(preview?.settlement?.outstanding_loan_total || 0);
-  const hasLoan = outstandingLoan > 0;
+  // Only the company owner may backdate the last working day (D62).
+  const isOwner = useCurrentUser()?.accessLevel === "ADMIN";
+  // Loans come with the Payroll module: no balance to handle yet.
+  const outstandingLoan = 0;
+  const hasLoan = false;
   const R = useMemo(
     () => exitRules(t, { outstandingLoan, allowPastLwd: isOwner }),
     [t, outstandingLoan, isOwner],
@@ -154,6 +187,7 @@ export default function RaiseExitWizard({ isOpen, onClose, employeeId, employeeN
     setValue,
     reset,
     getValues,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm({ mode: "onTouched", reValidateMode: "onChange" });
 
@@ -176,15 +210,15 @@ export default function RaiseExitWizard({ isOpen, onClose, employeeId, employeeN
       exit_type: "RESIGNATION",
       reason_category: "",
       reason: "",
-      notice_start_date: d.notice_start_date || "",
-      notice_days: d.notice_days ?? "",
+      notice_start_date: d.noticeStartDate || "",
+      notice_days: d.noticeDays ?? "",
       preferred_last_day: "",
-      last_working_day: d.last_working_day || "",
-      allow_leave_during_notice: !!d.allow_leave_during_notice,
-      encash_leave: !!d.encash_leave,
+      last_working_day: d.noticeStartDate ? computeLastWorkingDay(d.noticeStartDate, Number(d.noticeDays || 0)) : "",
+      allow_leave_during_notice: !!d.allowLeaveDuringNotice,
+      encash_leave: !!d.encashLeave,
       loan_handling: "",
-      rehire_eligible: d.rehire_eligible !== false,
-      cooling_period_days: d.cooling_period_days ?? "",
+      rehire_eligible: true,
+      cooling_period_days: d.coolingPeriodDays ?? "",
     });
   }, [preview, reset]);
 
@@ -239,10 +273,8 @@ export default function RaiseExitWizard({ isOpen, onClose, employeeId, employeeN
   };
   const goBack = () => setStep((s) => Math.max(s - 1, 1));
 
-  const settlement = preview?.settlement || {};
-  const currency = settlement.currency || "";
-  const money = (v) =>
-    `${fmtNumber(Number(v || 0), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${currency ? ` ${currency}` : ""}`;
+  const settlement = {};
+  const money = (v) => fmtNumber(Number(v || 0), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const rehireEligible = asBool(w.rehire_eligible);
   const rehireFrom =
@@ -261,28 +293,36 @@ export default function RaiseExitWizard({ isOpen, onClose, employeeId, employeeN
   const onSubmit = async (v) => {
     setTopError("");
     const payload = {
-      employee_id: Number(employeeId),
-      exit_type: v.exit_type,
-      reason_category: v.reason_category,
+      exitType: v.exit_type,
+      reasonCategory: v.reason_category,
       reason: String(v.reason || "").trim(),
-      notice_start_date: v.notice_start_date,
-      notice_days: Number(v.notice_days),
-      last_working_day: v.last_working_day,
-      allow_leave_during_notice: asBool(v.allow_leave_during_notice),
-      encash_leave: asBool(v.encash_leave),
-      rehire_eligible: asBool(v.rehire_eligible),
+      noticeStartDate: v.notice_start_date,
+      noticeDays: Number(v.notice_days),
+      lastWorkingDay: v.last_working_day,
+      allowLeaveDuringNotice: asBool(v.allow_leave_during_notice),
+      encashLeave: asBool(v.encash_leave),
+      rehireEligible: asBool(v.rehire_eligible),
     };
-    if (v.preferred_last_day) payload.preferred_last_day = v.preferred_last_day;
-    if (hasLoan) payload.loan_handling = v.loan_handling;
-    if (payload.rehire_eligible) payload.cooling_period_days = Number(v.cooling_period_days);
+    if (v.preferred_last_day) payload.preferredLastDay = v.preferred_last_day;
+    if (payload.rehireEligible) payload.coolingPeriodDays = Number(v.cooling_period_days);
 
+    let exit;
     try {
-      const exit = raiseExit(payload);
-      toast.success(t("wizard.toast.raised"));
-      onRaised?.(exit);
-    } catch {
-      toast.error(t("common.genericError"));
+      exit = await raiseExit(employeeId, payload);
+    } catch (err) {
+      // A field error goes back to its step; anything else (an open exit, raising for
+      // yourself) shows above the buttons.
+      const rows = serverErrors(err).filter((r) => SERVER_FIELDS[r.field]);
+      if (rows.length) {
+        rows.forEach((r) => setError(SERVER_FIELDS[r.field], { type: "server", message: r.message }));
+        setStep(Math.min(...rows.map((r) => stepOf(SERVER_FIELDS[r.field]))));
+        return;
+      }
+      setTopError(serverErrors(err)[0]?.message || apiErrorMessage(err));
+      return;
     }
+    toast.success(t("wizard.toast.raised"));
+    onRaised?.(exit);
   };
 
   const onFormSubmit = (e) => {
@@ -292,7 +332,41 @@ export default function RaiseExitWizard({ isOpen, onClose, employeeId, employeeN
   };
 
   const hasErrors = Object.keys(errors).length > 0;
-  const name = preview?.employee?.full_name || employeeName || "";
+  const name = employeeName || "";
+
+
+  // Handover before the last working day (D65): warnings only, nothing blocks.
+  const warnings = preview?.warnings || {};
+  const names = (rows) => rows.map((r) => r.name).filter(Boolean).join(", ");
+  const handoverBlock = (warnings.approval_groups?.length > 0 ||
+    Number(warnings.pending_approvals) > 0 ||
+    warnings.departments_headed?.length > 0 ||
+    warnings.projects?.length > 0) && (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold text-gray-500">{t("wizard.handover.title")}</p>
+      {warnings.approval_groups?.length > 0 && (
+        <Callout>
+          {t("wizard.handover.approvalGroups", { count: warnings.approval_groups.length })}{" "}
+          <span className="font-semibold">{names(warnings.approval_groups)}</span>
+        </Callout>
+      )}
+      {Number(warnings.pending_approvals) > 0 && (
+        <Callout>{t("wizard.handover.pendingApprovals", { count: Number(warnings.pending_approvals) })}</Callout>
+      )}
+      {warnings.departments_headed?.length > 0 && (
+        <Callout>
+          {t("wizard.handover.departments", { count: warnings.departments_headed.length })}{" "}
+          <span className="font-semibold">{names(warnings.departments_headed)}</span>
+        </Callout>
+      )}
+      {warnings.projects?.length > 0 && (
+        <Callout>
+          {t("wizard.handover.projects", { count: warnings.projects.length })}{" "}
+          <span className="font-semibold">{names(warnings.projects)}</span>
+        </Callout>
+      )}
+    </div>
+  );
 
   // ── step bodies ────────────────────────────────────────────────────────────
   const stepType = (
@@ -516,6 +590,8 @@ export default function RaiseExitWizard({ isOpen, onClose, employeeId, employeeN
 
   const stepSettlement = (
     <div className="space-y-6">
+      {handoverBlock}
+
       {/* Leave encashment */}
       <div>
         <span className={labelCls}>{t("wizard.fields.encashLeave")}</span>
@@ -531,48 +607,9 @@ export default function RaiseExitWizard({ isOpen, onClose, employeeId, employeeN
             asBool(w.encash_leave) ? "border-gray-200 bg-white" : "border-gray-200 bg-gray-50 opacity-60"
           }`}
         >
-          <p className="text-xs font-semibold text-gray-500 mb-3">{t("wizard.settlement.previewTitle")}</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <p className="text-[11px] text-gray-400">{t("wizard.settlement.encashableDays")}</p>
-              <p className="text-sm font-bold text-gray-900">
-                <Ltr>{fmtNumber(Number(settlement.encashable_days || 0), { maximumFractionDigits: 2 })}</Ltr>
-              </p>
-            </div>
-            <div>
-              <p className="text-[11px] text-gray-400">{t("wizard.settlement.dailyRate")}</p>
-              <p className="text-sm font-bold text-gray-900">
-                <Ltr>{money(settlement.daily_rate)}</Ltr>
-              </p>
-            </div>
-            <div>
-              <p className="text-[11px] text-gray-400">{t("wizard.settlement.estimatedAmount")}</p>
-              <p className="text-sm font-bold text-cyan-700">
-                <Ltr>{money(asBool(w.encash_leave) ? settlement.encashment_amount : 0)}</Ltr>
-              </p>
-            </div>
-          </div>
-          {Array.isArray(settlement.leave) && settlement.leave.some((l) => Number(l.encashable_days) > 0) && (
-            <ul className="mt-3 pt-3 border-t border-gray-100 space-y-1">
-              {settlement.leave
-                .filter((l) => Number(l.encashable_days) > 0)
-                .map((l) => (
-                  <li key={l.leave_type_id} className="flex items-center justify-between gap-3 text-xs text-gray-600">
-                    <span className="truncate">{l.leave_name}</span>
-                    <span className="shrink-0 tabular-nums">
-                      {t("common.days", { count: Number(l.encashable_days) })}
-                    </span>
-                  </li>
-                ))}
-            </ul>
-          )}
-          {settlement.has_salary === false && (
-            <div className="mt-3">
-              <Callout tone="gray" icon={MdOutlineInfo}>
-                {t("wizard.settlement.noSalary")}
-              </Callout>
-            </div>
-          )}
+          <p className="text-xs font-semibold text-gray-500 mb-1">{t("wizard.settlement.previewTitle")}</p>
+          {/* The amounts come with the Payroll module (D62). */}
+          <p className="text-sm text-gray-600">{t("wizard.settlement.availableAfterPayroll")}</p>
           {!asBool(w.encash_leave) && (
             <p className="mt-3 text-xs text-gray-500">{t("wizard.settlement.notEncashing")}</p>
           )}
@@ -669,8 +706,6 @@ export default function RaiseExitWizard({ isOpen, onClose, employeeId, employeeN
     </div>
   );
 
-  const warnings = preview?.warnings || {};
-  const names = (rows) => rows.map((r) => r.name).filter(Boolean).join(", ");
   const yn = (v) => (asBool(v) ? t("common.yes") : t("common.no"));
 
   const stepReview = (
@@ -709,12 +744,6 @@ export default function RaiseExitWizard({ isOpen, onClose, employeeId, employeeN
           <dl className="divide-y divide-gray-50">
             <SummaryRow label={t("wizard.fields.encashLeave")}>
               {yn(w.encash_leave)}
-              {asBool(w.encash_leave) && (
-                <span className="text-gray-500">
-                  {" · "}
-                  <Ltr>{money(settlement.encashment_amount)}</Ltr>
-                </span>
-              )}
             </SummaryRow>
             {hasLoan && (
               <SummaryRow label={t("wizard.fields.loanHandling")}>
@@ -740,39 +769,6 @@ export default function RaiseExitWizard({ isOpen, onClose, employeeId, employeeN
         </div>
       </div>
 
-      {(warnings.approval_groups?.length > 0 ||
-        Number(warnings.pending_approvals) > 0 ||
-        warnings.projects?.length > 0 ||
-        warnings.deployments?.length > 0) && (
-        <div className="space-y-2">
-          <p className="text-xs font-semibold text-gray-500">{t("wizard.handover.title")}</p>
-          {warnings.approval_groups?.length > 0 && (
-            <Callout>
-              {t("wizard.handover.approvalGroups", { count: warnings.approval_groups.length })}{" "}
-              <span className="font-semibold">{names(warnings.approval_groups)}</span>
-            </Callout>
-          )}
-          {Number(warnings.pending_approvals) > 0 && (
-            <Callout>{t("wizard.handover.pendingApprovals", { count: Number(warnings.pending_approvals) })}</Callout>
-          )}
-          {warnings.projects?.length > 0 && (
-            <Callout>
-              {t("wizard.handover.projects", { count: warnings.projects.length })}{" "}
-              <span className="font-semibold">{names(warnings.projects)}</span>
-            </Callout>
-          )}
-          {warnings.deployments?.length > 0 && (
-            <Callout>
-              {t("wizard.handover.deployments", { count: warnings.deployments.length })}{" "}
-              <span className="font-semibold">{names(warnings.deployments)}</span>
-            </Callout>
-          )}
-        </div>
-      )}
-
-      <Callout tone="red" icon={MdOutlineErrorOutline}>
-        <span className="font-semibold">{t("wizard.immediate")}</span>
-      </Callout>
     </div>
   );
 
@@ -853,9 +849,18 @@ export default function RaiseExitWizard({ isOpen, onClose, employeeId, employeeN
             {loading ? (
               <Loader label={t("wizard.loadingPreview")} />
             ) : loadError ? (
-              <Callout tone="red" icon={MdOutlineErrorOutline}>
-                {loadError}
-              </Callout>
+              <div className="space-y-3">
+                <Callout tone="red" icon={MdOutlineErrorOutline}>
+                  {loadError}
+                </Callout>
+                <button
+                  type="button"
+                  onClick={retryLoad}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold border border-gray-200 text-gray-700 hover:bg-gray-50"
+                >
+                  <MdOutlineRefresh /> {t("settings.retry")}
+                </button>
+              </div>
             ) : preview ? (
               <>
                 {topError && (
@@ -916,11 +921,8 @@ export default function RaiseExitWizard({ isOpen, onClose, employeeId, employeeN
                   {isSubmitting && (
                     <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   )}
-                  {isSubmitting
-                    ? t("wizard.submitting")
-                    : w.exit_type === "TERMINATION"
-                      ? t("wizard.submitTermination")
-                      : t("wizard.submitResignation")}
+                  {/* D60: the exit goes for approval. */}
+                  {isSubmitting ? t("wizard.submitting") : t("wizard.submitForApproval")}
                 </button>
               )}
             </div>
