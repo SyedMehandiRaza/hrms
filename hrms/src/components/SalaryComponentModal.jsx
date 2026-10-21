@@ -1,9 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { MdClose } from "react-icons/md";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
-import { createSalaryComponent, updateSalaryComponent } from "../data/groupE";
+import { createSalaryComponent, updateSalaryComponent } from "../api/salaryComponents";
+import { applyFieldErrors } from "../utils/applyFieldErrors";
+import { apiErrorCode, apiErrorMessage, toastApiError } from "../utils/apiError";
 import CustomDropdown from "./CustomDropdown";
 
 const labelCls = "block text-[13px] text-gray-700 mb-1.5";
@@ -19,9 +21,9 @@ const removeEmojis = (e) => {
 
 export default function SalaryComponentModal({ isOpen, onClose, mode = "create", initialData = null, onSuccess }) {
   const { t } = useTranslation("payroll");
-  const saving = false;
+  const [saving, setSaving] = useState(false);
 
-  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm({
+  const { register, handleSubmit, reset, control, setError, formState: { errors } } = useForm({
     defaultValues: {
       name: "",
       type: "",
@@ -30,8 +32,8 @@ export default function SalaryComponentModal({ isOpen, onClose, mode = "create",
     }
   });
 
-  const typeValue = watch("type");
-  const statusValue = watch("status");
+  const typeValue = useWatch({ control, name: "type" });
+  const statusValue = useWatch({ control, name: "status" });
 
   useEffect(() => {
     if (isOpen) {
@@ -51,7 +53,7 @@ export default function SalaryComponentModal({ isOpen, onClose, mode = "create",
 
   const isView = mode === "view";
 
-  const onSubmit = (data) => {
+  const onSubmit = async (data) => {
     if (isView) {
       onClose();
       return;
@@ -62,17 +64,26 @@ export default function SalaryComponentModal({ isOpen, onClose, mode = "create",
       description: data.description?.trim() || "",
     };
 
-    if (mode === "edit") {
-      updateSalaryComponent(initialData?.id, { ...payload, is_active: data.status === "ACTIVE" });
-      toast.success(t("componentModal.toast.updated"));
-      onSuccess?.();
-      onClose();
-    } else {
-      createSalaryComponent(payload);
-      toast.success(t("componentModal.toast.created"));
-      onSuccess?.();
-      onClose();
+    setSaving(true);
+    try {
+      if (mode === "edit") await updateSalaryComponent(initialData?.id, { ...payload, status: data.status });
+      else await createSalaryComponent(payload);
+    } catch (err) {
+      setSaving(false);
+      const code = apiErrorCode(err);
+      // 409 SALARY_COMPONENT_NAME_TAKEN belongs under the name; TYPE_LOCKED under the type.
+      if (code === "SALARY_COMPONENT_NAME_TAKEN" || code === "SALARY_COMPONENT_TYPE_LOCKED") {
+        setError(code === "SALARY_COMPONENT_NAME_TAKEN" ? "name" : "type", { type: "server", message: apiErrorMessage(err) }, { shouldFocus: true });
+        return;
+      }
+      const { mapped } = applyFieldErrors(err, setError, { knownFields: ["name", "type", "description", "status"] });
+      if (!mapped.length) toastApiError(err);
+      return;
     }
+    setSaving(false);
+    toast.success(mode === "edit" ? t("componentModal.toast.updated") : t("componentModal.toast.created"));
+    onSuccess?.();
+    onClose();
   };
 
   const getTitle = () => {

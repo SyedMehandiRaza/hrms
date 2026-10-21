@@ -15,8 +15,10 @@ import SalaryComponentModal from "../../components/SalaryComponentModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import Can from "../../components/Can";
 import { MODULES, ACTIONS } from "../../constants/permissions";
-import { matches, paginate } from "../../data/common";
-import { SALARY_COMPONENTS, deactivateSalaryComponent } from "../../data/groupE";
+import { ScreenError } from "../../components/ScreenState";
+import useApiQuery from "../../hooks/useApiQuery";
+import { listSalaryComponents, deactivateSalaryComponent } from "../../api/salaryComponents";
+import { toastApiError } from "../../utils/apiError";
 import CustomDropdown from "../../components/CustomDropdown";
 
 const LIMIT = 5;
@@ -34,9 +36,7 @@ const STATUS_STYLES = {
 
 const SalaryComponent = () => {
   const { t } = useTranslation("payroll");
-  const loading = false;
-  const deleteLoading = false;
-  const [tick, setTick] = useState(0);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -54,19 +54,15 @@ const SalaryComponent = () => {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  // Search / type / status filters + paging on the static list.
-  const filtered = tick >= 0
-    ? SALARY_COMPONENTS.filter(
-      (c) =>
-        matches(c, debouncedSearch, ["name", "description"]) &&
-        (type === "All" || c.type === type) &&
-        (status === "All Statuses" || (status === "ACTIVE") === !!c.is_active),
-    )
-    : [];
-  const pg = paginate(filtered, page, LIMIT);
-  const list = pg.rows;
-  const pagination = { total: pg.total, total_pages: pg.totalPages };
-  const load = () => setTick((n) => n + 1);
+  // Search (name), type and status filters + paging by the server.
+  const typeParam = type === "All" ? "" : type;
+  const statusParam = status === "All Statuses" ? "" : status;
+  const { data, loading, error, reload: load } = useApiQuery(
+    () => listSalaryComponents({ page, limit: LIMIT, search: debouncedSearch, type: typeParam, status: statusParam }),
+    [page, debouncedSearch, typeParam, statusParam],
+  );
+  const list = data?.items || [];
+  const pagination = { total: data?.total ?? 0, total_pages: Math.max(1, Math.ceil((data?.total ?? 0) / LIMIT)) };
 
   const handleClearFilters = () => {
     setSearchInput("");
@@ -82,7 +78,7 @@ const SalaryComponent = () => {
         id: comp.id,
         name: comp.name,
         type: comp.type,
-        status: comp.is_active ? "ACTIVE" : "INACTIVE",
+        status: comp.status,
         description: comp.description || "",
       }
       : null;
@@ -90,13 +86,20 @@ const SalaryComponent = () => {
   };
   const closeModal = () => setModalState((m) => ({ ...m, isOpen: false }));
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     const item = deleteModal.item;
     if (!item) return;
-    deactivateSalaryComponent(item.id);
-    toast.success(t("components.toast.deactivated"));
+    setDeleteLoading(true);
+    try {
+      // "Delete" = deactivate (D43): it stays listed as Inactive.
+      await deactivateSalaryComponent(item.id);
+      toast.success(t("components.toast.deactivated"));
+      load();
+    } catch (err) {
+      toastApiError(err);
+    }
+    setDeleteLoading(false);
     setDeleteModal({ isOpen: false, item: null });
-    load();
   };
 
   const total = pagination?.total ?? 0;
@@ -115,7 +118,7 @@ const SalaryComponent = () => {
           </p>
         </div>
 
-        <Can module={MODULES.PAYROLL} action={ACTIONS.CREATE}>
+        <Can module={MODULES.SALARY} action={ACTIONS.CREATE}>
           <button
             onClick={() => openModal("create")}
             className="flex items-center gap-2 bg-[#17a2b8] hover:bg-[#138496] text-white px-4 py-2.5 rounded-lg font-medium text-sm transition-colors flex-shrink-0 self-start"
@@ -214,10 +217,16 @@ const SalaryComponent = () => {
             </thead>
 
             <tbody className="divide-y divide-gray-100">
-              {loading && list.length === 0 ? (
+              {loading ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-10 text-center text-sm text-gray-400">
                     {t("components.loading")}
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-6">
+                    <ScreenError error={error} onRetry={load} />
                   </td>
                 </tr>
               ) : list.length === 0 ? (
@@ -228,7 +237,7 @@ const SalaryComponent = () => {
                 </tr>
               ) : (
                 list.map((comp, index) => {
-                  const statusLabel = comp.is_active ? "ACTIVE" : "INACTIVE";
+                  const statusLabel = comp.status;
                   return (
                     <tr key={comp.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
@@ -265,12 +274,12 @@ const SalaryComponent = () => {
                             </span>
                           ) : (
                             <>
-                              <Can module={MODULES.PAYROLL} action={ACTIONS.UPDATE}>
+                              <Can module={MODULES.SALARY} action={ACTIONS.UPDATE}>
                                 <button onClick={() => openModal("edit", comp)} className="hover:text-cyan-600 transition-colors" title={t("components.edit")}>
                                   <MdOutlineEdit className="text-lg" />
                                 </button>
                               </Can>
-                              <Can module={MODULES.PAYROLL} action={ACTIONS.DELETE}>
+                              <Can module={MODULES.SALARY} action={ACTIONS.DELETE}>
                                 <button onClick={() => setDeleteModal({ isOpen: true, item: comp })} className="hover:text-red-500 transition-colors" title={t("components.delete")}>
                                   <MdOutlineDeleteOutline className="text-lg" />
                                 </button>
