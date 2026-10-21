@@ -75,7 +75,7 @@ describe("final approval", () => {
     const ctx = await setup();
     const exit = await raise(ctx.token, ctx.leaver, termination());
     const needed = "An exit request for Sara Leaver needs your approval.";
-    expect(mailsTo(ctx.l1.user).map((m) => m.text)).toEqual([needed]);
+    expect(mailsTo(ctx.l1.user).map((m) => [m.subject, m.text])).toEqual([["Exit request needs your approval", needed]]);
     expect(mailsTo(ctx.l2.user)).toEqual([]);
 
     expect((await approve(ctx.l1.token, exit)).status).toBe(200);
@@ -110,9 +110,15 @@ describe("final approval", () => {
     expect(mailsTo(ctx.owner)).toEqual([]);
     await approve(ctx.l2.token, exit);
     expect(mailsTo(ctx.owner).map((m) => m.template)).toEqual(["exit-approved"]);
-    expect(mailsTo(ctx.owner)[0].text).toContain("Sara Leaver");
+    expect(mailsTo(ctx.owner)[0]).toMatchObject({
+      subject: "Exit request approved",
+      text: "The exit request for Sara Leaver has been approved. Last working day: 2026-11-19.",
+    });
     expect(mailsTo(ctx.leaver.user).map((m) => m.template)).toEqual(["exit-approved-employee"]);
-    expect(mailsTo(ctx.leaver.user)[0].text).toContain("2026-11-19");
+    expect(mailsTo(ctx.leaver.user)[0]).toMatchObject({
+      subject: "Your employment is ending",
+      text: "Your exit has been approved. Your last working day is 2026-11-19.",
+    });
   });
 
   it("an own resignation: the employee (the raiser) gets one approval email", async () => {
@@ -146,8 +152,10 @@ describe("rejection", () => {
     await approve(ctx.l1.token, exit);
     await reject(ctx.l2.token, exit, "Not enough evidence yet");
     expect(mailsTo(ctx.owner).map((m) => m.template)).toEqual(["exit-rejected"]);
-    expect(mailsTo(ctx.owner)[0].text).toContain("Sara Leaver");
-    expect(mailsTo(ctx.owner)[0].text).toContain("Not enough evidence yet");
+    expect(mailsTo(ctx.owner)[0]).toMatchObject({
+      subject: "Exit request rejected",
+      text: "The exit request for Sara Leaver has been rejected. Reason: Not enough evidence yet",
+    });
     expect(mailsTo(ctx.leaver.user)).toEqual([]);
   });
 });

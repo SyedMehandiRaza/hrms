@@ -99,16 +99,17 @@ module.exports = {
     }),
   },
 
-  // Exit approvals (workforce D68): the current level's approvers, then the raiser and the leaving employee.
+  // Exit approvals (workforce D68; wording approved by the user 2026-10-21): the current level's
+  // approvers, then the raiser and the leaving employee.
   "exit-approval-needed": {
     required: ["employeeName"],
     en: ({ employeeName }) => ({
-      subject: "Exit approval needed",
+      subject: "Exit request needs your approval",
       text: `An exit request for ${employeeName} needs your approval.`,
     }),
     // AR: needs native review
     ar: ({ employeeName }) => ({
-      subject: "موافقة مطلوبة على إنهاء خدمة",
+      subject: "طلب إنهاء خدمة بانتظار موافقتك",
       text: `طلب إنهاء خدمة للموظف ${employeeName} بانتظار موافقتك.`,
     }),
   },
@@ -117,12 +118,12 @@ module.exports = {
     required: ["employeeName", "lastWorkingDay"],
     en: ({ employeeName, lastWorkingDay }) => ({
       subject: "Exit request approved",
-      text: `The exit request for ${employeeName} has been approved.\n\nLast working day: ${lastWorkingDay}`,
+      text: `The exit request for ${employeeName} has been approved. Last working day: ${lastWorkingDay}.`,
     }),
     // AR: needs native review
     ar: ({ employeeName, lastWorkingDay }) => ({
       subject: "تمت الموافقة على طلب إنهاء الخدمة",
-      text: `تمت الموافقة على طلب إنهاء الخدمة للموظف ${employeeName}.\n\nآخر يوم عمل: ${lastWorkingDay}`,
+      text: `تمت الموافقة على طلب إنهاء الخدمة للموظف ${employeeName}. آخر يوم عمل: ${lastWorkingDay}.`,
     }),
   },
 
@@ -130,25 +131,25 @@ module.exports = {
     required: ["employeeName", "reason"],
     en: ({ employeeName, reason }) => ({
       subject: "Exit request rejected",
-      text: `The exit request for ${employeeName} has been rejected.\n\nReason: ${reason}`,
+      text: `The exit request for ${employeeName} has been rejected. Reason: ${reason}`,
     }),
     // AR: needs native review
     ar: ({ employeeName, reason }) => ({
       subject: "تم رفض طلب إنهاء الخدمة",
-      text: `تم رفض طلب إنهاء الخدمة للموظف ${employeeName}.\n\nالسبب: ${reason}`,
+      text: `تم رفض طلب إنهاء الخدمة للموظف ${employeeName}. السبب: ${reason}`,
     }),
   },
 
   "exit-approved-employee": {
     required: ["lastWorkingDay"],
     en: ({ lastWorkingDay }) => ({
-      subject: "Your exit has been confirmed",
-      text: `Your exit has been approved.\n\nYour last working day is ${lastWorkingDay}.`,
+      subject: "Your employment is ending",
+      text: `Your exit has been approved. Your last working day is ${lastWorkingDay}.`,
     }),
     // AR: needs native review
     ar: ({ lastWorkingDay }) => ({
-      subject: "تم تأكيد إنهاء خدمتك",
-      text: `تمت الموافقة على إنهاء خدمتك.\n\nآخر يوم عمل لك هو ${lastWorkingDay}.`,
+      subject: "خدمتك على وشك الانتهاء",
+      text: `تمت الموافقة على إنهاء خدمتك. آخر يوم عمل لك هو ${lastWorkingDay}.`,
     }),
   },
 };

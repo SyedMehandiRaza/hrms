@@ -39,3 +39,6 @@ Notes (2026-10-21):
   the same second come back in timeline order.
 - Tests: `backend/tests/exits-outcomes.test.js`. It pins `MAIL_DRIVER=memory` so email assertions don't depend on
   the local `.env`.
+
+Notes (2026-10-21, follow-up): email wording aligned to what the user approved — subjects "Exit request needs your
+approval", "Exit request approved", "Exit request rejected", "Your employment is ending"; bodies on one line.
