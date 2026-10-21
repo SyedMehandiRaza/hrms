@@ -1,4 +1,5 @@
 const exitService = require("../services/exit.service");
+const rehireService = require("../services/rehire.service");
 
 const raiseExit = async (req, res) => {
   const id = await exitService.raiseExit(req.auth, req.params.id, req.body);
@@ -25,6 +26,10 @@ const confirmImmediate = async (req, res) => {
   res.json({ success: true, data: await exitService.getExit(req.auth, id) });
 };
 
+const rehire = async (req, res) => {
+  res.json({ success: true, data: await rehireService.rehire(req.auth, req.params.id, req.body) });
+};
+
 const listExits = async (req, res) => {
   res.json({ success: true, data: await exitService.listExits(req.auth, req.query) });
 };
@@ -41,4 +46,4 @@ const saveSettings = async (req, res) => {
   res.json({ success: true, data: await exitService.saveSettings(req.auth, req.body) });
 };
 
-module.exports = { raiseExit, withdrawExit, editTerms, cancelExit, confirmImmediate, listExits, getExit, getSettings, saveSettings };
+module.exports = { raiseExit, withdrawExit, editTerms, cancelExit, confirmImmediate, rehire, listExits, getExit, getSettings, saveSettings };

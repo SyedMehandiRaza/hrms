@@ -6,8 +6,8 @@ const { resolveLang, translate } = require("../utils/i18n");
 // errors or stack traces; unexpected errors are logged on the server.
 const errorHandler = (err, req, res, next) => {
   const lang = req.lang || resolveLang(req.headers["accept-language"]);
-  const send = (status, code, errors) => {
-    const body = { success: false, code, message: translate(code, lang) };
+  const send = (status, code, errors, params) => {
+    const body = { success: false, code, message: translate(code, lang, params) };
     if (errors) {
       body.errors = Object.fromEntries(Object.entries(errors).map(([field, key]) => [field, translate(key, lang)]));
     }
@@ -15,7 +15,7 @@ const errorHandler = (err, req, res, next) => {
   };
 
   if (err instanceof ErrorHandler) {
-    return send(err.statusCode, err.code, err.errors);
+    return send(err.statusCode, err.code, err.errors, err.params);
   }
 
   if (err.type === "entity.parse.failed") {

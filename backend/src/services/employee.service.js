@@ -630,4 +630,17 @@ const updateEmployee = async (auth, id, body) => {
   });
 };
 
-module.exports = { createEmployee, updateEmployee, checkUnique, findOwn, emailClash, phoneTaken, idNumberTaken };
+module.exports = {
+  createEmployee,
+  updateEmployee,
+  checkUnique,
+  findOwn,
+  emailClash,
+  phoneTaken,
+  idNumberTaken,
+  checkAccess,
+  checkJob,
+  assignLeave,
+  changeShift,
+  MODULE_ALL,
+};

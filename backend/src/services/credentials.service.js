@@ -92,8 +92,9 @@ const hasPendingTemporaryPassword = async (userId, transaction) =>
 //     Email: welcome-existing-password { email }.
 // Runs in the caller's transaction when given one. The email goes out only after the
 // commit; a failed send is logged, not thrown (the rows are saved and Resend exists).
-// Returns { temporaryPassword: boolean }.
-const issueLoginCredentials = async ({ userId, accountId, transaction }) => {
+// `forceTemporary` issues a temporary password even when the person has their own (rehire,
+// workforce D67). Returns { temporaryPassword: boolean }.
+const issueLoginCredentials = async ({ userId, accountId, transaction, forceTemporary = false }) => {
   const work = async (t) => {
     const user = await User.scope("withPassword").findByPk(userId, { transaction: t, lock: t.LOCK.UPDATE });
     const account = await HrmsAccount.findOne({
@@ -103,7 +104,7 @@ const issueLoginCredentials = async ({ userId, accountId, transaction }) => {
     });
     if (!user || !account) throw new Error("issueLoginCredentials: no such account for this person");
 
-    const issueTemp = !user.password || (await hasPendingTemporaryPassword(user.id, t));
+    const issueTemp = forceTemporary || !user.password || (await hasPendingTemporaryPassword(user.id, t));
 
     let mail;
     if (issueTemp) {

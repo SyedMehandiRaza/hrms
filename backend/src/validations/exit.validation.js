@@ -2,6 +2,9 @@ const Joi = require("joi");
 const { required, INVALID } = require("./department.validation");
 const { isRealDate } = require("./dates");
 const { reason } = require("./approval.validation");
+const { ACCESS_LEVELS } = require("./employee.validation");
+
+const ACCEPTED_ACCESS_LEVELS = [...ACCESS_LEVELS, "ADMIN"];
 
 // Exits (standards §7.2 "Exit (raise, edit terms)", "Exit settings"; workforce D61, D62). Date
 // ranges that depend on today, the notice start or the caller are checked by the service.
@@ -120,4 +123,22 @@ const confirmImmediateSchema = Joi.object({
   }),
 });
 
-module.exports = { raiseExitSchema, editTermsSchema, withdrawExitSchema, confirmImmediateSchema, listExitsSchema, exitSettingsSchema, REASONS };
+// POST /exits/:id/rehire (standards §7.2 "Rehire", workforce D67): everything optional. Job
+// fields given here override the kept ones under the create rules; null or "" clears an
+// optional one.
+const clearable = Joi.string().trim().allow(null, "").messages({ "string.base": INVALID });
+const rehireSchema = Joi.object({
+  rehireDate: date("rehireDateInvalid"),
+  mainProjectId: Joi.string().trim().empty(["", null]).messages({ "string.base": "mainProjectActive" }),
+  employmentType: Joi.string().valid("FULL_TIME", "CONTRACT").messages({ "string.base": "employmentTypeRequired", "any.only": "employmentTypeRequired" }),
+  // ADMIN passes here so the service can answer ACCOUNT_ADMIN_EXISTS (D48).
+  accessLevel: Joi.string()
+    .valid(...ACCEPTED_ACCESS_LEVELS)
+    .messages({ "string.base": "accessLevelInvalid", "any.only": "accessLevelInvalid" }),
+  roleId: clearable,
+  departmentId: clearable,
+  designationId: clearable,
+  staffingCompanyId: clearable,
+});
+
+module.exports = { rehireSchema, raiseExitSchema, editTermsSchema, withdrawExitSchema, confirmImmediateSchema, listExitsSchema, exitSettingsSchema, REASONS };

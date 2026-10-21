@@ -4,7 +4,7 @@ const requireAuth = require("../middlewares/requireAuth");
 const requireAccessLevel = require("../middlewares/requireAccessLevel");
 const requirePermission = require("../middlewares/requirePermission");
 const { ACCESS_LEVELS } = require("../constants/accessLevels");
-const { listExitsSchema, exitSettingsSchema, withdrawExitSchema, editTermsSchema, confirmImmediateSchema } =require("../validations/exit.validation");
+const { listExitsSchema, exitSettingsSchema, withdrawExitSchema, editTermsSchema, confirmImmediateSchema, rehireSchema } = require("../validations/exit.validation");
 const exitController = require("../controllers/exit.controller");
 
 // /exits and /exit-settings (workforce D58–D66): ADMIN, or a role with the matching exit flag.
@@ -26,6 +26,8 @@ exitRouter.put("/:id/terms", ...companyLogin, validate(editTermsSchema), exitCon
 exitRouter.post("/:id/cancel", ...companyLogin, validate(withdrawExitSchema), exitController.cancelExit);
 // Confirm → Immediate (D64): the owner only.
 exitRouter.post("/:id/confirm-immediate", requireAuth, requireAccessLevel(ACCESS_LEVELS.ADMIN), validate(confirmImmediateSchema), exitController.confirmImmediate);
+// Rehire an exited employee (D67).
+exitRouter.post("/:id/rehire", ...companyLogin, requirePermission("employee", "create"), validate(rehireSchema), exitController.rehire);
 
 const exitSettingsRouter = Router();
 exitSettingsRouter.get("/", ...can("read"), exitController.getSettings);

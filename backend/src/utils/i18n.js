@@ -13,10 +13,12 @@ const resolveLang = (header) =>
 
 // Translates an error code or a field message key. Unknown keys come back
 // unchanged, so a raw text (e.g. Joi's default message) still reaches the client.
-const translate = (key, lang = "en") => {
+// `params` fill `{name}` placeholders ("… until {date}.").
+const translate = (key, lang = "en", params) => {
   const entry = MESSAGES[key] || FIELD_MESSAGES[key];
   if (!entry) return key;
-  return entry[LANGS.includes(lang) ? lang : "en"];
+  const text = entry[LANGS.includes(lang) ? lang : "en"];
+  return params ? text.replace(/\{(\w+)\}/g, (match, name) => (name in params ? String(params[name]) : match)) : text;
 };
 
 module.exports = { resolveLang, translate };
