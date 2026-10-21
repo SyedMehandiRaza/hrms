@@ -394,10 +394,16 @@ const resolveAccessToken = async (claims) => {
   if (![sub, acc, emp, sid].every((v) => typeof v === "string" && v)) throw new ErrorHandler("AUTH_REQUIRED");
 
   const session = await findSessionWithAccount({ id: sid });
-  if (!session || session.status !== ACTIVE) throw new ErrorHandler("AUTH_REQUIRED");
+  if (!session) throw new ErrorHandler("AUTH_REQUIRED");
 
   const account = session.hrmsAccount;
   if (account.id !== acc || account.user_id !== sub || account.employer_id !== emp) {
+    throw new ErrorHandler("AUTH_REQUIRED");
+  }
+  if (session.status !== ACTIVE) {
+    // An ended (INACTIVE) account's sessions are revoked with it; its next request says why
+    // (ADR 0002, workforce D63). Any other revoked session just needs a new login.
+    if (account.status === "INACTIVE") throw new ErrorHandler("AUTH_ACCOUNT_INACTIVE");
     throw new ErrorHandler("AUTH_REQUIRED");
   }
   assertAccountUsable({ account, user: account.user, employer: account.employer });

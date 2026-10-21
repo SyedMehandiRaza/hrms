@@ -14,7 +14,8 @@
     "db:seed": "sequelize-cli db:seed:all",
     "db:reset": "sequelize-cli db:seed:undo:all && sequelize-cli db:migrate:undo:all && npm run db:migrate && npm run db:seed",
     "db:setup": "npm run db:create && npm run db:create:test && npm run db:migrate && npm run db:migrate:test && npm run db:seed",
-    "geo:load": "node scripts/load-geo-data.js"
+    "geo:load": "node scripts/load-geo-data.js",
+    "job:lwd": "node scripts/run-lwd-job.js"
   },
   "description": "HRMS API (Express + Sequelize + MySQL)",
   "dependencies": {
@@ -31,6 +32,7 @@
     "morgan": "^1.12.1",
     "multer": "^2.4.0",
     "mysql2": "^3.24.6",
+    "node-cron": "^4.6.0",
     "nodemailer": "^10.1.7",
     "sequelize": "^6.37.8"
   },

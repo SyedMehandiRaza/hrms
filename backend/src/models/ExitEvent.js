@@ -9,6 +9,8 @@ module.exports = (sequelize, DataTypes) => {
       event_type: { type: DataTypes.ENUM("RAISED", "TERMS_UPDATED", "LWD_EXTENDED", "LWD_REVERTED", "CHECKLIST_UPDATED", "ITEM_ADDED", "SETTLEMENT_POSTED", "ADJUSTMENT_ADDED", "EXITED", "COMPLETED", "CANCELLED", "REHIRED", "CONFIRMED", "CONFIRMED_WITH_OVERRIDE", "RELIEVED_EARLY", "DOCUMENT_GENERATED", "DOCUMENT_SENT", "CLEARANCE_UPLOADED", "APPROVED", "REJECTED", "WITHDRAWN"), allowNull: false },
       payload: { type: DataTypes.JSON },
       actor_user_id: { type: DataTypes.UUID, references: { model: "users", key: "id" } },
+      // DATETIME(3): the timeline is ordered by created_at, so milliseconds must be written too.
+      createdAt: { type: DataTypes.DATE(3) },
     },
     {
       tableName: "hrms_exit_events",

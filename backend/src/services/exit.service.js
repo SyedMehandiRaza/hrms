@@ -6,6 +6,7 @@ const { ACCESS_LEVELS } = require("../constants/accessLevels");
 const { UUID, likePattern } = require("./department.service");
 const { companyToday } = require("./companyTime.service");
 const approvals = require("./approval.service");
+const { processExit } = require("./exitProcess.service");
 
 // Raising exits, approval outcomes, withdraw, the exit list/detail and Exit settings
 // (docs/plans/workforce-and-lifecycle.md D58, D59, D61, D62, D66, D68).
@@ -21,7 +22,7 @@ const exitOfRequest = (request, transaction) =>
   EmployeeExit.findOne({ where: { id: request.entity_id, employer_id: request.employer_id }, transaction, lock: transaction.LOCK.UPDATE });
 
 // D59, D68: final approval → exit and employee IN_NOTICE; the raiser is emailed, and so is the
-// leaving employee when someone else raised it. (An LWD already past is processed by ticket 18.)
+// leaving employee when someone else raised it. An LWD already past is processed at once (D63).
 const onApproved = async (request, { transaction }) => {
   const exit = await exitOfRequest(request, transaction);
   if (!exit || exit.status !== "PENDING_APPROVAL") return;
@@ -29,6 +30,7 @@ const onApproved = async (request, { transaction }) => {
   await exit.update({ status: "IN_NOTICE" }, { transaction });
   await employee.update({ employment_status: "IN_NOTICE" }, { transaction });
   await ExitEvent.create({ exit_id: exit.id, event_type: "APPROVED" }, { transaction });
+  if (exit.last_working_day < (await companyToday(exit.employer_id, { transaction }))) await processExit(exit, { transaction });
 
   const mails = [];
   const raiser = await userTo(exit.raised_by, transaction);
