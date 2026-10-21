@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useForm, Controller, useFieldArray, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
@@ -17,7 +17,13 @@ import {
 import Loader from "../Loader";
 import CustomDropdown from "../CustomDropdown";
 import FieldError from "../FieldError";
-import { getExitSettings, updateExitSettings, getExitTemplate, replaceExitTemplate } from "../../data/groupG";
+import { getExitTemplate, replaceExitTemplate } from "../../data/groupG";
+import { getExitSettings, saveExitSettings } from "../../api/exits";
+import useApiQuery from "../../hooks/useApiQuery";
+import { useCan } from "../../hooks/usePermission";
+import { MODULES } from "../../constants/permissions";
+import { applyFieldErrors } from "../../utils/applyFieldErrors";
+import { toastApiError } from "../../utils/apiError";
 import { exitRules, validateTemplateItems, CHECKLIST_CATEGORIES, LIMITS } from "../../utils/exitValidation";
 
 // ── shared bits ───────────────────────────────────────────────────────────────
@@ -91,46 +97,63 @@ const TOGGLES = [
   { name: "block_loans_during_notice", key: "blockLoans" },
 ];
 
-// Number inputs hold strings; keep form values as strings so isDirty compares like with like.
+// GET /exit-settings → form values. Number inputs hold strings; keep form values as strings so
+// isDirty compares like with like.
 const toFormDefaults = (s) => ({
-  default_notice_days: String(s?.default_notice_days ?? ""),
-  default_cooling_days: String(s?.default_cooling_days ?? ""),
-  default_allow_leave_during_notice: !!s?.default_allow_leave_during_notice,
-  default_encash_leave: !!s?.default_encash_leave,
-  block_loans_during_notice: !!s?.block_loans_during_notice,
+  default_notice_days: String(s?.noticeDays ?? ""),
+  default_cooling_days: String(s?.coolingPeriodDays ?? ""),
+  default_allow_leave_during_notice: !!s?.allowLeaveDuringNotice,
+  default_encash_leave: !!s?.encashLeave,
+  block_loans_during_notice: !!s?.blockLoansDuringNotice,
 });
+const FIELD_MAP = {
+  noticeDays: "default_notice_days",
+  coolingPeriodDays: "default_cooling_days",
+  allowLeaveDuringNotice: "default_allow_leave_during_notice",
+  encashLeave: "default_encash_leave",
+  blockLoansDuringNotice: "block_loans_during_notice",
+};
 
 function DefaultsCard() {
   const { t } = useTranslation("exits");
   const R = useMemo(() => exitRules(t), [t]);
-  const loading = false;
-  const loadFailed = false;
+  // Read-only without exit:update.
+  const canEdit = useCan()(MODULES.EXIT, "update");
+  const { data: settings, loading, error: loadError, reload } = useApiQuery(() => getExitSettings(), []);
+  const loadFailed = !!loadError && !settings;
 
   const {
     register,
     control,
     handleSubmit,
     reset,
+    setError,
     formState: { errors, isDirty, isSubmitting },
-  } = useForm({ mode: "onTouched", reValidateMode: "onChange", defaultValues: toFormDefaults(getExitSettings()) });
+  } = useForm({ mode: "onTouched", reValidateMode: "onChange", defaultValues: toFormDefaults(null) });
 
-  const load = useCallback(() => reset(toFormDefaults(getExitSettings())), [reset]);
+  useEffect(() => {
+    if (settings) reset(toFormDefaults(settings));
+  }, [settings, reset]);
+
+  const load = useCallback(() => reload(), [reload]);
 
   const onSubmit = async (v) => {
     try {
-      const saved = updateExitSettings({
-        default_notice_days: Number(String(v.default_notice_days).trim()),
-        default_cooling_days: Number(String(v.default_cooling_days).trim()),
-        default_allow_leave_during_notice: !!v.default_allow_leave_during_notice,
-        default_encash_leave: !!v.default_encash_leave,
-        block_loans_during_notice: !!v.block_loans_during_notice,
+      const saved = await saveExitSettings({
+        noticeDays: Number(String(v.default_notice_days).trim()),
+        coolingPeriodDays: Number(String(v.default_cooling_days).trim()),
+        allowLeaveDuringNotice: !!v.default_allow_leave_during_notice,
+        encashLeave: !!v.default_encash_leave,
+        blockLoansDuringNotice: !!v.block_loans_during_notice,
       });
       reset(toFormDefaults(saved));
       toast.success(t("settings.defaults.saved"));
-    } catch {
-      toast.error(t("common.genericError"));
+    } catch (err) {
+      const { mapped } = applyFieldErrors(err, setError, { fieldMap: FIELD_MAP, knownFields: Object.values(FIELD_MAP) });
+      if (!mapped.length) toastApiError(err);
     }
   };
+  const locked = isSubmitting || !canEdit;
 
   const hasErrors = Object.keys(errors).length > 0;
 
@@ -155,7 +178,7 @@ function DefaultsCard() {
                 min={0}
                 max={LIMITS.noticeDaysMax}
                 step={1}
-                disabled={isSubmitting}
+                disabled={locked}
                 className={inputCls(errors.default_notice_days)}
                 {...register("default_notice_days", R.default_notice_days)}
               />
@@ -175,7 +198,7 @@ function DefaultsCard() {
                 min={0}
                 max={LIMITS.coolingDaysMax}
                 step={1}
-                disabled={isSubmitting}
+                disabled={locked}
                 className={inputCls(errors.default_cooling_days)}
                 {...register("default_cooling_days", R.default_cooling_days)}
               />
@@ -209,7 +232,7 @@ function DefaultsCard() {
                         checked={field.value}
                         onChange={field.onChange}
                         onBlur={field.onBlur}
-                        disabled={isSubmitting}
+                        disabled={locked}
                         label={t(`settings.defaults.${key}`)}
                       />
                     </div>
@@ -219,11 +242,13 @@ function DefaultsCard() {
             ))}
           </div>
 
-          <div className="flex justify-end">
-            <button type="submit" disabled={hasErrors || !isDirty || isSubmitting} className={primaryBtn}>
-              {isSubmitting ? t("common.saving") : t("common.save")}
-            </button>
-          </div>
+          {canEdit && (
+            <div className="flex justify-end">
+              <button type="submit" disabled={hasErrors || !isDirty || isSubmitting} className={primaryBtn}>
+                {isSubmitting ? t("common.saving") : t("common.save")}
+              </button>
+            </div>
+          )}
         </form>
       )}
     </section>

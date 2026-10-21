@@ -1,6 +1,5 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useLocation } from "react-router-dom";
-import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
 import RolesPermissions from "../../components/RolesPermission";
@@ -11,7 +10,7 @@ import CompanyProfile from "../../components/CompanyProfile";
 import UserManagement from "../../components/UserManagement";
 import SecuritySsO from "../../components/SecuritySso";
 import ExitSettingsTab from "../../components/exits/ExitSettingsTab";
-import useCanManageExits from "../../hooks/useCanManageExits";
+import { MODULES } from "../../constants/permissions";
 import FinancialYearTab from "./FinancialYearTab";
 import { useCan } from "../../hooks/usePermission";
 
@@ -49,8 +48,9 @@ export default function Settings() {
   const location = useLocation();
   // other pages may open a tab directly: navigate("/admin/settings", { state: { tab } })
   const [activeTab, setActiveTab] = useState(location.state?.tab || "Company Profile");
-  const canManageExits = useCanManageExits();
   const can = useCan();
+  // Exit settings: exit:read sees the tab, exit:update saves it (D62).
+  const canManageExits = can(MODULES.EXIT, "read");
   const canSeeFy = can("financial_year", "read");
   const tabs = [...TABS, ...(canManageExits ? [EXIT_TAB] : []), ...(canSeeFy ? [FY_TAB] : [])];
 
