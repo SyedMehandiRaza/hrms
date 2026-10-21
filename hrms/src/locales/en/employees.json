@@ -60,7 +60,8 @@
   },
   "status": {
     "active": "Active",
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "suspended": "Inactive"
   },
   "buttons": {
     "addEmployee": "Add Employee"
@@ -390,9 +391,12 @@
     },
     "toast": {
       "noPayslip": "No credited payslip is available for this employee yet.",
-      "payslipDownloadFailed": "Failed to download payslip"
+      "payslipDownloadFailed": "Failed to download payslip",
+      "loginResent": "Login email sent."
     },
-    "exitedNoEdit": "This employee has exited. Use Rehire from the Exits screen to make changes."
+    "exitedNoEdit": "This employee has exited. Use Rehire from the Exits screen to make changes.",
+    "resendLogin": "Resend login",
+    "exitedReadOnly": "This employee has exited. Use Rehire."
   },
   "overview": {
     "personalInformation": "Personal Information",
@@ -804,7 +808,8 @@
       "emailInvalid": "Enter a valid email",
       "max10Chars": "Max 10 characters",
       "max255Chars": "Max 255 characters",
-      "mainProjectRequired": "Main Project is required when projects are assigned"
+      "mainProjectRequired": "Main Project is required when projects are assigned",
+      "effectiveFromRequired": "Effective date must be after the current main project's start, not in the future and not in a locked period."
     },
     "toast": {
       "photoUploadFailed": "Failed to upload photo",
@@ -814,7 +819,8 @@
       "partialSave": "Employee details were saved, but this part failed:"
     },
     "routingLoadFailed": "Approval routing could not be loaded, so it will be left unchanged when you save.",
-    "dateOfJoining": "Date of joining"
+    "dateOfJoining": "Date of joining",
+    "effectiveFrom": "Effective from"
   },
   "userManagement": {
     "filters": {

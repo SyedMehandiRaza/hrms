@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   MdOutlineCalendarToday,
@@ -11,7 +10,7 @@ import {
 } from "react-icons/md";
 import Ltr from "./Ltr";
 import { useFormat } from "../hooks/useFormat";
-import { getEmployeeRecord, employeeSalary } from "../data/groupB";
+import { formatPhone } from "../utils/phone";
 import SalaryBreakdownModal from "./SalaryBreakdownModal";
 
 const formatEmploymentType = (type, t) => {
@@ -20,12 +19,12 @@ const formatEmploymentType = (type, t) => {
   return type || "—";
 };
 
-const formatMoney = (val) => {
+const formatMoney = (val, currency = "SAR") => {
   const n = Number(val);
   if (!Number.isFinite(n)) return "—";
   return n.toLocaleString("en-US", {
     style: "currency",
-    currency: "USD",
+    currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -34,12 +33,32 @@ const formatMoney = (val) => {
 const projectInitial = (name) =>
   (name || "—").trim().charAt(0).toUpperCase() || "—";
 
+// The saved salary (detail.salary) → the breakdown: earnings / deductions with PERCENTAGE rows
+// resolved against Basic (D52), and the monthly gross / deductions / net.
+const salaryBreakdown = (salary) => {
+  if (!salary) return null;
+  const basic = salary.components
+    .filter((r) => String(r.component.code).toUpperCase() === "BASIC" && r.calculation_type === "FIXED")
+    .reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+  const lines = salary.components.map((r) => ({
+    name: r.component.name,
+    code: r.component.code,
+    type: r.component.type,
+    amount: r.calculation_type === "PERCENTAGE" ? ((Number(r.amount) || 0) / 100) * basic : Number(r.amount) || 0,
+  }));
+  const earnings = lines.filter((l) => l.type !== "DEDUCTION");
+  const deductions = lines.filter((l) => l.type === "DEDUCTION");
+  const gross = earnings.reduce((s, l) => s + l.amount, 0);
+  const ded = deductions.reduce((s, l) => s + l.amount, 0);
+  return { currency: salary.currency || "SAR", current: { earnings, deductions, preview: { gross, deductions: ded, net: gross - ded } } };
+};
+
 // ── Overview Tab ──────────────────────────────────────────────────────────────
-function OverviewTab() {
+// `detail`: the employee from GET /employees/:id (null while loading).
+function OverviewTab({ detail }) {
   const { t } = useTranslation("employees");
-  const { id } = useParams();
-  const detailLoading = false;
-  const employee = getEmployeeRecord(id);
+  const detailLoading = !detail;
+  const employee = detail?.overview;
 
   const ACTIVITY = [
     {
@@ -65,26 +84,27 @@ function OverviewTab() {
     },
   ];
 
-  const fullName = employee?.full_name || (detailLoading ? t("detail.loading") : "—");
-  const email = employee?.email || employee?.User?.email || "—";
-  const phone = employee?.phone_number || employee?.User?.phone_number || "—";
-  const nationality = employee?.nationality || "—";
+  const fullName = employee?.name || (detailLoading ? t("detail.loading") : "—");
+  const email = employee?.email || "—";
+  const phone = employee?.phone ? formatPhone(employee.phone) : "—";
+  const nationality = employee?.nationality?.name || "—";
   // Optional field — most employees have none, so fall back to the same dash.
   const accommodation = employee?.accommodation || "—";
-  const iqamaNumber = employee?.iqama_number || "—";
+  const iqamaNumber = employee?.country_emp_id || "—";
 
   const employmentType = formatEmploymentType(employee?.employment_type, t);
   const { fmtDate } = useFormat();
-  const joinedOn = employee?.date_of_joining ? fmtDate(employee.date_of_joining) : "—";
-  const roleName = employee?.roles?.[0]?.name || "—";
+  const joinedOn = employee?.joining_date ? fmtDate(employee.joining_date) : "—";
+  const roleName = employee?.role?.name || "—";
 
-  const activeProjects = employee?.projects || [];
+  const activeProjects = detail?.projects?.current || [];
 
-  const salaryData = employee?.id ? employeeSalary(employee.id) : null;
+  const salaryData = salaryBreakdown(detail?.salary);
+  const currency = salaryData?.currency || "SAR";
   const [isSalaryModalOpen, setIsSalaryModalOpen] = useState(false);
 
   const netMonthly = salaryData?.current?.preview?.net || 0;
-  const baseSalary = salaryData?.current?.earnings?.find(e => e.name?.toLowerCase() === "basic" || e.name?.toLowerCase() === "hourly")?.amount || salaryData?.current?.preview?.gross || 0;
+  const baseSalary = salaryData?.current?.earnings?.find((e) => ["BASIC", "HOURLY"].includes(String(e.code).toUpperCase()))?.amount || salaryData?.current?.preview?.gross || 0;
   const extraAllowance = (salaryData?.current?.preview?.gross || 0) - baseSalary;
   const taxAndDeductions = salaryData?.current?.preview?.deductions || 0;
 
@@ -176,14 +196,14 @@ function OverviewTab() {
                     className="w-full flex items-center gap-3 border border-gray-200 rounded-xl px-4 py-3"
                   >
                     <div className="w-9 h-9 bg-cyan-600 rounded-lg flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                      {projectInitial(proj.project_name)}
+                      {projectInitial(proj.name)}
                     </div>
                     <div className="flex-1 text-start">
                       <p className="text-sm font-bold text-gray-900">
-                        {proj.project_name}
+                        {proj.name}
                       </p>
                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                        {proj.project_code || "—"}
+                        {proj.code || "—"}
                       </p>
                     </div>
                   </div>
@@ -212,7 +232,7 @@ function OverviewTab() {
           </p>
           <div className="flex items-end justify-between mb-4">
             <p className="text-3xl font-bold text-white">
-              <Ltr>{formatMoney(netMonthly)}</Ltr>
+              <Ltr>{formatMoney(netMonthly, currency)}</Ltr>
             </p>
             <span className="text-[10px] font-bold text-green-400 bg-green-900/40 border border-green-700 px-2 py-0.5 rounded-full">
               {t("overview.paid")}
@@ -222,17 +242,17 @@ function OverviewTab() {
             {[
               {
                 label: t("overview.baseSalary"),
-                value: formatMoney(baseSalary),
+                value: formatMoney(baseSalary, currency),
                 color: "text-gray-300",
               },
               {
                 label: t("overview.totalAllowances"),
-                value: `+${formatMoney(extraAllowance)}`,
+                value: `+${formatMoney(extraAllowance, currency)}`,
                 color: "text-green-400",
               },
               {
                 label: t("overview.taxDeductions"),
-                value: `-${formatMoney(taxAndDeductions)}`,
+                value: `-${formatMoney(taxAndDeductions, currency)}`,
                 color: "text-red-400",
               },
             ].map(({ label, value, color }) => (

@@ -57,13 +57,14 @@ const avatarFor = (name) =>
     name || "Employee",
   )}&background=1e3a5f&color=fff&size=120`;
 
-function PersonalInformation() {
+// `profile`: the signed-in employee's own record (Profile.jsx, GET /employees/me); without it
+// the static profile is shown.
+function PersonalInformation({ profile: given }) {
   const { t } = useTranslation("profile");
   const user = getStaticUser();
   const isEmployer = user?.role?.name?.toLowerCase() === "employer" || (typeof user?.role === "string" && user.role.toLowerCase() === "employer");
   const photoRef = useRef();
-  // Static profile of the signed-in user (src/data/groupB.js).
-  const [profile] = useState(() => myProfile());
+  const [profile] = useState(() => given || myProfile());
   const [photo, setPhoto] = useState(() => profile.profile_url || avatarFor(profile.full_name));
   const [hasPhoto, setHasPhoto] = useState(() => !!profile.profile_url);
   const loading = false;
@@ -301,7 +302,11 @@ function PersonalInformation() {
                   error={!!errors.nationality}
                   options={[
                     { label: t("personal.selectNationality"), value: "" },
-                    ...NATIONALITIES.map((n) => ({ label: t(n.labelKey), value: n.value }))
+                    ...NATIONALITIES.map((n) => ({ label: t(n.labelKey), value: n.value })),
+                    // The saved nationality, when it isn't one of the listed ones.
+                    ...(profile.nationality && !NATIONALITIES.some((n) => n.value === profile.nationality)
+                      ? [{ label: profile.nationality, value: profile.nationality }]
+                      : []),
                   ]}
                 />
               </div>

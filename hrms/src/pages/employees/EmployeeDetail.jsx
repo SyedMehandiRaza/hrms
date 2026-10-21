@@ -1,4 +1,9 @@
 import { useState } from "react";
+import { ScreenError } from "../../components/ScreenState";
+import useApiQuery from "../../hooks/useApiQuery";
+import { assetUrl } from "../../api/client";
+import { getEmployee, resendEmployeeLogin } from "../../api/employees";
+import { toastApiError } from "../../utils/apiError";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -16,12 +21,14 @@ import DependentTab from "../../components/DependentTab";
 import AttendanceTab from "../../components/AttendanceTab";
 import RaiseExitWizard from "../../components/exits/RaiseExitWizard";
 import { ExitStatusBadge, EmploymentStatusBadge } from "../../components/exits/ExitBadges";
-import useCanManageExits from "../../hooks/useCanManageExits";
+import { useCan } from "../../hooks/usePermission";
+import { listExits } from "../../api/exits";
+import { diffDays } from "../../utils/exitValidation";
+import useFiscalYear from "../../hooks/useFiscalYear";
 import { useFormat } from "../../hooks/useFormat";
 import useYearLock from "../../hooks/useYearLock";
 import EditEmployeeModal from "../../components/EditEmployeeModal";
-import { getEmployeeRecord, openExitFor, employeePayslips } from "../../data/groupB";
-import { getStaticUser } from "../../data/session";
+import { employeePayslips } from "../../data/groupB";
 import Can from "../../components/Can";
 import { MODULES, ACTIONS } from "../../constants/permissions";
 import { toast } from "react-toastify";
@@ -64,31 +71,42 @@ export default function EmployeeDetail() {
     Dependent: t("detail.tabs.dependent"),
   };
 
-  const detailLoading = false;
-  // Re-read the static record after an edit (the modal updates the store).
-  const [, setRefresh] = useState(0);
-  const employee = getEmployeeRecord(id);
+  // GET /employees/:id → { overview, projects, shift, leave_policies, salary, approval_group }.
+  const { data: detail, loading: detailLoading, error: detailError, reload, setData: setDetail } = useApiQuery(
+    () => getEmployee(id),
+    [id],
+  );
+  const employee = detail?.overview;
+  const isExited = employee?.employment_status === "EXITED";
+  const [resending, setResending] = useState(false);
 
   const [tab, setTab] = useState("Overview");
   const [openExitWizard, setOpenExitWizard] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
   const [downloadingPayslip] = useState(false);
 
-  // Employee Exit: who may raise one, and whether this employee already has an
-  // open exit (IN_NOTICE / EXITED) — that drives the banner and hides the button.
-  const canManageExits = useCanManageExits();
-  const myEmployeeId = getStaticUser()?.employeeId;
-  const isSelf = !!myEmployeeId && String(myEmployeeId) === String(id);
-  // Any open exit, whatever year the header shows.
-  const openExit = canManageExits ? openExitFor(id) : null;
-  const exitChecked = true;
+  // Employee Exit (D66): raising one for someone needs employee:create + employee:update; the
+  // open exit (PENDING_APPROVAL / IN_NOTICE) drives the banner and hides the button.
+  const can = useCan();
+  const canRaiseExits = can(MODULES.EMPLOYEE, ACTIONS.CREATE) && can(MODULES.EMPLOYEE, ACTIONS.UPDATE);
+  const canReadExits = can(MODULES.EXIT, ACTIONS.READ);
+  const employeeCode = employee?.employee_code;
+  const { data: openExits, loading: exitLoading, reload: reloadExits } = useApiQuery(
+    () =>
+      canReadExits && employeeCode
+        ? listExits({ search: employeeCode, status: "PENDING_APPROVAL,IN_NOTICE", limit: 10 }).catch(() => null)
+        : Promise.resolve(null),
+    [canReadExits, employeeCode],
+  );
+  const openExit = (openExits?.items || []).find((x) => x.employee?.id === employee?.id) || null;
+  const exitChecked = !canReadExits || !exitLoading;
+  const today = useFiscalYear().today;
 
   // A closed + locked year in the header → read-only (no new exits).
   const lock = useYearLock();
   const showExitButton =
     !lock.locked &&
-    canManageExits &&
-    !isSelf &&
+    canRaiseExits &&
     exitChecked &&
     !openExit &&
     !!employee &&
@@ -96,7 +114,8 @@ export default function EmployeeDetail() {
 
   const handleExitRaised = (exit) => {
     setOpenExitWizard(false);
-    if (exit?.id) navigate(`/admin/exits/${exit.id}`);
+    reloadExits();
+    if (exit?.id && canReadExits) navigate(`/admin/exits/${exit.id}`);
   };
 
   // Download this employee's latest CREDITED payslip: the current month if it
@@ -114,9 +133,31 @@ export default function EmployeeDetail() {
     toast.info(t("detail.toast.payslipPreview", { defaultValue: "Payslip PDFs are not available in this preview." }));
   };
 
+  // An exited employee is read-only (D56a): Edit and Resend say so instead.
+  const handleEdit = () => {
+    if (isExited) {
+      toast.error(t("detail.exitedReadOnly"));
+      return;
+    }
+    setOpenEditModal(true);
+  };
+
+  // A new temporary password + setup link by email; the old ones stop working (D47, ADR 3).
+  const handleResendLogin = async () => {
+    if (resending) return;
+    setResending(true);
+    try {
+      await resendEmployeeLogin(id);
+      toast.success(t("detail.toast.loginResent"));
+    } catch (err) {
+      toastApiError(err);
+    }
+    setResending(false);
+  };
+
   const renderTab = () => {
-    if (tab === "Overview") return <OverviewTab />;
-    if (tab === "Projects") return <ProjectsTab />;
+    if (tab === "Overview") return <OverviewTab detail={detail} />;
+    if (tab === "Projects") return <ProjectsTab projects={detail?.projects} />;
     if (tab === "Attendance") return <AttendanceTab employeeId={id} />;
     if (tab === "Payroll") return <PayrollTab employeeId={id} />;
     if (tab === "Documents") return <DocumentsTab />;
@@ -124,33 +165,39 @@ export default function EmployeeDetail() {
     return <PlaceholderTab name={TAB_LABELS[tab] || tab} />;
   };
 
-  const empCode = id ? `EMP-${id}` : "—";
+  if (detailError && !detail) {
+    return <ScreenError error={detailError} onRetry={reload} />;
+  }
+
+  const empCode = employee?.employee_code || "—";
   const displayName =
-    employee?.full_name || (detailLoading ? t("detail.loading") : "—");
-  const roleName = employee?.roles?.[0]?.name || "—";
-  const iqamaNumber = employee?.iqama_number || "—";
-  const activeProjects = employee?.projects || [];
+    employee?.name || (detailLoading ? t("detail.loading") : "—");
+  const roleName = employee?.role?.name || "—";
+  const iqamaNumber = employee?.country_emp_id || "—";
+  // The main project first (the API lists it first).
+  const activeProjects = detail?.projects?.current || [];
   const projectName =
     activeProjects.length === 0
       ? "—"
       : activeProjects.length === 1
-        ? activeProjects[0].project_name
+        ? activeProjects[0].name
         : t("detail.moreProjects", {
-            name: activeProjects[0].project_name,
+            name: activeProjects[0].name,
             count: activeProjects.length - 1,
           });
-  const status = employee?.user_status || "—";
+  // The login's status (bulk Activate / Deactivate, D56).
+  const status = employee?.account_status || "—";
   const statusText =
     status === "ACTIVE"
       ? t("status.active")
-      : status === "INACTIVE"
-        ? t("status.inactive")
+      : status === "SUSPENDED"
+        ? t("status.suspended")
         : status;
-  const avatarUrl =
-    employee?.profile_url ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      employee?.full_name || "Employee"
-    )}&background=1e3a5f&color=fff&size=80`;
+  const avatarUrl = employee?.profile_url
+    ? assetUrl(employee.profile_url)
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(
+        employee?.name || "Employee"
+      )}&background=1e3a5f&color=fff&size=80`;
 
   const statusPill =
     status === "ACTIVE"
@@ -220,11 +267,24 @@ export default function EmployeeDetail() {
             </Can>
             <Can module={MODULES.EMPLOYEE} action={ACTIONS.UPDATE}>
               <button
-                onClick={() => setOpenEditModal(true)}
+                type="button"
+                onClick={handleResendLogin}
+                disabled={!employee || resending}
+                className="flex items-center gap-2 border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {resending && (
+                  <span className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                )}
+                {t("detail.resendLogin")}
+              </button>
+            </Can>
+            <Can module={MODULES.EMPLOYEE} action={ACTIONS.UPDATE}>
+              <button
+                onClick={handleEdit}
                 // An exited employee is frozen until the exit completes
                 // (changes go through Rehire) — the API refuses edits too.
-                disabled={!employee || employee.employment_status === "EXITED"}
-                title={employee?.employment_status === "EXITED" ? t("detail.exitedNoEdit") : undefined}
+                disabled={!employee}
+                title={isExited ? t("detail.exitedNoEdit") : undefined}
                 className="bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors"
               >
                 {t("detail.editInfo")}
@@ -259,23 +319,13 @@ export default function EmployeeDetail() {
                 </div>
                 <p className="text-xs text-gray-600 mt-0.5">
                   {tx("employeeDetail.lastWorkingDay", {
-                    date: fmtDate(openExit.notice?.last_working_day),
+                    date: fmtDate(openExit.last_working_day),
                   })}
-                  {openExit.status === "IN_NOTICE" &&
-                    Number.isFinite(Number(openExit.notice?.days_left)) && (
-                      <>
-                        {" · "}
-                        {tx("employeeDetail.daysLeft", {
-                          count: Math.max(Number(openExit.notice.days_left), 0),
-                        })}
-                      </>
-                    )}
-                  {openExit.checklist_progress?.total > 0 && (
+                  {openExit.status === "IN_NOTICE" && diffDays(openExit.last_working_day, today) !== null && (
                     <>
                       {" · "}
-                      {tx("employeeDetail.checklistProgress", {
-                        closed: openExit.checklist_progress.closed,
-                        total: openExit.checklist_progress.total,
+                      {tx("employeeDetail.daysLeft", {
+                        count: Math.max(diffDays(openExit.last_working_day, today), 0),
                       })}
                     </>
                   )}
@@ -320,16 +370,16 @@ export default function EmployeeDetail() {
           isOpen={openExitWizard}
           onClose={() => setOpenExitWizard(false)}
           employeeId={id}
-          employeeName={employee?.full_name || ""}
+          employeeName={employee?.name || ""}
           onRaised={handleExitRaised}
         />
       )}
 
-      {openEditModal && employee && (
+      {openEditModal && detail && (
         <EditEmployeeModal
-          employee={employee}
+          employee={detail}
           onClose={() => setOpenEditModal(false)}
-          onSaved={() => setRefresh((n) => n + 1)}
+          onSaved={(saved) => setDetail(saved)}
         />
       )}
     </>

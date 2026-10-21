@@ -1,14 +1,13 @@
-import React from "react";
 import { MdClose, MdOutlineReceiptLong } from "react-icons/md";
 import { useTranslation } from "react-i18next";
 import Ltr from "./Ltr";
 
-const formatMoney = (val) => {
+const formatMoney = (val, currency = "SAR") => {
   const n = Number(val);
   if (!Number.isFinite(n)) return "—";
   return n.toLocaleString("en-US", {
     style: "currency",
-    currency: "USD",
+    currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -20,6 +19,7 @@ export default function SalaryBreakdownModal({ isOpen, onClose, salaryData }) {
   if (!isOpen) return null;
 
   const current = salaryData?.current;
+  const currency = salaryData?.currency || "SAR";
   const earnings = current?.earnings || [];
   const deductions = current?.deductions || [];
   
@@ -66,7 +66,7 @@ export default function SalaryBreakdownModal({ isOpen, onClose, salaryData }) {
                   <div key={idx} className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">{e.name}</span>
                     <span className="text-sm font-semibold text-gray-900">
-                      <Ltr>{formatMoney(e.amount || e.resolved_amount)}</Ltr>
+                      <Ltr>{formatMoney(e.amount || e.resolved_amount, currency)}</Ltr>
                     </span>
                   </div>
                 ))}
@@ -77,7 +77,7 @@ export default function SalaryBreakdownModal({ isOpen, onClose, salaryData }) {
               <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
                 <span className="text-sm font-bold text-gray-900">{t("breakdown.grossEarnings")}</span>
                 <span className="text-sm font-bold text-gray-900">
-                  <Ltr>{formatMoney(gross)}</Ltr>
+                  <Ltr>{formatMoney(gross, currency)}</Ltr>
                 </span>
               </div>
             </div>
@@ -92,7 +92,7 @@ export default function SalaryBreakdownModal({ isOpen, onClose, salaryData }) {
                   <div key={idx} className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">{d.name}</span>
                     <span className="text-sm font-semibold text-red-500">
-                      -<Ltr>{formatMoney(d.amount || d.resolved_amount)}</Ltr>
+                      -<Ltr>{formatMoney(d.amount || d.resolved_amount, currency)}</Ltr>
                     </span>
                   </div>
                 ))}
@@ -103,7 +103,7 @@ export default function SalaryBreakdownModal({ isOpen, onClose, salaryData }) {
               <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
                 <span className="text-sm font-bold text-gray-900">{t("breakdown.totalDeductions")}</span>
                 <span className="text-sm font-bold text-red-500">
-                  -<Ltr>{formatMoney(totalDeductions)}</Ltr>
+                  -<Ltr>{formatMoney(totalDeductions, currency)}</Ltr>
                 </span>
               </div>
             </div>
@@ -116,7 +116,7 @@ export default function SalaryBreakdownModal({ isOpen, onClose, salaryData }) {
                 {t("breakdown.netPayable")}
               </p>
               <p className="text-2xl font-bold text-cyan-600">
-                <Ltr>{formatMoney(net)}</Ltr>
+                <Ltr>{formatMoney(net, currency)}</Ltr>
               </p>
             </div>
             <div className="text-right">

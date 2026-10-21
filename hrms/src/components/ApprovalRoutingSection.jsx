@@ -1,13 +1,19 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import CustomDropdown from "./CustomDropdown";
-import { APPR_GROUPS } from "../data/groupD";
+import { MdOutlineError } from "react-icons/md";
+import { listApprovalGroups } from "../api/approvalGroups";
+import useApiQuery from "../hooks/useApiQuery";
 
-// Optional per-employee approval routing. Emits `value` as an array of
+// Per-employee approval routing. Emits `value` as an array of
 // { module_key, approval_group_id }. Two modes:
-//   ALL — one catch-all group for every request
-//   PER — a group per module (Overtime / Leave / Correction / Exit Visa)
-// A specific module overrides the catch-all.
+//   ALL — one catch-all group for every request (the only one the API takes, D51)
+//   PER — a group per module (Overtime / Leave / Correction / Exit Visa); the API answers
+//         "Per-module routing isn't available yet." for now
+// The groups are the company's active ones (GET /approval-groups?status=ACTIVE). With
+// `projectId` (the main project) a project-scoped group shows only for that project; the
+// current `value` always stays listed, so a group that no longer matches can still be seen.
+// `error`: a message to show under the picker (the server's field error).
 // Labels are translated at render time via `labelKey` (approvals namespace).
 const MODULES = [
   { key: "OVERTIME", labelKey: "routing.modules.OVERTIME" },
@@ -16,13 +22,18 @@ const MODULES = [
   { key: "EXIT_VISA", labelKey: "routing.modules.EXIT_VISA" },
 ];
 
-export default function ApprovalRoutingSection({ value = [], onChange }) {
+export default function ApprovalRoutingSection({ value = [], onChange, projectId, error, warning }) {
   const { t } = useTranslation("approvals");
-  // Its own full list of active groups, loaded once. It used to reuse the
-  // Approval Settings page's Redux list — capped at that page's 10 rows (or
-  // whatever filter it last used) — and re-fetched in a loop when a company
-  // had no groups (each empty response was a new [] reference).
-  const [groups] = useState(() => APPR_GROUPS.filter((g) => g.is_active !== false));
+  // Its own full list of active groups, loaded once.
+  const { data } = useApiQuery(() => listApprovalGroups({ limit: 100, status: "ACTIVE" }).catch(() => null), []);
+  const picked = useMemo(() => new Set(value.map((v) => String(v.approval_group_id))), [value]);
+  const groups = useMemo(
+    () =>
+      (data?.items || []).filter(
+        (g) => picked.has(String(g.id)) || !projectId || g.scope !== "PROJECT" || String(g.project?.id) === String(projectId),
+      ),
+    [data, picked, projectId],
+  );
   const modeFromValue = () => (value.some((v) => v.module_key === "ALL") ? "ALL" : "PER");
   const [mode, setMode] = useState(() => (value.length ? modeFromValue() : "ALL")); // ALL | PER
 
@@ -39,31 +50,26 @@ export default function ApprovalRoutingSection({ value = [], onChange }) {
   }
 
   const norm = (s) => String(s || "").toUpperCase();
-  // A specific module shows only that module's groups; the catch-all shows all.
-  const optsFor = (moduleKey) => {
-    const pool =
-      moduleKey && moduleKey !== "ALL"
-        ? groups.filter((g) => norm(g.module_key) === norm(moduleKey))
-        : groups;
-    return [
-      { label: t("routing.none"), value: "" },
-      ...pool.map((g) => ({
-        label: `${g.group_name || g.name || t("routing.groupFallback", { id: g.id })}${g.group_code ? ` (${g.group_code})` : ""}`,
-        value: String(g.id),
-      })),
-    ];
-  };
-  const countFor = (moduleKey) =>
+  // A specific module shows that module's groups and the all-requests ones; the catch-all shows all.
+  const poolFor = (moduleKey) =>
     moduleKey && moduleKey !== "ALL"
-      ? groups.filter((g) => norm(g.module_key) === norm(moduleKey)).length
-      : groups.length;
+      ? groups.filter((g) => [norm(moduleKey), "ALL"].includes(norm(g.module)))
+      : groups;
+  const optsFor = (moduleKey) => [
+    { label: t("routing.none"), value: "" },
+    ...poolFor(moduleKey).map((g) => ({
+      label: `${g.name || t("routing.groupFallback", { id: g.id })}${g.code ? ` (${g.code})` : ""}`,
+      value: String(g.id),
+    })),
+  ];
+  const countFor = (moduleKey) => poolFor(moduleKey).length;
 
   const emit = (entries) => onChange?.(entries.filter((e) => e.approval_group_id));
 
-  const setAll = (gid) => emit(gid ? [{ module_key: "ALL", approval_group_id: Number(gid) }] : []);
+  const setAll = (gid) => emit(gid ? [{ module_key: "ALL", approval_group_id: String(gid) }] : []);
   const setPer = (moduleKey, gid) => {
     const next = { ...perEntries };
-    if (gid) next[moduleKey] = Number(gid);
+    if (gid) next[moduleKey] = String(gid);
     else delete next[moduleKey];
     emit(Object.entries(next).map(([module_key, approval_group_id]) => ({ module_key, approval_group_id })));
   };
@@ -75,7 +81,11 @@ export default function ApprovalRoutingSection({ value = [], onChange }) {
   return (
     <div className="border border-gray-200 rounded-xl p-4 space-y-4 bg-white">
       <div>
-        <p className="text-sm font-bold text-gray-900">{t("routing.title")} <span className="text-gray-400 font-normal">{t("routing.optional")}</span></p>
+        <p className="text-sm font-bold text-gray-900">
+          {t("routing.title")}{" "}
+          {/* Required once the company has an active group (D51). */}
+          {groups.length === 0 ? <span className="text-gray-400 font-normal">{t("routing.optional")}</span> : <span className="text-red-500">*</span>}
+        </p>
         <p className="text-[11px] text-gray-400 mt-0.5">{t("routing.hint")}</p>
       </div>
 
@@ -115,6 +125,14 @@ export default function ApprovalRoutingSection({ value = [], onChange }) {
             </div>
           ))}
         </div>
+      )}
+
+      {warning && <p className="text-[11px] text-amber-600">{warning}</p>}
+      {error && (
+        <p className="flex items-center gap-1 text-xs text-red-500">
+          <MdOutlineError className="shrink-0 text-sm" />
+          {error}
+        </p>
       )}
     </div>
   );

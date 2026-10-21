@@ -210,7 +210,13 @@ const salaryOf = async (employee) => {
 };
 
 // `afterEdit`: the caller just saved this employee with employee:update, so the read check is skipped.
+// `id` "me" is the caller's own record (the Employee panel's My Profile); none → 404.
 const getEmployee = async (auth, id, lang, { afterEdit = false } = {}) => {
+  if (id === "me") {
+    const own = await Employee.findOne({ where: { user_id: auth.userId, employer_id: auth.employerId }, attributes: ["id"] });
+    if (!own) throw new ErrorHandler("NOT_FOUND");
+    id = own.id;
+  }
   const employee = await findEmployee(auth.employerId, id, {
     include: [
       { model: User, as: "user", attributes: ["id", "email", "phone_number", "phone_country"] },

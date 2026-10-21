@@ -21,13 +21,14 @@ const InfoCard = ({ label, value, extra, loading = false }) => (
   </div>
 );
 
-function WorkInformation() {
+// `profile`: the signed-in employee's own record (Profile.jsx); without it the static profile.
+function WorkInformation({ profile: given }) {
   const { t } = useTranslation("profile");
   const { fmtDate } = useFormat();
   const user = getStaticUser();
   const isEmployer = user?.role?.name?.toLowerCase() === "employer" || (typeof user?.role === "string" && user.role.toLowerCase() === "employer");
 
-  const [profile] = useState(() => myProfile());
+  const [profile] = useState(() => given || myProfile());
   const loading = false;
 
   // Sample/seed values that will come from the API later — kept as English

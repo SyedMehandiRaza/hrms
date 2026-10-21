@@ -108,7 +108,7 @@ employee). Builds on Auth + Company (all done). Senior review 2026-10-20 applied
 | 28b | [Add employee: Review, approval group, create](workforce/28b-ui-add-employee-review-submit.md) | ready-for-agent | 28a, 31 |
 | 29 | [Employee drafts tab](workforce/29-ui-employee-drafts.md) | done | 28a |
 | 30 | [Employees list](workforce/30-ui-employees-list.md) | done | 14a |
-| 31 | [Employee detail, Projects tab, Edit modal, resend login](workforce/31-ui-employee-detail-edit.md) | ready-for-agent | 30, 15 |
+| 31 | [Employee detail, Projects tab, Edit modal, resend login](workforce/31-ui-employee-detail-edit.md) | done | 30, 15 |
 | 32 | [Raise exit wizard](workforce/32-ui-raise-exit-wizard.md) | ready-for-agent | 31, 16a |
 | 33 | [Exit list](workforce/33-ui-exit-list.md) | done | 16b |
 | 34 | [Exit detail](workforce/34-ui-exit-detail.md) | ready-for-agent | 33, 17, 19 |

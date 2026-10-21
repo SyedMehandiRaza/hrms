@@ -6,6 +6,33 @@ import { useSession } from "../../hooks/useSession";
 import WorkInformation from "../../components/WorkInformation";
 import PersonalInformation from "../../components/PersonalInformation";
 import ActiveSessionsCard from "../../components/sessions/ActiveSessionsCard";
+import Loader from "../../components/Loader";
+import { ScreenError } from "../../components/ScreenState";
+import useApiQuery from "../../hooks/useApiQuery";
+import { getEmployee } from "../../api/employees";
+
+// GET /employees/me (the Employee panel sees only its own profile, D57) → the profile sections' shape.
+const toProfile = (d) => {
+  const ov = d.overview;
+  const main = d.projects.current.find((p) => p.is_main) || d.projects.current[0];
+  return {
+    full_name: ov.name,
+    phone_number: ov.phone,
+    email: ov.email,
+    dob: ov.dob,
+    nationality: ov.nationality?.name || "",
+    gender: ov.gender,
+    address: ov.address,
+    profile_url: ov.profile_url,
+    employee_id: ov.employee_code,
+    department: ov.department?.name,
+    designation: ov.designation?.name,
+    project: main?.name || null,
+    date_of_joining: ov.joining_date,
+    employment_type: ov.employment_type,
+    access_level: ov.access_level,
+  };
+};
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const TABS = [
@@ -22,6 +49,9 @@ export default function Profile() {
   // Admin-panel users manage sessions in Settings → Security & SSO; employees here (D15).
   const { me } = useSession();
   const showSessions = me?.account?.panel === "employee";
+  const isEmployeePanel = me?.account?.panel === "employee";
+  const own = useApiQuery(() => (isEmployeePanel ? getEmployee("me") : Promise.resolve(null)), [isEmployeePanel]);
+  const profile = own.data ? toProfile(own.data) : undefined;
 
   const visibleTabs = TABS.filter(item => {
     if (isEmployer && item.id === "Work Information") return false;
@@ -61,13 +91,17 @@ export default function Profile() {
         </div>
 
         {/* Tab Content */}
-        {tab === "Personal Information" ? (
+        {isEmployeePanel && own.loading ? (
+          <Loader />
+        ) : isEmployeePanel && own.error ? (
+          <ScreenError error={own.error} onRetry={own.reload} />
+        ) : tab === "Personal Information" ? (
           <>
-            <PersonalInformation />
+            <PersonalInformation profile={profile} />
             {showSessions && <ActiveSessionsCard />}
           </>
         ) : (
-          <WorkInformation />
+          <WorkInformation profile={profile} />
         )}
       </div>
   

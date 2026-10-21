@@ -194,6 +194,17 @@ describe("Employee panel (D57)", () => {
     }
   });
 
+  // The Employee panel's My Profile doesn't know its employee id (ticket workforce#31).
+  it("GET /employees/me → the caller's own detail; a login without an employee record → 404", async () => {
+    const ctx = await employeeSetup();
+    const me = await add(ctx, { accessLevel: "EMPLOYEE", name: "Mona Self" });
+    const token = await loginOf(me.id);
+    const res = await api.get("/api/employees/me", token);
+    expect(res.status).toBe(200);
+    expect(res.body.data.overview).toMatchObject({ id: me.id, name: "Mona Self" });
+    expect((await api.get("/api/employees/me", ctx.token)).body).toEqual(errorBody("NOT_FOUND"));
+  });
+
   it("even with employee:read, an EMPLOYEE-panel login sees only itself", async () => {
     const ctx = await employeeSetup();
     const role = await createRole(ctx.employer, READER);
