@@ -1,12 +1,13 @@
 const { Op } = require("sequelize");
 const { sequelize, ApprovalRequest, Employee, User, EmployeeExit, ExitEvent, ExitSetting } = require("../models");
 const ErrorHandler = require("../utils/ErrorHandler");
-const { addDays } = require("../utils/clock");
+const { clock, addDays } = require("../utils/clock");
 const { ACCESS_LEVELS } = require("../constants/accessLevels");
 const { UUID, likePattern } = require("./department.service");
 const { companyToday } = require("./companyTime.service");
 const approvals = require("./approval.service");
 const { processExit } = require("./exitProcess.service");
+const { REASONS } = require("../validations/exit.validation");
 
 // Raising exits, approval outcomes, withdraw, the exit list/detail and Exit settings
 // (docs/plans/workforce-and-lifecycle.md D58, D59, D61, D62, D66, D68).
@@ -129,6 +130,10 @@ const toDetail = (exit, events = []) => ({
   cancel_reason: exit.cancel_reason ?? null,
   raised_by: exit.raisedBy ? { id: exit.raisedBy.id, name: exit.raisedBy.name } : null,
   events: events.map((e) => ({ id: e.id, event_type: e.event_type, payload: e.payload ?? null, actor_user_id: e.actor_user_id ?? null, created_at: e.createdAt })),
+  // Every LWD change, oldest first (D65).
+  lwd_history: events
+    .filter((e) => e.event_type === "LWD_EXTENDED")
+    .map((e) => ({ from: e.payload.old.last_working_day, to: e.payload.new.last_working_day, actor_user_id: e.actor_user_id ?? null, created_at: e.createdAt })),
 });
 
 const DETAIL_INCLUDE = [
@@ -215,17 +220,22 @@ const resolveSubject = async (auth, id, body, transaction) => {
   return { employee, self, own };
 };
 
+// LWD bounds (D62): ≥ the notice start, ≤ start + 365, and in the past only for the owner.
+const checkLwd = (auth, lwd, start, today) => {
+  if (lwd < start) throw fieldError("lastWorkingDay", "lwdBeforeStart");
+  if (lwd > addDays(start, 365)) throw fieldError("lastWorkingDay", "lwdTooFar");
+  if (lwd < today && auth.accessLevel !== ACCESS_LEVELS.ADMIN) throw fieldError("lastWorkingDay", "lwdPast");
+};
+
 // Notice terms (D62): start within ±90 days of today (default today); days 0–180 (default from
-// Exit settings); LWD = start + max(days, 1) − 1 unless given, ≥ start, ≤ start + 365, and in the
-// past only for the owner. An own resignation takes the defaults and today's start.
+// Exit settings); LWD = start + max(days, 1) − 1 unless given, within checkLwd's bounds. An own
+// resignation takes the defaults and today's start.
 const noticeTerms = (auth, body, settings, today, self) => {
   const start = (!self && body.noticeStartDate) || today;
   if (start < addDays(today, -90) || start > addDays(today, 90)) throw fieldError("noticeStartDate", "noticeStartInvalid");
   const days = !self && body.noticeDays !== undefined ? body.noticeDays : settings.default_notice_days;
   const lwd = (!self && body.lastWorkingDay) || addDays(start, Math.max(days, 1) - 1);
-  if (lwd < start) throw fieldError("lastWorkingDay", "lwdBeforeStart");
-  if (lwd > addDays(start, 365)) throw fieldError("lastWorkingDay", "lwdTooFar");
-  if (lwd < today && auth.accessLevel !== ACCESS_LEVELS.ADMIN) throw fieldError("lastWorkingDay", "lwdPast");
+  checkLwd(auth, lwd, start, today);
   if (body.preferredLastDay && body.preferredLastDay < start) throw fieldError("preferredLastDay", "preferredDayBeforeStart");
   return { start, days, lwd };
 };
@@ -296,4 +306,98 @@ const withdrawExit = async (auth, id, { reason }) =>
     return exit.id;
   });
 
-module.exports = { raiseExit, withdrawExit, listExits, getExit, getSettings, saveSettings, findExit, ENTITY, OPEN };
+// ---------- In notice: edit terms, cancel, Confirm → Immediate (D64, D65) ----------
+
+// The caller's exit, locked; anything but IN_NOTICE → EXIT_INVALID_STATE.
+const lockInNotice = async (auth, id, transaction) => {
+  const exit = await findExit(auth.employerId, id, { transaction, lock: transaction.LOCK.UPDATE });
+  if (exit.status !== "IN_NOTICE") throw new ErrorHandler("EXIT_INVALID_STATE");
+  return exit;
+};
+
+// An LWD change, kept as an exit event (the LWD history).
+const lwdChanged = (exit, from, auth, transaction) =>
+  ExitEvent.create(
+    { exit_id: exit.id, event_type: "LWD_EXTENDED", payload: { old: { last_working_day: from }, new: { last_working_day: exit.last_working_day } }, actor_user_id: auth.userId },
+    { transaction }
+  );
+
+// Editable terms: body field → column.
+const TERMS = {
+  reasonCategory: "reason_category",
+  reason: "reason",
+  noticeDays: "notice_days",
+  preferredLastDay: "preferred_last_day",
+  allowLeaveDuringNotice: "allow_leave_during_notice",
+  encashLeave: "encash_leave",
+  loanHandling: "loan_handling",
+  rehireEligible: "rehire_eligible",
+  coolingPeriodDays: "cooling_period_days",
+};
+
+// PUT /exits/:id/terms (D65): employee:create + update; no re-approval and the original LWD stays.
+// New notice days without an LWD move the LWD to start + max(days, 1) − 1. Changed terms → event
+// TERMS_UPDATED, a changed LWD → LWD_EXTENDED (old and new values each). An LWD now in the past
+// (owner only) is processed at once (D63).
+const editTerms = async (auth, id, body) =>
+  sequelize.transaction(async (transaction) => {
+    if (!(can(auth, "create") && can(auth, "update"))) throw new ErrorHandler("FORBIDDEN");
+    const exit = await lockInNotice(auth, id, transaction);
+    if (body.reasonCategory && !REASONS[exit.exit_type].includes(body.reasonCategory)) throw fieldError("reasonCategory", "exitReasonCategory");
+    const today = await companyToday(auth.employerId, { transaction });
+    const start = exit.notice_start_date;
+    const from = exit.last_working_day;
+    const lwd = body.lastWorkingDay || (body.noticeDays !== undefined ? addDays(start, Math.max(body.noticeDays, 1) - 1) : from);
+    if (lwd !== from) checkLwd(auth, lwd, start, today);
+    if (body.preferredLastDay && body.preferredLastDay < start) throw fieldError("preferredLastDay", "preferredDayBeforeStart");
+
+    const before = {};
+    const after = {};
+    for (const [key, column] of Object.entries(TERMS)) {
+      if (body[key] === undefined) continue;
+      const current = typeof body[key] === "boolean" ? Boolean(exit[column]) : exit[column];
+      if (current === body[key]) continue;
+      before[column] = current ?? null;
+      after[column] = body[key];
+    }
+    const termsChanged = Object.keys(after).length > 0;
+    if (!termsChanged && lwd === from) return exit.id;
+
+    await exit.update({ ...after, last_working_day: lwd }, { transaction });
+    if (termsChanged) await ExitEvent.create({ exit_id: exit.id, event_type: "TERMS_UPDATED", payload: { old: before, new: after }, actor_user_id: auth.userId }, { transaction });
+    if (lwd !== from) await lwdChanged(exit, from, auth, transaction);
+    if (lwd < today) await processExit(exit, { transaction });
+    return exit.id;
+  });
+
+// POST /exits/:id/cancel (D65): employee:create + update, reason 5–500 → exit CANCELLED, employee
+// back to ACTIVE, exit event CANCELLED.
+const cancelExit = async (auth, id, { reason }) =>
+  sequelize.transaction(async (transaction) => {
+    if (!(can(auth, "create") && can(auth, "update"))) throw new ErrorHandler("FORBIDDEN");
+    const exit = await lockInNotice(auth, id, transaction);
+    const employee = await Employee.findByPk(exit.employee_id, { transaction, lock: transaction.LOCK.UPDATE });
+    await exit.update({ status: "CANCELLED", cancel_reason: reason, cancelled_by: auth.userId, cancelled_at: clock.now() }, { transaction });
+    await employee.update({ employment_status: "ACTIVE" }, { transaction });
+    await ExitEvent.create({ exit_id: exit.id, event_type: "CANCELLED", payload: { reason }, actor_user_id: auth.userId }, { transaction });
+    return exit.id;
+  });
+
+// POST /exits/:id/confirm-immediate (D64, owner only — checked by the route): reason 10–500 →
+// LWD = today and the exit is processed now (exit date = today).
+const confirmImmediate = async (auth, id, { reason }) =>
+  sequelize.transaction(async (transaction) => {
+    const exit = await lockInNotice(auth, id, transaction);
+    const today = await companyToday(auth.employerId, { transaction });
+    const from = exit.last_working_day;
+    await exit.update(
+      { last_working_day: today, confirm_mode: "IMMEDIATE", confirm_override_reason: reason, confirmed_by: auth.userId, confirmed_at: clock.now() },
+      { transaction }
+    );
+    if (from !== today) await lwdChanged(exit, from, auth, transaction);
+    await ExitEvent.create({ exit_id: exit.id, event_type: "CONFIRMED_WITH_OVERRIDE", payload: { mode: "IMMEDIATE", reason }, actor_user_id: auth.userId }, { transaction });
+    await processExit(exit, { transaction });
+    return exit.id;
+  });
+
+module.exports = { raiseExit, withdrawExit, editTerms, cancelExit, confirmImmediate, listExits, getExit, getSettings, saveSettings, findExit, ENTITY, OPEN };

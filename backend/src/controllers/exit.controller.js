@@ -10,6 +10,21 @@ const withdrawExit = async (req, res) => {
   res.json({ success: true, data: await exitService.getExit(req.auth, id) });
 };
 
+const editTerms = async (req, res) => {
+  const id = await exitService.editTerms(req.auth, req.params.id, req.body);
+  res.json({ success: true, data: await exitService.getExit(req.auth, id) });
+};
+
+const cancelExit = async (req, res) => {
+  const id = await exitService.cancelExit(req.auth, req.params.id, req.body);
+  res.json({ success: true, data: await exitService.getExit(req.auth, id) });
+};
+
+const confirmImmediate = async (req, res) => {
+  const id = await exitService.confirmImmediate(req.auth, req.params.id, req.body);
+  res.json({ success: true, data: await exitService.getExit(req.auth, id) });
+};
+
 const listExits = async (req, res) => {
   res.json({ success: true, data: await exitService.listExits(req.auth, req.query) });
 };
@@ -26,4 +41,4 @@ const saveSettings = async (req, res) => {
   res.json({ success: true, data: await exitService.saveSettings(req.auth, req.body) });
 };
 
-module.exports = { raiseExit, withdrawExit, listExits, getExit, getSettings, saveSettings };
+module.exports = { raiseExit, withdrawExit, editTerms, cancelExit, confirmImmediate, listExits, getExit, getSettings, saveSettings };

@@ -61,7 +61,7 @@ Workforce tickets 03, 04, 13a, 20, 21, 28a are also blocked by geo tickets (show
 ## Workforce structure + Employee lifecycle (`workforce/`)
 
 Plan: `docs/plans/workforce-and-lifecycle.md`. ADRs 0010 (1:1 head office ↔ project), 0011 (one approval group per
-employee). Builds on Auth + Company (all done). Senior review 2026-10-20 applied (plan §8). Frontier now: **17, 19, 20, 21, 23, 24, 25, 26, 27, 33, 35**.
+employee). Builds on Auth + Company (all done). Senior review 2026-10-20 applied (plan §8). Frontier now: **19, 20, 21, 23, 24, 25, 26, 27, 33, 35**.
 
 ### Backend + tests
 
@@ -89,7 +89,7 @@ employee). Builds on Auth + Company (all done). Senior review 2026-10-20 applied
 | 16a | [Raise exit + exit list/detail + exit settings API](workforce/16a-raise-exit-settings-api.md) | done | 11b, 13a |
 | 16b | [Exit approval outcomes, withdraw, emails](workforce/16b-exit-approval-outcomes-api.md) | done | 16a |
 | 18 | [Last-working-day daily job (+ shared "process exit" service)](workforce/18-lwd-daily-job.md) | done | 16b |
-| 17 | [Exit edit terms, cancel, confirm immediate API](workforce/17-exit-terms-cancel-confirm-api.md) | ready-for-agent | 16b, 18 |
+| 17 | [Exit edit terms, cancel, confirm immediate API](workforce/17-exit-terms-cancel-confirm-api.md) | done | 16b, 18 |
 | 19 | [Rehire API](workforce/19-rehire-api.md) | ready-for-agent | 18, 13b |
 
 ### UI (one ticket per screen, verified by `ui-tester`)

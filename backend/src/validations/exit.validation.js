@@ -88,7 +88,36 @@ const exitSettingsSchema = Joi.object({
   blockLoansDuringNotice: yesNo.required().messages({ "any.required": "yesNo" }),
 });
 
-// POST /exits/:id/withdraw (standards §7.2 "Exit withdraw / cancel").
+// PUT /exits/:id/terms (D65): any subset of the notice and settlement terms. The exit type and
+// notice start stay; a reason category must belong to the exit's type (checked by the service).
+const editTermsSchema = Joi.object({
+  reasonCategory: Joi.string().messages({ "string.base": "exitReasonCategory", "string.empty": "exitReasonCategory" }),
+  reason: Joi.string().trim().min(10).max(1000).messages({ "string.base": "exitReason", "string.empty": "exitReason", "string.min": "exitReason", "string.max": "exitReason" }),
+  noticeDays: days(180, "noticeDays"),
+  lastWorkingDay: date("lwdInvalid"),
+  preferredLastDay: date(INVALID),
+  allowLeaveDuringNotice: yesNo,
+  encashLeave: yesNo,
+  rehireEligible: yesNo,
+  loanHandling: Joi.string()
+    .valid(...LOAN_HANDLING)
+    .empty(["", null])
+    .messages({ "string.base": "loanHandling", "any.only": "loanHandling" }),
+  coolingPeriodDays: days(1095, "coolingDays"),
+});
+
+// POST /exits/:id/withdraw and /exits/:id/cancel (standards §7.2 "Exit withdraw / cancel").
 const withdrawExitSchema = Joi.object({ reason: reason.required() });
 
-module.exports = { raiseExitSchema, withdrawExitSchema, listExitsSchema, exitSettingsSchema, REASONS };
+// POST /exits/:id/confirm-immediate (standards §7.2 "Exit confirm immediate").
+const confirmImmediateSchema = Joi.object({
+  reason: Joi.string().trim().min(10).max(500).required().messages({
+    "any.required": "overrideReason",
+    "string.base": "overrideReason",
+    "string.empty": "overrideReason",
+    "string.min": "overrideReason",
+    "string.max": "overrideReason",
+  }),
+});
+
+module.exports = { raiseExitSchema, editTermsSchema, withdrawExitSchema, confirmImmediateSchema, listExitsSchema, exitSettingsSchema, REASONS };
