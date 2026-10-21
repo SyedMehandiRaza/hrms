@@ -160,6 +160,59 @@ describe("rejection", () => {
   });
 });
 
+// The Exit detail's approval progress by level (ticket workforce#34).
+describe("exit detail approval progress", () => {
+  const approvalOf = async (ctx, exit) => (await api.get(`/api/exits/${exit.id}`, ctx.token)).body.data.approval;
+
+  it("shows each level's approvers and decisions as the request moves on", async () => {
+    const ctx = await setup();
+    const exit = await raise(ctx.token, ctx.leaver, termination());
+    expect(await approvalOf(ctx, exit)).toEqual({
+      status: "PENDING",
+      current_level: 1,
+      total_levels: 2,
+      owner_only: false,
+      levels: [
+        { level: 1, status: "PENDING", approvers: [{ id: ctx.l1.id, name: "Lina One" }], decisions: [] },
+        { level: 2, status: "WAITING", approvers: [{ id: ctx.l2.id, name: "Lars Two" }], decisions: [] },
+      ],
+      decisions: [],
+    });
+
+    await approve(ctx.l1.token, exit, { comment: "Fine by me" });
+    await reject(ctx.l2.token, exit, "Not enough evidence yet");
+    const progress = await approvalOf(ctx, exit);
+    expect(progress).toMatchObject({ status: "REJECTED", current_level: 2, total_levels: 2, owner_only: false });
+    expect(progress.levels).toEqual([
+      {
+        level: 1,
+        status: "APPROVED",
+        approvers: [{ id: ctx.l1.id, name: "Lina One" }],
+        decisions: [{ name: "Lina One", status: "APPROVED", comment: "Fine by me", acted_at: expect.any(String), is_override: false }],
+      },
+      {
+        level: 2,
+        status: "REJECTED",
+        approvers: [{ id: ctx.l2.id, name: "Lars Two" }],
+        decisions: [{ name: "Lars Two", status: "REJECTED", comment: "Not enough evidence yet", acted_at: expect.any(String), is_override: false }],
+      },
+    ]);
+  });
+
+  it("an owner-only request has no levels; the owner's decision is listed as an override", async () => {
+    const ctx = await employeeSetup();
+    const leaver = await add(ctx, { name: "No Group" });
+    const exit = await raise(ctx.token, leaver, termination());
+    expect(await approvalOf(ctx, exit)).toEqual({ status: "PENDING", current_level: 1, total_levels: 1, owner_only: true, levels: [], decisions: [] });
+    await approve(ctx.token, exit, { reason: "Approved after review" });
+    const progress = await approvalOf(ctx, exit);
+    expect(progress).toMatchObject({ status: "APPROVED", owner_only: true });
+    expect(progress.decisions).toEqual([
+      { name: ctx.owner.name, status: "APPROVED", comment: "Approved after review", acted_at: expect.any(String), is_override: true },
+    ]);
+  });
+});
+
 describe("the leaving employee's own views (D68)", () => {
   const listIds = async (token) => (await api.get("/api/exits", token)).body.data.items.map((i) => i.id);
 

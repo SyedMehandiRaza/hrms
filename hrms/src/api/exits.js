@@ -39,3 +39,28 @@ export const getExitSettings = () => client.get("/exit-settings").then((res) => 
 
 // PUT /exit-settings (the same five fields) → the saved settings.
 export const saveExitSettings = (body) => client.put("/exit-settings", body).then((res) => res.data.data);
+
+// ── Exit actions (D59, D64, D65, D67); each → the exit detail (rehire → the employee) ──
+
+// POST /exits/:id/withdraw { reason } (5–500): a pending exit → CANCELLED.
+export const withdrawExit = (id, reason) =>
+  client.post(`/exits/${encodeURIComponent(id)}/withdraw`, { reason }).then((res) => res.data.data);
+
+// PUT /exits/:id/terms { reasonCategory?, reason?, noticeDays?, lastWorkingDay?, preferredLastDay?,
+//   allowLeaveDuringNotice?, encashLeave?, rehireEligible?, loanHandling?, coolingPeriodDays? }
+//   (only the changed ones; the exit type and notice start stay).
+export const editExitTerms = (id, body) =>
+  client.put(`/exits/${encodeURIComponent(id)}/terms`, body).then((res) => res.data.data);
+
+// POST /exits/:id/cancel { reason } (5–500): an exit in notice → CANCELLED, the employee Active again.
+export const cancelExit = (id, reason) =>
+  client.post(`/exits/${encodeURIComponent(id)}/cancel`, { reason }).then((res) => res.data.data);
+
+// POST /exits/:id/confirm-immediate { reason } (10–500, owner only): LWD = today, processed now.
+export const confirmExitImmediate = (id, reason) =>
+  client.post(`/exits/${encodeURIComponent(id)}/confirm-immediate`, { reason }).then((res) => res.data.data);
+
+// POST /exits/:id/rehire { rehireDate?, mainProjectId?, … } → the rehired employee.
+// 409 REHIRE_NOT_ALLOWED (cooling period), REHIRE_NOT_ELIGIBLE.
+export const rehireExit = (id, body) =>
+  client.post(`/exits/${encodeURIComponent(id)}/rehire`, body).then((res) => res.data.data);

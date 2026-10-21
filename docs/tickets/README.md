@@ -111,6 +111,6 @@ employee). Builds on Auth + Company (all done). Senior review 2026-10-20 applied
 | 31 | [Employee detail, Projects tab, Edit modal, resend login](workforce/31-ui-employee-detail-edit.md) | done | 30, 15 |
 | 32 | [Raise exit wizard](workforce/32-ui-raise-exit-wizard.md) | done | 31, 16a |
 | 33 | [Exit list](workforce/33-ui-exit-list.md) | done | 16b |
-| 34 | [Exit detail](workforce/34-ui-exit-detail.md) | ready-for-agent | 33, 17, 19 |
+| 34 | [Exit detail](workforce/34-ui-exit-detail.md) | done | 33, 17, 19 |
 | 35 | [Settings → Exit settings tab](workforce/35-ui-exit-settings.md) | done | 16a |
 | 36 | [End-to-end workforce lifecycle](workforce/36-e2e-workforce-lifecycle.md) | ready-for-agent | all other workforce tickets |

@@ -110,7 +110,10 @@
     "CONFIRMED_WITH_OVERRIDE": "Exit confirmed with open items",
     "RELIEVED_EARLY": "Relieved early",
     "DOCUMENT_GENERATED": "Document generated",
-    "DOCUMENT_SENT": "Documents e-mailed"
+    "DOCUMENT_SENT": "Documents e-mailed",
+    "APPROVED": "Exit approved",
+    "REJECTED": "Exit rejected",
+    "WITHDRAWN": "Exit request withdrawn"
   },
   "payrollStatus": {
     "NOT_GENERATED": "Not generated",
@@ -425,7 +428,9 @@
       "rehire": "Rehire",
       "confirmTermination": "Confirm Termination",
       "confirmResignation": "Confirm Resignation",
-      "lockedHint": "Complete the required checklist items first: {{items}}"
+      "lockedHint": "Complete the required checklist items first: {{items}}",
+      "withdraw": "Withdraw",
+      "confirmImmediate": "Confirm → Immediate"
     },
     "access": {
       "canLogin": "Can log in",
@@ -448,7 +453,8 @@
       "exitedOn": "Exited on",
       "completedOn": "Completed on",
       "cancelledOn": "Cancelled on",
-      "cancelReason": "Cancellation reason"
+      "cancelReason": "Cancellation reason",
+      "rejectReason": "Rejection reason"
     },
     "lwd": {
       "title": "Last working day",
@@ -490,7 +496,23 @@
       "awaiting": "Exited — awaiting your confirmation. Clear the checklist, then confirm to close this exit.",
       "waitingPayroll": "Confirmed — waiting for the final payroll ({{month}}) to be credited. The exit completes automatically after that.",
       "confirmedOnLwd": "Confirmed — employment ends on the last working day ({{date}})."
-    }
+    },
+    "approval": {
+      "title": "Approval",
+      "level": "Level {{n}}",
+      "ownerOnly": "No approval group: the company owner decides.",
+      "noApprover": "No active approver",
+      "override": "on behalf",
+      "status": {
+        "PENDING": "Waiting for decision",
+        "WAITING": "Not reached yet",
+        "APPROVED": "Approved",
+        "REJECTED": "Rejected",
+        "SKIPPED": "Skipped",
+        "CANCELLED": "Withdrawn"
+      }
+    },
+    "comingLater": "Coming in a later release."
   },
   "editTerms": {
     "title": "Edit notice terms",
@@ -531,7 +553,7 @@
   },
   "rehireModal": {
     "title": "Rehire employee",
-    "notEligible": "This employee is not eligible for rehire.",
+    "notEligible": "This employee isn't eligible for rehire.",
     "beforeAllowed": "Rehire is allowed from {{date}}. You can pick that date or later.",
     "rehireDate": "Rehire date",
     "project": "Assign to project",
@@ -570,7 +592,9 @@
     "cancel": "Back",
     "submit": "Confirm",
     "submitting": "Confirming…",
-    "done": "Exit confirmed"
+    "done": "Exit confirmed",
+    "immediateTitle": "Confirm → Immediate",
+    "immediateReason": "Reason"
   },
   "documents": {
     "title": "Exit documents",
@@ -594,5 +618,14 @@
     "send": "E-mail to employee",
     "sent": "Documents e-mailed to the employee",
     "sending": "Sending…"
+  },
+  "withdrawModal": {
+    "title": "Withdraw exit request",
+    "warning": "The request leaves every approver's inbox and {{name}} stays an active employee.",
+    "reason": "Reason for withdrawing",
+    "keep": "Keep request",
+    "confirm": "Withdraw",
+    "withdrawing": "Withdrawing…",
+    "done": "Exit request withdrawn"
   }
 }

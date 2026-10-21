@@ -180,7 +180,7 @@ const getExit = async (auth, id) => {
   const exit = await findExit(auth.employerId, id, { include: DETAIL_INCLUDE });
   if ((await hiddenFrom(auth)).includes(exit.id)) throw new ErrorHandler("NOT_FOUND");
   const events = await ExitEvent.findAll({ where: { exit_id: exit.id }, order: [["created_at", "ASC"], ["id", "ASC"]] });
-  return toDetail(exit, events);
+  return { ...toDetail(exit, events), approval: await approvals.progress(exit.approval_request_id) };
 };
 
 // GET /exits?status=&type=&reason=&lwdMonth=&search= (name, Employee ID), newest first. `status`

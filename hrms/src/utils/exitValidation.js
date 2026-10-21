@@ -220,7 +220,8 @@ export const exitRules = (t, ctx = {}) => {
       },
     },
     project_id: {
-      validate: (v) => v === "" || v === null || v === undefined || /^[1-9]\d*$/.test(String(v)) || m("projectInvalid"),
+      // Project ids are UUIDs.
+      validate: (v) => v === "" || v === null || v === undefined || /^[0-9a-f-]{36}$/i.test(String(v)) || m("projectInvalid"),
     },
 
     // V23–V25 (company settings)

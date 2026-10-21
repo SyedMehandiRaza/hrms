@@ -335,6 +335,59 @@ const toInboxRow = (request, lang, subjects, blocked) => {
   };
 };
 
+// A request's progress for its entity's detail page (the Exit detail, ticket workforce#34): each
+// level's approvers (current group members) and decisions, and the level's state: APPROVED /
+// REJECTED / SKIPPED once decided, PENDING at the current level, WAITING after it. An owner-only
+// request has no levels; its decisions (and any owner override) are listed at the top level.
+const progress = async (requestId) => {
+  const request = requestId ? await ApprovalRequest.findByPk(requestId) : null;
+  if (!request) return null;
+  const logs = await ApprovalRequestLog.findAll({
+    where: { approval_request_id: request.id, status: { [Op.ne]: "PENDING" } },
+    include: [
+      { model: Employee, as: "employee", attributes: ["full_name"], required: false },
+      { model: User, as: "actor", attributes: ["name"], required: false },
+    ],
+    order: [
+      ["acted_at", "ASC"],
+      ["id", "ASC"],
+    ],
+  });
+  const decision = (l) => ({
+    name: l.is_override ? l.actor?.name || null : l.employee?.full_name || l.actor?.name || null,
+    status: l.status,
+    comment: l.comments ?? null,
+    acted_at: l.acted_at,
+    is_override: Boolean(l.is_override),
+  });
+  const base = { status: request.final_status, current_level: request.current_level, total_levels: request.total_levels };
+  if (!request.approval_group_id) return { ...base, owner_only: true, levels: [], decisions: logs.map(decision) };
+
+  const members = await ApprovalGroupMember.findAll({
+    where: { approval_group_id: request.approval_group_id },
+    include: [{ model: Employee, as: "employee", attributes: ["id", "full_name"], required: true }],
+    order: [["level_no", "ASC"]],
+  });
+  const levels = [];
+  for (let level = 1; level <= request.total_levels; level += 1) {
+    const here = logs.filter((l) => l.level_no === level);
+    let status = "WAITING";
+    if (here.some((l) => l.status === "REJECTED")) status = "REJECTED";
+    else if (level < request.current_level || request.final_status === "APPROVED")
+      status = here.length && here.every((l) => l.status === "SKIPPED") ? "SKIPPED" : "APPROVED";
+    else if (level === request.current_level && PENDING.includes(request.final_status)) status = "PENDING";
+    levels.push({
+      level,
+      status,
+      approvers: members
+        .filter((m) => m.level_no === level && m.is_active)
+        .map((m) => ({ id: m.employee.id, name: m.employee.full_name })),
+      decisions: here.map(decision),
+    });
+  }
+  return { ...base, owner_only: false, levels, decisions: [] };
+};
+
 // GET /approvals/inbox: pending requests waiting at the caller's level (D23). The owner also sees
 // owner-only requests and blocked ones (nobody left who can act at the current level).
 const inbox = async (auth, lang) => {
@@ -377,6 +430,7 @@ const inbox = async (auth, lang) => {
 };
 
 module.exports = {
+  progress,
   registerEntity,
   raise,
   decide,

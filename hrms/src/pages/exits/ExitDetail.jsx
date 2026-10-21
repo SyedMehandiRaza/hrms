@@ -13,25 +13,29 @@ import {
   MdOutlineEventRepeat,
   MdOutlineArrowForward,
   MdOutlineTaskAlt,
-  MdOutlineInfo,
-  MdOutlineHourglassEmpty,
+  MdOutlineUndo,
+  MdOutlineChecklist,
+  MdOutlineDescription,
+  MdOutlinePayments,
+  MdOutlineHowToReg,
 } from "react-icons/md";
 
-import { getExit } from "../../data/groupG";
-import { STATIC_PERMISSION } from "../../data/session";
-import useCanManageExits from "../../hooks/useCanManageExits";
+import { getExit } from "../../api/exits";
+import useApiQuery from "../../hooks/useApiQuery";
+import { useCan } from "../../hooks/usePermission";
+import { useCurrentUser } from "../../hooks/useSession";
+import { MODULES, ACTIONS } from "../../constants/permissions";
+import { apiErrorCode, apiErrorMessage } from "../../utils/apiError";
 import { useFormat } from "../../hooks/useFormat";
 import useYearLock from "../../hooks/useYearLock";
-import { diffDays, todayYmd } from "../../utils/exitValidation";
+import useFiscalYear from "../../hooks/useFiscalYear";
+import { diffDays } from "../../utils/exitValidation";
 import { ExitStatusBadge, EmploymentStatusBadge } from "../../components/exits/ExitBadges";
-import ChecklistPanel from "../../components/exits/ChecklistPanel";
-import SettlementPanel from "../../components/exits/SettlementPanel";
 import EditExitTermsModal from "../../components/exits/EditExitTermsModal";
 import CancelExitModal from "../../components/exits/CancelExitModal";
 import RehireModal from "../../components/exits/RehireModal";
 import ConfirmExitModal from "../../components/exits/ConfirmExitModal";
-import { openRequiredItems } from "../../utils/exitConfirm";
-import ExitDocumentsCard from "../../components/exits/ExitDocumentsCard";
+import { ScreenError } from "../../components/ScreenState";
 import Loader from "../../components/Loader";
 import Ltr from "../../components/Ltr";
 
@@ -49,20 +53,64 @@ const initialsOf = (name = "") =>
     .join("")
     .toUpperCase() || "?";
 
+// GET /exits/:id → the shape the panels and modals read (notice / settlement_options / rehire
+// groups, events with { from, to } payloads).
+const toView = (d) => {
+  const lwdEvents = (d.events || []).filter((e) => e.event_type === "LWD_EXTENDED");
+  const ended = (d.events || []).find((e) => e.event_type === "CANCELLED" || e.event_type === "WITHDRAWN");
+  return {
+    ...d,
+    employee: {
+      id: d.employee?.id,
+      full_name: d.employee?.name,
+      country_emp_id: d.employee?.employee_code,
+      employment_status: d.status === "IN_NOTICE" || d.status === "EXITED" ? d.status : null,
+    },
+    access: { can_login: d.status !== "EXITED" },
+    notice: {
+      start_date: d.notice_start_date,
+      days: d.notice_days,
+      last_working_day: d.last_working_day,
+      original_last_working_day: d.original_last_working_day,
+      preferred_last_day: d.preferred_last_day,
+      allow_leave_during_notice: d.allow_leave_during_notice,
+      extended_days: Math.max(diffDays(d.last_working_day, d.original_last_working_day) || 0, 0),
+    },
+    settlement_options: { encash_leave: d.encash_leave, loan_handling: d.loan_handling },
+    rehire: { eligible: d.rehire_eligible, cooling_period_days: d.cooling_period_days, allowed_from: d.rehire_allowed_from },
+    exited_at: d.status === "EXITED" ? d.last_working_day : null,
+    cancelled_at: ended ? ended.created_at : null,
+    events: (d.events || []).map((e) => {
+      if (e.event_type === "LWD_EXTENDED") {
+        const from = e.payload?.old?.last_working_day;
+        const to = e.payload?.new?.last_working_day;
+        return { ...e, payload: { from, to, days: Math.abs(diffDays(to, from) || 0) } };
+      }
+      if (e.event_type === "TERMS_UPDATED") {
+        const old = e.payload?.old || {};
+        const now = e.payload?.new || {};
+        return { ...e, payload: { changes: Object.fromEntries(Object.keys(now).map((k) => [k, { from: old[k], to: now[k] }])) } };
+      }
+      return e;
+    }),
+    lwd_events: lwdEvents.length,
+  };
+};
+
 export default function ExitDetail() {
-  const canManage = useCanManageExits();
-  if (!canManage) return <StateBlock icon={MdOutlineLock} textKey="common.notAllowed" />;
+  const canRead = useCan()(MODULES.EXIT, ACTIONS.READ);
+  if (!canRead) return <StateBlock icon={MdOutlineLock} textKey="common.notAllowed" />;
   return <ExitDetailInner />;
 }
 
-function StateBlock({ icon: Icon, textKey, back }) {
+function StateBlock({ icon: Icon, textKey, text, back }) {
   const { t } = useTranslation("exits");
   return (
     <div className="flex flex-col items-center justify-center text-center py-24 px-4">
       <div className="w-14 h-14 rounded-2xl bg-gray-50 border border-gray-200 flex items-center justify-center mb-4">
         <Icon className="text-2xl text-gray-400" />
       </div>
-      <p className="text-sm text-gray-600 max-w-md">{t(textKey)}</p>
+      <p className="text-sm text-gray-600 max-w-md">{text || t(textKey)}</p>
       {back && (
         <Link to="/admin/exits" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-cyan-600 hover:text-cyan-700">
           <MdArrowBack className="rtl:rotate-180" />
@@ -76,65 +124,36 @@ function StateBlock({ icon: Icon, textKey, back }) {
 function ExitDetailInner() {
   const { id } = useParams();
   const { t } = useTranslation("exits");
-  const [loaded, setLoaded] = useState(() => ({ id, exit: getExit(id) }));
-  const exit = loaded.exit;
-  const setExit = useCallback((d) => setLoaded((s) => ({ ...s, exit: d })), []);
-  if (loaded.id !== id) setLoaded({ id, exit: getExit(id) });
-  const loading = false;
-  const failure = exit ? null : { code: 404 }; // { code, message }
-  const [modal, setModal] = useState(null); // "terms" | "cancel" | "rehire" | "confirm"
-  const isOwner = !!STATIC_PERMISSION.isSuper;
-  // Read-only when the selected year is closed + locked. Only the writes the
-  // backend guards by the last working day's period (Edit terms, settlement
-  // adjustments) also lock when that day's year is closed; rehire / cancel /
-  // checklist / confirm (non-immediate) are not dated in a period.
+  const { data, loading, error, reload, setData } = useApiQuery(() => getExit(id), [id]);
+  const exit = data ? toView(data) : null;
+  // The actions answer with the fresh detail (rehire with the employee: reload then).
+  const setExit = useCallback((detail) => (detail?.approval !== undefined ? setData(detail) : reload()), [setData, reload]);
+  const [modal, setModal] = useState(null); // "withdraw" | "terms" | "cancel" | "rehire" | "confirm"
+  const user = useCurrentUser();
+  const can = useCan();
+  const isOwner = user?.accessLevel === "ADMIN";
+  const canManage = can(MODULES.EMPLOYEE, ACTIONS.CREATE) && can(MODULES.EMPLOYEE, ACTIONS.UPDATE);
+  // Read-only when the selected year is closed + locked; Edit terms also when the LWD's year is.
   const lock = useYearLock();
-  const lwdLock = useYearLock(exit?.notice?.last_working_day);
+  const lwdLock = useYearLock(exit?.last_working_day);
   const lockProps = { disabled: lock.locked, title: lock.title };
 
-  // Cancel / rehire change the employee's access and approver duties on the
-  // server — refresh the cached permission gates alongside the detail.
-  const onAccessChanged = useCallback(
-    (detail) => {
-      setExit(detail);
-    },
-    [setExit],
-  );
-
-  const load = useCallback(() => setExit(getExit(id)), [id, setExit]);
-
-  const reload = useCallback(() => load(), [load]);
-
-  if (loading) return <Loader label={t("common.loading")} className="py-24" />;
-  if (failure?.code === 404) return <StateBlock icon={MdOutlineSearchOff} textKey="detail.notFound" back />;
-  if (failure?.code === 403) return <StateBlock icon={MdOutlineLock} textKey="common.notAllowed" back />;
-  if (failure || !exit) {
-    return (
-      <div className="flex flex-col items-center justify-center text-center py-24 px-4 gap-4">
-        <p className="text-sm text-gray-600">{failure?.message || t("common.genericError")}</p>
-        <button
-          type="button"
-          onClick={() => load()}
-          className="px-4 py-2 text-sm font-semibold text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg"
-        >
-          {t("detail.retry")}
-        </button>
-      </div>
-    );
+  if (loading && !exit) return <Loader label={t("common.loading")} className="py-24" />;
+  if (error && !exit) {
+    // The server text: "The requested record was not found."
+    if (apiErrorCode(error) === "NOT_FOUND") return <StateBlock icon={MdOutlineSearchOff} text={apiErrorMessage(error)} back />;
+    if (apiErrorCode(error) === "FORBIDDEN") return <StateBlock icon={MdOutlineLock} textKey="common.notAllowed" back />;
+    return <ScreenError error={error} onRetry={reload} />;
   }
 
+  const pending = exit.status === "PENDING_APPROVAL";
   const inNotice = exit.status === "IN_NOTICE";
-  const confirmation = exit.confirmation || {};
-  // Confirm Termination / Resignation: open exits not yet confirmed. Locked
-  // while required items are open — except for the owner (override in modal).
-  const canConfirm = ["IN_NOTICE", "EXITED"].includes(exit.status) && !confirmation.confirmed;
-  const openItems = openRequiredItems(exit);
-  const confirmLocked = openItems.length > 0 && !isOwner;
-  const lockedHint = confirmLocked ? t("detail.actions.lockedHint", { items: openItems.map((i) => i.label).join(", ") }) : null;
-  const canRehire =
-    ["EXITED", "COMPLETED"].includes(exit.status) &&
-    !!exit.rehire?.eligible &&
-    exit.employee?.employment_status !== "ACTIVE";
+  // Withdraw (D59): the raiser, the owner, or employee:create + update.
+  const canWithdraw = pending && (isOwner || canManage || (exit.raised_by?.id && exit.raised_by.id === user?.id));
+  // Rehire (D67): an exited employee, employee:create; the server answers eligibility and cooling.
+  // Once rehired the exit stays EXITED in its history, so the button goes away.
+  const rehired = (exit.events || []).some((e) => e.event_type === "REHIRED");
+  const canRehire = exit.status === "EXITED" && !rehired && can(MODULES.EMPLOYEE, ACTIONS.CREATE);
 
   return (
     <div className="space-y-6 pb-10">
@@ -142,7 +161,18 @@ function ExitDetailInner() {
         exit={exit}
         actions={
           <>
-            {inNotice && (
+            {canWithdraw && (
+              <button
+                type="button"
+                onClick={() => setModal("withdraw")}
+                {...lockProps}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-red-600 border border-red-200 bg-white hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <MdOutlineUndo className="text-base" />
+                {t("detail.actions.withdraw")}
+              </button>
+            )}
+            {inNotice && canManage && (
               <>
                 <button
                   type="button"
@@ -165,16 +195,16 @@ function ExitDetailInner() {
                 </button>
               </>
             )}
-            {canConfirm && (
+            {/* Confirm → Immediate (D64): the owner only. */}
+            {inNotice && isOwner && (
               <button
                 type="button"
                 onClick={() => setModal("confirm")}
-                disabled={confirmLocked || lock.locked}
-                title={lock.title || lockedHint || undefined}
+                {...lockProps}
                 className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <MdOutlineTaskAlt className="text-base" />
-                {exit.exit_type === "TERMINATION" ? t("detail.actions.confirmTermination") : t("detail.actions.confirmResignation")}
+                {t("detail.actions.confirmImmediate")}
               </button>
             )}
             {canRehire && (
@@ -192,61 +222,107 @@ function ExitDetailInner() {
         }
       />
 
-      {canConfirm && confirmLocked && !lock.locked && <Banner tone="amber" icon={MdOutlineInfo} text={lockedHint} />}
-      <ConfirmationBanner exit={exit} />
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 space-y-6 min-w-0">
           <SummaryCard exit={exit} />
-          <ChecklistPanel exit={exit} onUpdated={setExit} locked={lock.locked} lockTitle={lock.title} />
-          <SettlementPanel exit={exit} onChanged={reload} locked={lwdLock.locked} lockTitle={lwdLock.title} />
+          <ApprovalPanel approval={exit.approval} />
+          {/* Clearance checklist and settlement come later (D62, D64). */}
+          <ComingLater icon={MdOutlineChecklist} title={t("settings.template.title")} />
+          <ComingLater icon={MdOutlinePayments} title={t("wizard.settlement.previewTitle")} text={t("wizard.settlement.availableAfterPayroll")} />
         </div>
         <div className="space-y-6 min-w-0">
-          <ExitDocumentsCard exit={exit} onChanged={reload} />
+          <ComingLater icon={MdOutlineDescription} title={t("documents.title", { defaultValue: t("confirm.documents") })} />
           <LwdPanel exit={exit} />
           <ActivityTimeline events={exit.events || []} />
         </div>
       </div>
 
+      {modal === "withdraw" && !lock.locked && (
+        <CancelExitModal exit={exit} mode="withdraw" onClose={() => setModal(null)} onCancelled={setExit} />
+      )}
       {modal === "terms" && !lwdLock.locked && <EditExitTermsModal exit={exit} onClose={() => setModal(null)} onSaved={setExit} />}
-      {modal === "cancel" && !lock.locked && <CancelExitModal exit={exit} onClose={() => setModal(null)} onCancelled={onAccessChanged} />}
-      {modal === "rehire" && !lock.locked && <RehireModal exit={exit} onClose={() => setModal(null)} onRehired={onAccessChanged} />}
-      {modal === "confirm" && !lock.locked && <ConfirmExitModal exit={exit} onClose={() => setModal(null)} onConfirmed={onAccessChanged} />}
+      {modal === "cancel" && !lock.locked && <CancelExitModal exit={exit} onClose={() => setModal(null)} onCancelled={setExit} />}
+      {modal === "rehire" && !lock.locked && <RehireModal exit={exit} onClose={() => setModal(null)} onRehired={setExit} />}
+      {modal === "confirm" && !lock.locked && <ConfirmExitModal exit={exit} onClose={() => setModal(null)} onConfirmed={setExit} />}
     </div>
   );
 }
 
-// ── banners ──────────────────────────────────────────────────────────────────
-const TONES = {
-  amber: "bg-amber-50 border-amber-200 text-amber-800",
-  cyan: "bg-cyan-50 border-cyan-200 text-cyan-800",
-  emerald: "bg-emerald-50 border-emerald-200 text-emerald-800",
+// A panel whose content comes in a later release (checklist, documents, settlement).
+function ComingLater({ icon: Icon, title, text }) {
+  const { t } = useTranslation("exits");
+  return (
+    <section className="bg-white border border-gray-200 rounded-xl">
+      <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
+        <Icon className="text-lg text-cyan-600" />
+        <h2 className="text-sm font-bold text-gray-900">{title}</h2>
+      </div>
+      <p className="p-5 text-sm text-gray-400">{text || t("detail.comingLater")}</p>
+    </section>
+  );
+}
+
+// Approval progress by level (the exit's approval request).
+const LEVEL_TONE = {
+  APPROVED: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  REJECTED: "bg-red-50 text-red-600 border-red-200",
+  PENDING: "bg-amber-50 text-amber-700 border-amber-200",
+  SKIPPED: "bg-gray-100 text-gray-600 border-gray-200",
+  WAITING: "bg-gray-50 text-gray-500 border-gray-200",
+  CANCELLED: "bg-slate-50 text-slate-500 border-slate-200",
 };
 
-function Banner({ tone, icon: Icon, text }) {
-  return (
-    <div className={`flex items-start gap-3 rounded-xl border px-4 py-3 ${TONES[tone]}`}>
-      <Icon className="text-lg shrink-0 mt-0.5" />
-      <p className="text-sm">{text}</p>
-    </div>
-  );
-}
-
-// Awaiting confirmation / waiting for the final payroll / ends on the LWD.
-function ConfirmationBanner({ exit }) {
+function ApprovalPanel({ approval }) {
   const { t } = useTranslation("exits");
   const { fmtDate } = useFormat();
-  const c = exit.confirmation || {};
-  if (c.awaiting) return <Banner tone="amber" icon={MdOutlineHourglassEmpty} text={t("detail.banners.awaiting")} />;
-  if (c.waiting_for_payroll) {
-    const p = exit.settlement?.payroll;
-    const month = p ? `${String(p.month).padStart(2, "0")}/${p.year}` : "—";
-    return <Banner tone="cyan" icon={MdOutlineHourglassEmpty} text={t("detail.banners.waitingPayroll", { month })} />;
-  }
-  if (c.confirmed && exit.status === "IN_NOTICE") {
-    return <Banner tone="emerald" icon={MdOutlineTaskAlt} text={t("detail.banners.confirmedOnLwd", { date: fmtDate(exit.notice?.last_working_day) })} />;
-  }
-  return null;
+  if (!approval) return null;
+  const withdrawn = approval.status === "CANCELLED";
+  const chip = (status) => (
+    <span className={`inline-flex px-2 py-0.5 rounded-md border text-[11px] font-semibold ${LEVEL_TONE[status] || LEVEL_TONE.WAITING}`}>
+      {t(`detail.approval.status.${status}`, { defaultValue: status })}
+    </span>
+  );
+  const decisions = (rows) =>
+    rows.map((d, i) => (
+      <li key={i} className="text-xs text-gray-600">
+        <span className="font-semibold text-gray-800">{d.name || "—"}</span>
+        {d.is_override ? ` (${t("detail.approval.override")})` : ""} · {t(`detail.approval.status.${d.status}`, { defaultValue: d.status })} ·{" "}
+        {fmtDate(d.acted_at)}
+        {d.comment && <span className="block text-gray-500 whitespace-pre-line break-words">{d.comment}</span>}
+      </li>
+    ));
+  return (
+    <section className="bg-white border border-gray-200 rounded-xl">
+      <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
+        <MdOutlineHowToReg className="text-lg text-cyan-600" />
+        <h2 className="text-sm font-bold text-gray-900">{t("detail.approval.title")}</h2>
+        <span className="ms-auto">{chip(withdrawn ? "CANCELLED" : approval.status === "IN_PROGRESS" ? "PENDING" : approval.status)}</span>
+      </div>
+      <div className="p-5 space-y-4">
+        {approval.owner_only ? (
+          <>
+            <p className="text-sm text-gray-600">{t("detail.approval.ownerOnly")}</p>
+            {approval.decisions?.length > 0 && <ul className="space-y-1">{decisions(approval.decisions)}</ul>}
+          </>
+        ) : (
+          <ol className="space-y-4">
+            {approval.levels.map((l) => (
+              <li key={l.level} className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-gray-900">{t("detail.approval.level", { n: l.level })}</p>
+                  {chip(withdrawn && ["PENDING", "WAITING"].includes(l.status) ? "CANCELLED" : l.status)}
+                </div>
+                <p className="text-xs text-gray-500">
+                  {l.approvers.length ? l.approvers.map((a) => a.name).join(", ") : t("detail.approval.noApprover")}
+                </p>
+                {l.decisions.length > 0 && <ul className="space-y-1">{decisions(l.decisions)}</ul>}
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+    </section>
+  );
 }
 
 // ── header ───────────────────────────────────────────────────────────────────
@@ -334,7 +410,7 @@ function SummaryCard({ exit }) {
     },
     {
       k: "raisedBy",
-      v: exit.raised_by?.email ? <Ltr>{exit.raised_by.email}</Ltr> : "—",
+      v: exit.raised_by?.name || "—",
       hint: exit.created_at ? fmtDate(exit.created_at) : null,
     },
   ];
@@ -364,6 +440,12 @@ function SummaryCard({ exit }) {
             </div>
           ))}
         </dl>
+        {exit.status === "REJECTED" && exit.reject_reason && (
+          <div className="rounded-lg bg-red-50 border border-red-100 px-4 py-3">
+            <p className="text-xs font-semibold text-red-500 mb-1">{t("detail.summary.rejectReason")}</p>
+            <p className="text-sm text-red-700 whitespace-pre-line break-words">{exit.reject_reason}</p>
+          </div>
+        )}
         {exit.status === "CANCELLED" && exit.cancel_reason && (
           <div className="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3">
             <p className="text-xs font-semibold text-slate-500 mb-1">{t("detail.summary.cancelReason")}</p>
@@ -379,12 +461,13 @@ function SummaryCard({ exit }) {
 function LwdPanel({ exit }) {
   const { t } = useTranslation("exits");
   const { fmtDate } = useFormat();
+  const today = useFiscalYear().today;
   const n = exit.notice || {};
   const ext = Number(n.extended_days || 0);
   const changes = (exit.events || []).filter((e) => e.event_type === "LWD_EXTENDED" || e.event_type === "LWD_REVERTED");
   const left =
     exit.status === "IN_NOTICE"
-      ? Math.max(Number(n.days_left ?? diffDays(n.last_working_day, todayYmd()) ?? 0), 0)
+      ? Math.max(Number(n.days_left ?? diffDays(n.last_working_day, today) ?? 0), 0)
       : null;
 
   return (
@@ -482,8 +565,8 @@ function ActivityTimeline({ events }) {
                 <span className="absolute start-0 top-1.5 w-[11px] h-[11px] rounded-full border-2 border-cyan-500 bg-white" />
                 <p className="text-sm font-semibold text-gray-900">{t(`event.${e.event_type}`, { defaultValue: e.event_type })}</p>
                 <p className="text-[11px] text-gray-400 mt-0.5">
-                  {e.actor?.email ? <Ltr>{e.actor.email}</Ltr> : t("detail.activity.system")}
-                  {" · "}
+                  {e.actor_user_id ? null : t("detail.activity.system")}
+                  {e.actor_user_id ? null : " · "}
                   {dateTime(e.created_at)}
                 </p>
                 <EventDetail event={e} />

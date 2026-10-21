@@ -4,8 +4,10 @@ import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import { MdClose, MdOutlineInfo } from "react-icons/md";
 
-import { updateExitTerms } from "../../data/groupG";
-import { STATIC_PERMISSION } from "../../data/session";
+import { editExitTerms } from "../../api/exits";
+import { useCurrentUser } from "../../hooks/useSession";
+import { apiErrorMessage } from "../../utils/apiError";
+import { serverErrors } from "../../utils/applyFieldErrors";
 import {
   exitRules,
   computeLastWorkingDay,
@@ -16,8 +18,8 @@ import {
 } from "../../utils/exitValidation";
 import FieldError from "../FieldError";
 
+// Editable terms (D65): the exit type and the notice start stay. Form field → API field.
 const FIELDS = [
-  "notice_start_date",
   "notice_days",
   "last_working_day",
   "preferred_last_day",
@@ -27,6 +29,18 @@ const FIELDS = [
   "rehire_eligible",
   "cooling_period_days",
 ];
+
+const API_FIELD = {
+  notice_days: "noticeDays",
+  last_working_day: "lastWorkingDay",
+  preferred_last_day: "preferredLastDay",
+  allow_leave_during_notice: "allowLeaveDuringNotice",
+  encash_leave: "encashLeave",
+  loan_handling: "loanHandling",
+  rehire_eligible: "rehireEligible",
+  cooling_period_days: "coolingPeriodDays",
+};
+const FORM_FIELD = Object.fromEntries(Object.entries(API_FIELD).map(([f, a]) => [a, f]));
 
 const inputCls = (err) =>
   `w-full border rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent ${
@@ -67,7 +81,8 @@ const normalize = (v) => ({
 
 export default function EditExitTermsModal({ exit, onClose, onSaved }) {
   const { t } = useTranslation("exits");
-  const outstandingLoan = Number(exit?.settlement?.preview?.outstanding_loan_total || 0);
+  // Loans come with the Payroll module: no balance to handle yet.
+  const outstandingLoan = 0;
   const original = useMemo(() => toForm(exit), [exit]);
   const [lwdByHand, setLwdByHand] = useState(false);
 
@@ -76,6 +91,7 @@ export default function EditExitTermsModal({ exit, onClose, onSaved }) {
     handleSubmit,
     watch,
     setValue,
+    setError,
     trigger,
     formState: { errors, isSubmitting, isDirty },
   } = useForm({ mode: "onTouched", reValidateMode: "onChange", defaultValues: original });
@@ -86,7 +102,7 @@ export default function EditExitTermsModal({ exit, onClose, onSaved }) {
 
   // Only the company owner may move the LWD into the past (V7b); an unchanged
   // LWD is never re-checked.
-  const isOwner = !!STATIC_PERMISSION.isSuper;
+  const isOwner = useCurrentUser()?.accessLevel === "ADMIN";
   const lwdCtx = { allowPastLwd: isOwner, originalLwd: original.last_working_day };
   const R = exitRules(t, { outstandingLoan, relaxStart: start === original.notice_start_date, ...lwdCtx });
   // An unchanged start date only has to be a real date (like the backend);
@@ -146,14 +162,18 @@ export default function EditExitTermsModal({ exit, onClose, onSaved }) {
       onClose?.();
       return;
     }
+    let detail;
     try {
-      const detail = updateExitTerms(exit.id, patch);
-      toast.success(t("editTerms.saved"));
-      onSaved?.(detail);
-      onClose?.();
-    } catch {
-      toast.error(t("common.genericError"));
+      detail = await editExitTerms(exit.id, Object.fromEntries(Object.entries(patch).map(([k, v]) => [API_FIELD[k], v])));
+    } catch (err) {
+      const rows = serverErrors(err).filter((row) => FORM_FIELD[row.field]);
+      rows.forEach((row, i) => setError(FORM_FIELD[row.field], { type: "server", message: row.message }, { shouldFocus: i === 0 }));
+      if (!rows.length) toast.error(apiErrorMessage(err));
+      return;
     }
+    toast.success(t("editTerms.saved"));
+    onSaved?.(detail);
+    onClose?.();
   };
 
   return (
@@ -180,7 +200,7 @@ export default function EditExitTermsModal({ exit, onClose, onSaved }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1.5">{t("editTerms.fields.noticeStart")}</label>
-                <input type="date" {...startReg} className={inputCls(errors.notice_start_date)} />
+                <input type="date" {...startReg} disabled className={`${inputCls(errors.notice_start_date)} disabled:bg-gray-50 disabled:text-gray-500`} />
                 <FieldError error={errors.notice_start_date} />
               </div>
               <div>
