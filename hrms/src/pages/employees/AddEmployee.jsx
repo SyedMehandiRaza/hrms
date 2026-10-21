@@ -29,29 +29,39 @@ import { toast } from "react-toastify";
 import CustomDropdown from "../../components/CustomDropdown";
 import { useTranslation, Trans } from "react-i18next";
 import { NAME_PATTERN, NAME_STRIP } from "../../utils/nameRules";
+import { addEmployeeRecord } from "../../data/groupB";
+import CountrySelect from "../../components/geo/CountrySelect";
+import CitySelect from "../../components/geo/CitySelect";
+import PhoneCountrySelect from "../../components/geo/PhoneCountrySelect";
+import useApiQuery from "../../hooks/useApiQuery";
+import { useCurrentUser } from "../../hooks/useSession";
+import { DEFAULT_PHONE_COUNTRY, phoneRule } from "../../utils/phone";
+import { apiErrorMessage } from "../../utils/apiError";
 import {
-  B_ROLES,
-  B_PROJECTS,
-  LEAVE_POLICIES,
-  STAFFING_COMPANIES,
-  SHIFTS,
-  SALARY_CATALOG_GROUPED,
-  DEPARTMENTS,
-  designationsForDepartment,
-  searchCountries,
-  getDraft,
-  saveDraft as saveDraftRecord,
-  deleteDraft,
-  addEmployeeRecord,
-  EMPLOYEE_RECORDS,
-} from "../../data/groupB";
+  checkEmployeeUnique,
+  createEmployeeDraft,
+  getEmployeeDraft,
+  listRoles,
+  listStaffingCompanies,
+  removeEmployeeDraft,
+  updateEmployeeDraft,
+} from "../../api/employees";
+import { listProjects } from "../../api/projects";
+import { listLeaveTypes } from "../../api/leaveTypes";
+import { listShifts } from "../../api/shifts";
+import { listSalaryComponents } from "../../api/salaryComponents";
+import { listDepartments } from "../../api/departments";
+import { designationDropdown } from "../../api/designations";
 import Ltr from "../../components/Ltr";
 import ApprovalRoutingSection from "../../components/ApprovalRoutingSection";
 import useFiscalYear from "../../hooks/useFiscalYear";
 import { useFormat } from "../../hooks/useFormat";
-import { joiningDateRule, maxJoiningDate } from "../../utils/fyValidation/misc";
+import { maxJoiningDate } from "../../utils/fyValidation/misc";
 
-const getProjectId = (p) => p?.id ?? p?._id ?? p?.project_id;
+const getProjectId = (p) => p?.id;
+
+// A lookup the caller may not be allowed to read (403) is just empty in the wizard.
+const listOrEmpty = (load) => load().catch(() => null);
 
 // The Iqama is mandatory for every new employee (file + document number).
 const IQAMA_DOC_TYPE = "Iqama (Residency Permit)";
@@ -125,12 +135,15 @@ const ACCESS_LEVELS = [
 const STEP_FIELDS = {
   1: [
     "fullName",
-    "nationality",
+    "nationalityCountryId",
+    "phoneCountry",
     "phone",
     "email",
     "countryEmpId",
     "accommodation",
     "address",
+    "residenceCountryId",
+    "residenceCityId",
   ],
   2: [
     "employmentType",
@@ -141,19 +154,10 @@ const STEP_FIELDS = {
     "accessLevel",
     "leavePolicyIds",
   ],
-  3: ["salaryComponents", "salaryWorkingHours", "salaryHourlyRate", "salaryMinHours"],
+  3: ["salaryComponents", "salaryWorkingHours", "salaryHourlyRate", "salaryMinHours", "overtimeRate"],
   4: [],
 };
 
-// Backend field → wizard input, for server validation errors on create
-// (e.g. a former employee's email / phone: "use Rehire" / "Not eligible").
-const CREATE_FIELD_MAP = {
-  email: "email",
-  phone_number: "phone",
-  full_name: "fullName",
-  country_emp_id: "countryEmpId",
-  date_of_joining: "dateOfJoining",
-};
 
 // ── Shared Styles ─────────────────────────────────────────────────────────────
 const inputBase =
@@ -290,51 +294,11 @@ function StepBasic({
   photoPreview,
   setPhotoPreview,
   watch,
-  setValue,
+  getValues,
 }) {
   const { t } = useTranslation("employees");
   const fileRef = useRef();
-
-  const [countries, setCountries] = useState(() => searchCountries("", 10));
-
-  const loadCountries = (search = "") => {
-    setCountries(searchCountries(search, 10));
-  };
-
-  const selectedNationality = watch("nationality");
-  const selectedCountryCode = watch("countryCode");
-  const prevNationalityRef = useRef(selectedNationality);
-
-  // The country list is a 10-row search result, so an already-chosen value
-  // (e.g. restored from a draft) may not be in it — keep it as an option so
-  // the dropdown can show it.
-  const withCurrent = (opts, current) =>
-    current && !opts.some((o) => String(o.value) === String(current))
-      ? [{ label: current, value: current }, ...opts]
-      : opts;
-  const nationalityOptions = withCurrent(
-    countries.map((c) => ({ label: c.name, value: c.name })),
-    selectedNationality,
-  );
-  const countryCodeOptions = withCurrent(
-    countries.map((c) => ({ label: c.calling_code, value: c.calling_code })),
-    selectedCountryCode,
-  );
-
-  useEffect(() => {
-    if (selectedNationality && selectedNationality !== prevNationalityRef.current) {
-      prevNationalityRef.current = selectedNationality;
-      const selected = countries.find(c => c.name === selectedNationality);
-      if (selected && selected.calling_code) {
-        setValue("countryCode", selected.calling_code);
-      }
-    }
-  }, [selectedNationality, countries, setValue]);
-
-  // The country list is local, so search runs immediately.
-  const handleCountrySearch = (val) => {
-    loadCountries(val);
-  };
+  const residenceCountryId = watch("residenceCountryId");
 
   const handlePhoto = (e) => {
     const f = e.target.files[0];
@@ -447,47 +411,40 @@ function StepBasic({
         <Field
           label={t("add.basic.nationality")}
           required
-          error={errors.nationality}
+          error={errors.nationalityCountryId}
         >
-          <CustomDropdown
-            {...register("nationality", {
+          {/* Nationality doesn't change the phone code (countries-cities-phones D14). */}
+          <CountrySelect
+            {...register("nationalityCountryId", {
               required: t("add.validation.nationalityRequired"),
             })}
-            error={!!errors.nationality}
-            isSearchable={true}
-            onSearchChange={handleCountrySearch}
+            error={!!errors.nationalityCountryId}
             placeholder={t("add.basic.selectNationality")}
-            options={nationalityOptions}
           />
         </Field>
 
-        <Field label={t("add.basic.phoneNumber")} required error={errors.phone}>
+        <Field label={t("add.basic.phoneNumber")} required error={errors.phone || errors.phoneCountry}>
           <div className="flex gap-2">
             <div className="relative flex-shrink-0 min-w-[100px]">
-              <CustomDropdown
-                {...register("countryCode")}
-                className="bg-white"
-                isSearchable={true}
-                onSearchChange={handleCountrySearch}
-                options={countryCodeOptions}
+              <PhoneCountrySelect
+                {...register("phoneCountry", { required: t("common:geo.phoneCountryRequired") })}
+                error={!!errors.phoneCountry}
               />
             </div>
             <input
               {...register("phone", {
-                required: t("add.validation.phoneRequired"),
-                pattern: {
-                  value: /^[0-9]{6,15}$/,
-                  message: t("add.validation.phoneInvalid"),
-                },
+                validate: phoneRule(() => getValues("phoneCountry"), t, {
+                  required: true,
+                  requiredMessage: t("add.validation.phoneRequired"),
+                }),
               })}
               type="tel"
               inputMode="numeric"
-              maxLength={15}
+              maxLength={20}
               placeholder={t("add.basic.phonePlaceholder")}
               className={inputCls(errors.phone)}
               onInput={(e) => {
-                // Allow numbers only
-                e.target.value = e.target.value.replace(/\D/g, "");
+                e.target.value = e.target.value.replace(/[^\d\s+()-]/g, "");
               }}
             />
           </div>
@@ -587,6 +544,19 @@ function StepBasic({
         </Field>
       </div>
 
+      {/* Residence country (default: the company's) → city (approved UI addition, countries D12). */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <Field label={t("add.basic.residenceCountry")} required error={errors.residenceCountryId}>
+          <CountrySelect
+            {...register("residenceCountryId", { required: t("common:geo.countryRequired") })}
+            error={!!errors.residenceCountryId}
+          />
+        </Field>
+        <Field label={t("add.basic.residenceCity")} error={errors.residenceCityId}>
+          <CitySelect {...register("residenceCityId")} countryId={residenceCountryId} error={!!errors.residenceCityId} />
+        </Field>
+      </div>
+
       <Field label={t("add.basic.address")} required error={errors.address}>
         <textarea
           {...register("address", {
@@ -638,6 +608,8 @@ function StepJob({
   leavePolicies = [],
   staffingCompanies = [],
   shifts = [],
+  departments = [],
+  isOwner = false,
   loadingRoles = false,
   loadingProjects = false,
   loadingPolicies = false,
@@ -651,6 +623,8 @@ function StepJob({
   const employmentType = watch("employmentType") || "Full-time";
   const isContract = employmentType === "Contract";
   const accessLevel = watch("accessLevel");
+  // The owner may add a Sub admin; nobody can add another Admin (D48).
+  const accessLevelOptions = ACCESS_LEVELS.filter((a) => a.value !== "SUB_ADMIN" || isOwner);
   const selectedPolicies = watch("leavePolicyIds") || [];
   const selectedProjects = watch("projectIds") || [];
 
@@ -706,30 +680,40 @@ function StepJob({
 
   const projectOptions = projects.map((p) => ({
     value: getProjectId(p),
-    label: p.project_name,
+    label: p.name,
   }));
 
-  const policyOptions = leavePolicies.map((p) => ({
-    value: p.id,
-    label: p.leave_type?.leave_name
-      ? `${p.policy_name} (${p.leave_type.leave_name})`
-      : p.policy_name,
+  // One policy per leave type (D30): the option is the type's policy.
+  const policyOptions = leavePolicies.map((lt) => ({
+    value: lt.policy_id,
+    label: lt.name,
   }));
 
   // ── Department + Designation (designation list depends on the department) ──
-  const departments = DEPARTMENTS;
   const loadingDepartments = false;
-  const loadingDesignations = false;
 
   register("departmentId");
   register("designationId");
   const departmentId = watch("departmentId");
 
-  // The designation list depends on the selected department.
-  const designations = useMemo(
-    () => (departmentId ? designationsForDepartment(departmentId) : []),
+  // The designation list depends on the selected department (active ones only).
+  const { data: designationData, loading: loadingDesignations } = useApiQuery(
+    () => (departmentId ? listOrEmpty(() => designationDropdown(departmentId)) : Promise.resolve(null)),
     [departmentId],
   );
+  const designations = designationData?.items || [];
+
+  // Joining date (D49): empty = today; not more than 12 months ahead; not before the main
+  // project's start.
+  const mainProject = projects.find((p) => String(getProjectId(p)) === String(mainProjectId));
+  const joiningRule = {
+    validate: (v) => {
+      if (!v) return true;
+      if (v > maxJoiningDate(companyToday)) return t("add.validation.joiningTooFar");
+      if (mainProject?.start_date && v < mainProject.start_date) return t("add.validation.joiningBeforeProjectStart");
+      return true;
+    },
+  };
 
   return (
     <div className="space-y-6">
@@ -794,7 +778,7 @@ function StepJob({
             max={maxJoiningDate(companyToday)}
             aria-invalid={!!errors.dateOfJoining}
             className={inputCls(errors.dateOfJoining)}
-            {...register("dateOfJoining", joiningDateRule(t, companyToday))}
+            {...register("dateOfJoining", joiningRule)}
           />
         </Field>
       </div>
@@ -803,11 +787,14 @@ function StepJob({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <Field
           label={t("add.job.designatedRole")}
-          required
+          required={accessLevel === "SUB_ADMIN"}
           error={errors.designatedRole}
         >
           <CustomDropdown
-            {...register("designatedRole", { required: t("add.validation.roleRequired") })}
+            {...register("designatedRole", {
+              // Required only for a Sub admin (D48); an Employee may have no role.
+              validate: (v, fv) => fv.accessLevel !== "SUB_ADMIN" || !!v || t("add.validation.roleRequired"),
+            })}
             error={!!errors.designatedRole}
             disabled={loadingRoles}
             placeholder={
@@ -859,11 +846,7 @@ function StepJob({
             <CustomDropdown
               value={mainProjectId || ""}
               onChange={(e) =>
-                setValue(
-                  "mainProjectId",
-                  e.target.value ? Number(e.target.value) : "",
-                  { shouldValidate: true }
-                )
+                setValue("mainProjectId", e.target.value || "", { shouldValidate: true })
               }
               error={!!errors.mainProjectId}
               placeholder={t("add.job.selectMainProject", "Select main project")}
@@ -872,7 +855,7 @@ function StepJob({
                   (p) => String(getProjectId(p)) === String(pid)
                 );
                 return {
-                  label: proj?.project_name || t("add.job.projectFallback", { id: pid }),
+                  label: proj?.name || t("add.job.projectFallback", { id: pid }),
                   value: pid
                 };
               })}
@@ -892,10 +875,11 @@ function StepJob({
           <CustomDropdown
             {...register("accessLevel", {
               required: t("add.validation.accessLevelRequired"),
+              validate: (v) => v !== "ADMIN" || t("add.validation.adminExists"),
             })}
             error={!!errors.accessLevel}
             placeholder={t("add.job.selectAccessLevel")}
-            options={ACCESS_LEVELS.map((a) => ({ label: t(a.labelKey), value: a.value }))}
+            options={accessLevelOptions.map((a) => ({ label: t(a.labelKey), value: a.value }))}
           />
         </Field>
 
@@ -960,7 +944,7 @@ function StepJob({
                 : t("add.job.selectDepartment", "Select department")
             }
             options={departments.map((d) => ({
-              label: d.name || d.department_name,
+              label: d.name,
               value: d.id
             }))}
           />
@@ -1073,7 +1057,10 @@ function StepJob({
 }
 
 // ── Step 3 — Salary Structure ─────────────────────────────────────────────────
-const SALARY_CURRENCIES = ["INR", "USD", "SAR", "AED"];
+// Currency is SAR only for now (D52).
+const SALARY_CURRENCIES = ["SAR"];
+// The default components (D42), in this order, are the locked first rows in monthly modes.
+const DEFAULT_CODES = ["BASIC", "HOUSING", "TRANSPORT"];
 
 // Salary calculation modes and how they're labelled.
 const MODE_LABEL_KEYS = {
@@ -1111,7 +1098,7 @@ function StepSalary({
 }) {
   const { t } = useTranslation("employees");
   const rows = watch("salaryComponents") || [];
-  const currency = watch("salaryCurrency") || "INR";
+  const currency = watch("salaryCurrency") || "SAR";
   const employmentType = watch("employmentType");
   const staffingCompanyId = watch("staffingCompanyId");
   const isStaffing = employmentType === "Contract" && !!staffingCompanyId;
@@ -1120,8 +1107,10 @@ function StepSalary({
   const mode = watch("salaryCalcMode") || allowedModes[0];
   const isHourly = mode === "HOURLY";
 
-  // The locked Basic default from the catalog (auto-added in monthly modes).
-  const basicComp = salaryCatalog.find((c) => codeOf(c) === "BASIC");
+  // The locked defaults from the catalog (auto-added in monthly modes).
+  const defaultComps = DEFAULT_CODES.map((code) => salaryCatalog.find((c) => codeOf(c) === code)).filter(Boolean);
+  const defaultIds = defaultComps.map((c) => String(c.id));
+  const basicComp = defaultComps.find((c) => codeOf(c) === "BASIC");
 
   // Keep the selected mode within the allowed set as hire type / staffing changes.
   useEffect(() => {
@@ -1131,26 +1120,22 @@ function StepSalary({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allowedModes.join(","), mode]);
 
-  // For monthly modes, guarantee a locked Basic row exists (added once, kept first).
+  // For monthly modes, the default rows (Basic, Housing, Transport) come first, once each.
   useEffect(() => {
-    if (isHourly || !basicComp) return;
-    const hasBasic = rows.some(
-      (r) => Number(r.salary_component_id) === basicComp.id,
+    if (isHourly || !defaultComps.length) return;
+    const others = rows.filter((r) => !defaultIds.includes(String(r.salary_component_id)));
+    const firsts = defaultComps.map(
+      (c) => rows.find((r) => String(r.salary_component_id) === String(c.id)) || { salary_component_id: c.id, calculation_type: "FIXED", amount: "" },
     );
-    if (!hasBasic) {
-      setValue(
-        "salaryComponents",
-        [
-          { salary_component_id: basicComp.id, calculation_type: "FIXED", amount: "" },
-          ...rows,
-        ],
-        { shouldValidate: false },
-      );
+    const next = [...firsts, ...others];
+    if (next.length !== rows.length || next.some((r, i) => r !== rows[i])) {
+      setValue("salaryComponents", next, { shouldValidate: false });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isHourly, basicComp?.id]);
+  }, [isHourly, defaultIds.join(",")]);
 
   // Validate the component rows on Next (mode-aware — HOURLY uses its own fields).
+  // The server's rules (D52, standards §7.2), checked on Next.
   register("salaryComponents", {
     validate: (v) => {
       if (isHourly) return true;
@@ -1168,8 +1153,11 @@ function StepSalary({
       }
       if (new Set(ids).size !== ids.length)
         return t("add.validation.duplicateComponent");
-      if (basicComp && !ids.includes(String(basicComp.id)))
-        return t("add.validation.basicRequired");
+      if (!defaultIds.every((id) => ids.includes(id)))
+        return t("add.validation.defaultComponentsRequired");
+      const basic = basicComp && v.find((r) => String(r.salary_component_id) === String(basicComp.id));
+      if (basic && !(Number(basic.amount) > 0))
+        return t("add.validation.basicPositive");
       return true;
     },
   });
@@ -1177,10 +1165,12 @@ function StepSalary({
   const componentById = (id) =>
     salaryCatalog.find((c) => String(c.id) === String(id));
 
-  // The Basic row is the locked default in monthly modes — its component can't
-  // be changed and the row can't be removed.
+  // The default rows are locked in monthly modes — their component can't be changed and the
+  // rows can't be removed.
   const isLockedRow = (row, idx) =>
-    !isHourly && basicComp && Number(row.salary_component_id) === basicComp.id && idx === 0;
+    !isHourly && idx < defaultIds.length && defaultIds[idx] === String(row.salary_component_id);
+  // Other rows offer every active component except the defaults and Hourly (HOURLY mode only).
+  const optionalCatalog = salaryCatalog.filter((c) => !defaultIds.includes(String(c.id)) && codeOf(c) !== "HOURLY");
 
   const updateRows = (next) =>
     setValue("salaryComponents", next, { shouldValidate: true });
@@ -1232,9 +1222,7 @@ function StepSalary({
           <label className={labelCls}>{t("add.salary.currency")}</label>
           <CustomDropdown
             {...register("salaryCurrency")}
-
             options={SALARY_CURRENCIES.map((c) => ({ label: c, value: c }))}
-            defaultValue={currency}
           />
         </div>
       </div>
@@ -1356,13 +1344,6 @@ function StepSalary({
         )}
       </div>
 
-      {errors.salaryComponents && (
-        <p className="flex items-center gap-1 text-xs text-red-500">
-          <MdOutlineError className="flex-shrink-0 text-sm" />
-          {errors.salaryComponents.message}
-        </p>
-      )}
-
       {/* Component grid — monthly modes only (hourly uses the rate field above). */}
       <div
         className={`bg-gray-50/50 border border-gray-100 p-6 rounded-2xl ${
@@ -1382,16 +1363,10 @@ function StepSalary({
                 <div className="flex-1 min-w-[180px] relative">
                   <CustomDropdown
                     value={row.salary_component_id || ""}
-                    onChange={(e) =>
-                      handleUpdate(
-                        idx,
-                        "salary_component_id",
-                        e.target.value ? Number(e.target.value) : "",
-                      )
-                    }
+                    onChange={(e) => handleUpdate(idx, "salary_component_id", e.target.value || "")}
                     disabled={loadingComponents || isLockedRow(row, idx)}
                     placeholder={loadingComponents ? t("add.salary.loadingComponents") : t("add.salary.selectComponent")}
-                    options={salaryCatalog.map((c) => ({
+                    options={(isLockedRow(row, idx) ? salaryCatalog.filter((c) => String(c.id) === String(row.salary_component_id)) : optionalCatalog).map((c) => ({
                       label: t(
                         c.is_system
                           ? "add.salary.componentOptionDefault"
@@ -1458,6 +1433,14 @@ function StepSalary({
             );
           })}
         </div>
+
+        {/* The rows' rule texts (§7.2 components), under the rows. */}
+        {errors.salaryComponents && (
+          <p className="flex items-center gap-1 text-xs text-red-500 mt-3">
+            <MdOutlineError className="flex-shrink-0 text-sm" />
+            {errors.salaryComponents.message}
+          </p>
+        )}
 
         <button
           type="button"
@@ -1955,16 +1938,16 @@ function StepReview({
       .map(
         (pid) =>
           projects.find((p) => String(getProjectId(p)) === String(pid))
-            ?.project_name,
+            ?.name,
       )
       .filter(Boolean)
       .join(", ") || "";
   const mainProjectName =
     projects.find(
       (p) => String(getProjectId(p)) === String(data.mainProjectId),
-    )?.project_name || "";
+    )?.name || "";
   const salaryRows = data.salaryComponents || [];
-  const currency = data.salaryCurrency || "INR";
+  const currency = data.salaryCurrency || "SAR";
   const componentName = (id) =>
     salaryCatalog.find((c) => String(c.id) === String(id))?.name || `#${id}`;
   return (
@@ -2154,8 +2137,10 @@ const FEATURE_CARDS_BY_STEP = {
 // Initial wizard values; a resumed draft is merged over these.
 const EMPLOYEE_FORM_DEFAULTS = {
   fullName: "",
-  nationality: "",
-  countryCode: "+1",
+  nationalityCountryId: "",
+  phoneCountry: DEFAULT_PHONE_COUNTRY,
+  residenceCountryId: "",
+  residenceCityId: "",
   phone: "",
   email: "",
   countryEmpId: "",
@@ -2170,7 +2155,7 @@ const EMPLOYEE_FORM_DEFAULTS = {
   leavePolicyIds: [],
   staffingCompanyId: "",
   shiftId: "",
-  salaryCurrency: "INR",
+  salaryCurrency: "SAR",
   salaryCalcMode: "MONTHLY_FIXED",
   salaryWorkingHours: "",
   salaryHourlyRate: "",
@@ -2204,27 +2189,31 @@ export default function AddEmployee({ onCancel, onComplete }) {
   const loadedDraftRef = useRef(null);
 
   const navigate = useNavigate();
-  const projects = B_PROJECTS;
-  const loadingProjects = false;
+  const user = useCurrentUser();
+  const isOwner = user?.accessLevel === "ADMIN";
   const createLoading = false;
 
-  // Static lookups (src/data/groupB.js).
-  const roles = B_ROLES;
-  const loadingRoles = false;
-  const leavePolicies = LEAVE_POLICIES;
-  const loadingPolicies = false;
-  const staffingCompanies = STAFFING_COMPANIES;
-  const loadingStaffing = false;
-  const shifts = SHIFTS;
-  const loadingShifts = false;
-  const salaryCatalog = useMemo(
-    () =>
-      [...SALARY_CATALOG_GROUPED.earnings, ...SALARY_CATALOG_GROUPED.deductions].filter(
-        (c) => c && c.is_active !== false,
-      ),
-    [],
-  );
-  const loadingComponents = false;
+  // Lookups (each one is empty when the caller can't read it).
+  const projectsQ = useApiQuery(() => listOrEmpty(() => listProjects({ limit: 100, status: "ACTIVE" })), []);
+  const rolesQ = useApiQuery(() => listOrEmpty(() => listRoles()), []);
+  const policiesQ = useApiQuery(() => listOrEmpty(() => listLeaveTypes({ limit: 100, status: "ACTIVE" })), []);
+  const staffingQ = useApiQuery(() => listOrEmpty(() => listStaffingCompanies("ACTIVE")), []);
+  const shiftsQ = useApiQuery(() => listOrEmpty(() => listShifts({ limit: 100 })), []);
+  const componentsQ = useApiQuery(() => listOrEmpty(() => listSalaryComponents({ limit: 100, status: "ACTIVE" })), []);
+  const departmentsQ = useApiQuery(() => listOrEmpty(() => listDepartments({ limit: 100, status: "ACTIVE" })), []);
+  const projects = useMemo(() => projectsQ.data?.items || [], [projectsQ.data]);
+  const loadingProjects = projectsQ.loading;
+  const roles = useMemo(() => rolesQ.data || [], [rolesQ.data]);
+  const loadingRoles = rolesQ.loading;
+  const leavePolicies = useMemo(() => (policiesQ.data?.items || []).filter((lt) => lt.policy_id), [policiesQ.data]);
+  const loadingPolicies = policiesQ.loading;
+  const staffingCompanies = useMemo(() => staffingQ.data || [], [staffingQ.data]);
+  const loadingStaffing = staffingQ.loading;
+  const shifts = useMemo(() => shiftsQ.data?.items || [], [shiftsQ.data]);
+  const loadingShifts = shiftsQ.loading;
+  const salaryCatalog = useMemo(() => componentsQ.data?.items || [], [componentsQ.data]);
+  const loadingComponents = componentsQ.loading;
+  const departments = useMemo(() => departmentsQ.data?.items || [], [departmentsQ.data]);
 
 
   const {
@@ -2239,7 +2228,11 @@ export default function AddEmployee({ onCancel, onComplete }) {
     formState: { errors },
   } = useForm({
     mode: "onTouched",
-    defaultValues: EMPLOYEE_FORM_DEFAULTS,
+    defaultValues: {
+      ...EMPLOYEE_FORM_DEFAULTS,
+      phoneCountry: user?.company?.country?.iso2 || DEFAULT_PHONE_COUNTRY,
+      residenceCountryId: user?.company?.country?.id || "",
+    },
   });
 
   // Resume a saved draft: restore values, documents, photo, routing and step.
@@ -2248,13 +2241,13 @@ export default function AddEmployee({ onCancel, onComplete }) {
     if (!draftParam || loadedDraftRef.current === draftParam) return;
     let active = true;
     setLoadingDraft(true);
-    Promise.resolve(getDraft(draftParam))
+    getEmployeeDraft(draftParam)
       .then((draft) => {
         if (!draft) throw new Error("not found");
         if (!active) return;
         const data = draft.data || {};
-        const savedAt = draft.updated_at
-          ? new Date(draft.updated_at).toLocaleDateString()
+        const savedAt = draft.last_saved_at
+          ? new Date(draft.last_saved_at).toLocaleDateString()
           : "";
         loadedDraftRef.current = String(draft.id);
         setDraftId(draft.id);
@@ -2362,19 +2355,22 @@ export default function AddEmployee({ onCancel, onComplete }) {
         }),
       );
 
+      const values = getValues();
       const payload = {
-        current_step: step,
+        step,
+        fullName: values.fullName || "",
+        email: values.email || "",
         data: {
-          values: getValues(),
-          // File objects can't be stored; the uploaded URL replaces them.
-          docs: uploadedDocs.map((d) => ({ ...d, file: undefined })),
+          values,
+          // Documents aren't saved yet (D44): only their details stay with the draft.
+          docs: uploadedDocs.map((d) => ({ ...d, file: undefined, fileUrl: null })),
           approvalRouting,
-          profileUrl,
+          // The photo stays in this browser until the employee exists.
+          profileUrl: null,
         },
       };
 
-      // Static build: drafts are kept in memory (src/data/groupB.js).
-      const saved = saveDraftRecord(draftId, payload);
+      const saved = draftId ? await updateEmployeeDraft(draftId, payload) : await createEmployeeDraft(payload);
 
       if (String(saved.id) !== String(draftId)) {
         loadedDraftRef.current = String(saved.id);
@@ -2384,9 +2380,8 @@ export default function AddEmployee({ onCancel, onComplete }) {
       setUnsaved(false);
       toast.success(t("add.drafts.saved"));
     } catch (err) {
-      toast.error(
-        err?.response?.data?.message || err?.message || t("add.drafts.saveFailed"),
-      );
+      // e.g. "Draft is too large (max 1 MB)." under data.
+      toast.error(err?.response?.data?.errors?.data || apiErrorMessage(err, t("add.drafts.saveFailed")));
     } finally {
       setSavingDraft(false);
     }
@@ -2508,10 +2503,8 @@ export default function AddEmployee({ onCancel, onComplete }) {
 
     // Static build: the employee is added to the in-memory list.
     const role = roles.find((r) => String(r.id) === String(data.designatedRole));
-    const department = DEPARTMENTS.find((d) => String(d.id) === String(data.departmentId));
-    const designation = designationsForDepartment(data.departmentId).find(
-      (d) => String(d.id) === String(data.designationId),
-    );
+    const department = departments.find((d) => String(d.id) === String(data.departmentId));
+    const designation = null;
     const staffing = payload.staffing_company_id
       ? staffingCompanies.find((c) => c.id === payload.staffing_company_id)
       : null;
@@ -2530,7 +2523,7 @@ export default function AddEmployee({ onCancel, onComplete }) {
       shift: shifts.find((s) => String(s.id) === String(data.shiftId)) || null,
       date_of_joining: data.dateOfJoining || new Date().toISOString().slice(0, 10),
     });
-    if (draftId) deleteDraft(draftId);
+    if (draftId) removeEmployeeDraft(draftId).catch(() => {});
     toast.success(t("add.toast.created"));
     setUnsaved(false);
     onComplete?.(created);
@@ -2561,27 +2554,31 @@ export default function AddEmployee({ onCancel, onComplete }) {
     return true;
   };
 
-  // Step 1: ask the server whether the email / phone / employee ID are free,
-  // so a duplicate is flagged under its input now instead of as a toast on
-  // the final step. A failed check (network) never blocks — create re-checks.
-  const checkingIdentity = false;
+  // Step 1: ask the server whether the ID number / email / phone are free, so a duplicate is
+  // flagged under its input now. A failed check (network) never blocks — create re-checks.
+  const [checkingIdentity, setCheckingIdentity] = useState(false);
   const identityIsAvailable = async () => {
     const v = getValues();
-    const email = (v.email || "").trim().toLowerCase();
-    const phone = v.phone ? `${v.countryCode}${v.phone}` : "";
-    const code = (v.countryEmpId || "").trim().toLowerCase();
+    let answer;
+    setCheckingIdentity(true);
+    try {
+      answer = await checkEmployeeUnique({
+        country_emp_id: (v.countryEmpId || "").trim(),
+        email: (v.email || "").trim(),
+        phone: (v.phone || "").trim(),
+        phoneCountry: v.phoneCountry,
+      });
+    } catch {
+      return true;
+    } finally {
+      setCheckingIdentity(false);
+    }
     const taken = [
-      [CREATE_FIELD_MAP.email, email && EMPLOYEE_RECORDS.some((e) => (e.email || "").toLowerCase() === email)],
-      [CREATE_FIELD_MAP.phone_number, phone && EMPLOYEE_RECORDS.some((e) => e.phone_number === phone)],
-      [CREATE_FIELD_MAP.country_emp_id, code && EMPLOYEE_RECORDS.some((e) => (e.country_emp_id || "").toLowerCase() === code)],
-    ].filter(([, isTaken]) => isTaken);
-    taken.forEach(([field], i) =>
-      setError(
-        field,
-        { type: "server", message: t("add.validation.alreadyInUse", { defaultValue: "This value is already in use." }) },
-        { shouldFocus: i === 0 },
-      ),
-    );
+      ["countryEmpId", answer.country_emp_id],
+      ["email", answer.email],
+      ["phone", answer.phone],
+    ].filter(([, r]) => r && !r.available);
+    taken.forEach(([field, r], i) => setError(field, { type: "server", message: r.message }, { shouldFocus: i === 0 }));
     return taken.length === 0;
   };
 
@@ -2614,6 +2611,8 @@ export default function AddEmployee({ onCancel, onComplete }) {
     getValues,
     roles,
     projects,
+    departments,
+    isOwner,
     leavePolicies,
     staffingCompanies,
     shifts,

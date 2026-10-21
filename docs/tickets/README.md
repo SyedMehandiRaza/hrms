@@ -104,7 +104,7 @@ employee). Builds on Auth + Company (all done). Senior review 2026-10-20 applied
 | 25 | [Salary components screen](workforce/25-ui-salary-components.md) | done | 09 |
 | 26 | [Approval groups list, create/edit, view](workforce/26-ui-approval-groups.md) | done | 10 |
 | 27 | [Approvals inbox](workforce/27-ui-approvals-inbox.md) | done | 11a, 16b |
-| 28a | [Add employee: Basic, Job, Salary + draft](workforce/28a-ui-add-employee-steps.md) | ready-for-agent | 12, 12b, 13b, geo 05 |
+| 28a | [Add employee: Basic, Job, Salary + draft](workforce/28a-ui-add-employee-steps.md) | done | 12, 12b, 13b, geo 05 |
 | 28b | [Add employee: Review, approval group, create](workforce/28b-ui-add-employee-review-submit.md) | ready-for-agent | 28a, 31 |
 | 29 | [Employee drafts tab](workforce/29-ui-employee-drafts.md) | done | 28a |
 | 30 | [Employees list](workforce/30-ui-employees-list.md) | done | 14a |
