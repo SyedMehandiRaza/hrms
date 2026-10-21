@@ -6,6 +6,8 @@ const requirePermission = require("../middlewares/requirePermission");
 const { ACCESS_LEVELS } = require("../constants/accessLevels");
 const { createEmployeeSchema, editEmployeeSchema, mainProjectSchema, checkUniqueSchema, listEmployeesSchema, bulkStatusSchema } = require("../validations/employee.validation");
 const employeeController = require("../controllers/employee.controller");
+const exitController = require("../controllers/exit.controller");
+const { raiseExitSchema } = require("../validations/exit.validation");
 
 // /employees (workforce D44–D53): ADMIN, or a role with the matching employee flag.
 // Staffing-company logins never (workforce D57), whatever their role allows.
@@ -33,6 +35,9 @@ router.post("/bulk-status", ...can("update"), validate(bulkStatusSchema), employ
 router.get("/:id", ...companyLogin, employeeController.getEmployee);
 router.put("/:id", ...can("update"), validate(editEmployeeSchema), employeeController.updateEmployee);
 router.put("/:id/main-project", ...can("update"), validate(mainProjectSchema), employeeController.changeMainProject);
+// Raise an exit (D66): own resignation for any company login with an employee record (":id" may be
+// "me"); for someone else employee:create + employee:update. Checked by the service.
+router.post("/:id/exits", ...companyLogin, validate(raiseExitSchema), exitController.raiseExit);
 router.post("/:id/resend-login", ...can("update"), employeeController.resendLogin);
 
 module.exports = router;
