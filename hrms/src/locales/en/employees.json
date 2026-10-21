@@ -50,7 +50,9 @@
     "typeBadge": {
       "contract": "CONTRACT",
       "fullTime": "FULL-TIME"
-    }
+    },
+    "bulkActivated": "Selected employees activated",
+    "bulkDeactivated": "Selected employees deactivated"
   },
   "type": {
     "fullTime": "Full-Time",
@@ -113,7 +115,9 @@
       "address": "Address",
       "addressPlaceholder": "e.g. 12 Main Street, Andheri East, Mumbai 400069",
       "infoNote": "The information provided will be used to generate the employee's internal profile. Ensure all official documents match these details.",
-      "photoPreviewAlt": "preview"
+      "photoPreviewAlt": "preview",
+      "residenceCountry": "Residence country",
+      "residenceCity": "Residence city"
     },
     "job": {
       "title": "Job Details",
@@ -324,7 +328,12 @@
       "basicRequired": "The Basic salary component is required",
       "workingHours": "Enter working hours per day (1–24)",
       "hourlyRate": "Enter an hourly rate greater than 0",
-      "minHours": "Minimum hours must be ≥ 0"
+      "minHours": "Minimum hours must be ≥ 0",
+      "adminExists": "This company already has an owner. Add other admins as Sub Admin.",
+      "joiningBeforeProjectStart": "Joining date can't be before the main project's start date.",
+      "joiningTooFar": "Joining date can't be more than 12 months ahead.",
+      "defaultComponentsRequired": "Basic, Housing and Transport are required.",
+      "basicPositive": "Basic salary must be more than 0."
     },
     "toast": {
       "photoTooLarge": "File size exceeds the 10MB limit.",

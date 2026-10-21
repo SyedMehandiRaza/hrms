@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "react-toastify";
 import {
   MdOutlineAdd,
   MdOutlineSearch,
@@ -12,13 +13,14 @@ import Ltr from "../../components/Ltr";
 import { MODULES, ACTIONS } from "../../constants/permissions";
 import CustomDropdown from "../../components/CustomDropdown";
 import { useCan } from "../../hooks/usePermission";
-import { EMPLOYEE_RECORDS, EMPLOYEE_DRAFTS, B_PROJECTS, B_ROLES } from "../../data/groupB";
-import { paginate, matches } from "../../data/common";
 import EmployeeDrafts from "./EmployeeDrafts";
 import Pagination from "../../components/Pagination";
 import { EmploymentStatusBadge } from "../../components/exits/ExitBadges";
-import useFiscalYear from "../../hooks/useFiscalYear";
-import useFyResetState from "../../hooks/useFyResetState";
+import { ScreenError } from "../../components/ScreenState";
+import useApiQuery from "../../hooks/useApiQuery";
+import { bulkEmployeeStatus, listEmployeeDrafts, listEmployees, listRoles } from "../../api/employees";
+import { listProjects } from "../../api/projects";
+import { toastApiError } from "../../utils/apiError";
 
 const TYPE_STYLES = {
   "FULL-TIME": "text-cyan-700 bg-cyan-50 border-cyan-200",
@@ -44,22 +46,22 @@ const getInitials = (name) => {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
-// API employee → row shape the existing UI already knows how to render.
+// API employee (GET /employees) → row shape the existing UI already knows how to render.
 const decorate = (apiEmp, idx) => ({
   raw: apiEmp,
   id: apiEmp.id,
-  empCode: apiEmp.country_emp_id || `EMP-${apiEmp.id}`,
-  iqamaNumber: apiEmp.iqama_number || "—",
-  name: apiEmp.full_name || "—",
+  empCode: apiEmp.employee_code,
+  // The ID number (Iqama / national ID / passport, D45).
+  iqamaNumber: apiEmp.country_emp_id || "—",
+  name: apiEmp.name || "—",
   email: apiEmp.email || "—",
-  avatar: apiEmp.profile_url || null,
-  initials: getInitials(apiEmp.full_name),
+  avatar: null,
+  initials: getInitials(apiEmp.name),
   color: AVATAR_COLORS[idx % AVATAR_COLORS.length],
-  role: apiEmp.roles?.[0]?.name || "—",
+  role: apiEmp.role?.name || "—",
   type: apiEmp.employment_type === "CONTRACT" ? "CONTRACT" : "FULL-TIME",
-  project: apiEmp.projects?.[0]?.project_name || "NA",
-  staffing: apiEmp.staffingCompany?.name || "NA",
-  status: apiEmp.user_status === "ACTIVE" ? "Active" : "Inactive",
+  project: apiEmp.main_project?.name || "NA",
+  staffing: apiEmp.staffing_company?.name || "NA",
   employmentStatus: apiEmp.employment_status || "ACTIVE",
 });
 
@@ -82,12 +84,10 @@ const Avatar = ({ emp }) =>
 
 function Employees() {
   const { t } = useTranslation("employees");
+  const { t: tExits } = useTranslation("exits");
   const navigate = useNavigate();
-  const loading = false;
-  // The header's financial year: a past year (?fy, added by the api client)
-  // also lists the former employees who worked in it, with their badge.
-  const fy = useFiscalYear();
-  const projects = B_PROJECTS;
+  const { data: projectData } = useApiQuery(() => listProjects({ limit: 100 }).catch(() => null), []);
+  const projects = projectData?.items || [];
 
   // Filters (values map directly to the backend query params).
   const [searchInput, setSearchInput] = useState("");
@@ -95,23 +95,26 @@ function Employees() {
   const [projectId, setProjectId] = useState(""); // project_id
   const [type, setType] = useState(""); // employment_type
   const [roleId, setRoleId] = useState(""); // role_id
-  const [status, setStatus] = useState(""); // ACTIVE | INACTIVE
-  const [page, setPage] = useFyResetState(1, fy.version); // page 1 on a year change
+  const [status, setStatus] = useState(""); // ACTIVE | IN_NOTICE | EXITED
+  const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState(""); // "" | full_name | employment_type
   const [sortOrder, setSortOrder] = useState("asc"); // asc | desc
 
-  const roles = B_ROLES;
+  const { data: roleData } = useApiQuery(() => listRoles().catch(() => null), []);
+  const roles = roleData || [];
 
   // Employees | Drafts tabs (?tab=drafts). Drafts belong to the Add Employee
   // flow, so only users who can create employees see them.
   const can = useCan();
   const canCreate = can(MODULES.EMPLOYEE, ACTIONS.CREATE);
+  const canUpdate = can(MODULES.EMPLOYEE, ACTIONS.UPDATE);
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = canCreate && searchParams.get("tab") === "drafts" ? "drafts" : "employees";
   const setTab = (next) =>
     setSearchParams(next === "drafts" ? { tab: "drafts" } : {}, { replace: true });
-  const [draftCount, setDraftCount] = useState(EMPLOYEE_DRAFTS.length);
-  const onDraftCountChange = useCallback((n) => setDraftCount(n), []);
+  const drafts = useApiQuery(() => (canCreate ? listEmployeeDrafts({ limit: 1 }).catch(() => null) : Promise.resolve(null)), [canCreate]);
+  const draftCount = drafts.data?.total ?? 0;
+  const onDraftCountChange = drafts.reload;
 
   // Debounce the search box; reset to page 1 when the term settles.
   useEffect(() => {
@@ -122,27 +125,42 @@ function Employees() {
     return () => clearTimeout(id);
   }, [searchInput]);
 
-  // Filter, sort and page the static list (client-side).
-  const filtered = useMemo(() => {
-    let out = EMPLOYEE_RECORDS.filter(
-      (e) =>
-        matches(e, debouncedSearch, ["full_name", "email", "country_emp_id", "iqama_number"]) &&
-        (!projectId || (e.projects || []).some((p) => String(p.id) === String(projectId))) &&
-        (!type || e.employment_type === type) &&
-        (!roleId || String(e.roles?.[0]?.id) === String(roleId)) &&
-        (!status || e.user_status === status),
-    );
-    if (sortBy) {
-      const dir = sortOrder === "asc" ? 1 : -1;
-      out = [...out].sort((a, b) => String(a[sortBy] || "").localeCompare(String(b[sortBy] || "")) * dir);
+  // Filters and paging by the server (by Employee ID); the column sort orders the page.
+  const { data, loading, error, reload } = useApiQuery(
+    () => listEmployees({ page, limit: LIMIT, search: debouncedSearch, status, employmentType: type, projectId, roleId }),
+    [page, debouncedSearch, status, type, projectId, roleId],
+  );
+  const list = useMemo(() => {
+    const items = data?.items || [];
+    if (!sortBy) return items;
+    const key = sortBy === "full_name" ? "name" : sortBy;
+    const dir = sortOrder === "asc" ? 1 : -1;
+    return [...items].sort((a, b) => String(a[key] || "").localeCompare(String(b[key] || "")) * dir);
+  }, [data, sortBy, sortOrder]);
+  const pagination = { total: data?.total ?? 0, total_pages: Math.max(1, Math.ceil((data?.total ?? 0) / LIMIT)) };
+
+  // Bulk activate / deactivate (D56): all or nothing; an exited employee fails the batch.
+  const [selected, setSelected] = useState([]);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const pageIds = list.map((e) => e.id);
+  const allOnPage = pageIds.length > 0 && pageIds.every((id) => selected.includes(id));
+  const toggleOne = (id) => setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const toggleAll = () =>
+    setSelected((prev) => (allOnPage ? prev.filter((id) => !pageIds.includes(id)) : [...new Set([...prev, ...pageIds])]));
+  const runBulk = async (nextStatus) => {
+    if (!selected.length) return;
+    setBulkBusy(true);
+    try {
+      await bulkEmployeeStatus(selected, nextStatus);
+      toast.success(nextStatus === "ACTIVE" ? t("list.bulkActivated") : t("list.bulkDeactivated"));
+      setSelected([]);
+      reload();
+    } catch (err) {
+      // e.g. 409 EMPLOYEE_EXITED "This employee has exited. Use Rehire." — nobody changed.
+      toastApiError(err);
     }
-    return out;
-  }, [debouncedSearch, projectId, type, roleId, status, sortBy, sortOrder]);
-  const pagination = useMemo(() => {
-    const block = paginate(filtered, page, LIMIT);
-    return { list: block.rows, total: block.total, total_pages: block.totalPages };
-  }, [filtered, page]);
-  const list = pagination.list;
+    setBulkBusy(false);
+  };
 
   // Toggle server-side sort on a column (asc → desc → asc); resets to page 1.
   const toggleSort = (field) => {
@@ -242,7 +260,7 @@ function Employees() {
                 onChange={(e) => { setProjectId(e.target.value); setPage(1); }}
                 options={[
                   { label: t("list.filters.allProjects"), value: "" },
-                  ...projects.map((p) => ({ label: p.project_name, value: p.id }))
+                  ...projects.map((p) => ({ label: p.name, value: p.id }))
                 ]}
               />
             </div>
@@ -297,8 +315,7 @@ function Employees() {
                 onChange={(e) => { setStatus(e.target.value); setPage(1); }}
                 options={[
                   { label: t("list.filters.allStatus"), value: "" },
-                  { label: t("status.active"), value: "ACTIVE" },
-                  { label: t("status.inactive"), value: "INACTIVE" }
+                  ...["ACTIVE", "IN_NOTICE", "EXITED"].map((v) => ({ label: tExits(`employmentStatus.${v}`), value: v })),
                 ]}
               />
             </div>
@@ -338,11 +355,38 @@ function Employees() {
 
       {/* ── Table ── */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        {canUpdate && selected.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-gray-100 bg-cyan-50/40">
+            <span className="text-sm font-semibold text-gray-700">{t("list.bulkActions")}</span>
+            <span className="text-xs text-gray-500"><Ltr>{selected.length}</Ltr></span>
+            <button
+              type="button"
+              onClick={() => runBulk("ACTIVE")}
+              disabled={bulkBusy}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-green-700 bg-green-50 border border-green-200 hover:bg-green-100 disabled:opacity-50"
+            >
+              {t("list.activate")}
+            </button>
+            <button
+              type="button"
+              onClick={() => runBulk("SUSPENDED")}
+              disabled={bulkBusy}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 disabled:opacity-50"
+            >
+              {t("list.deactivate")}
+            </button>
+          </div>
+        )}
         {/* Responsive Table */}
         <div className="w-full overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
+                {canUpdate && (
+                  <th className="px-4 py-3 w-10">
+                    <input type="checkbox" checked={allOnPage} onChange={toggleAll} className="w-4 h-4 accent-cyan-600 cursor-pointer" aria-label={t("list.bulkActions")} />
+                  </th>
+                )}
                 {[
                   { labelKey: "list.table.sn" },
                   { labelKey: "list.table.employeeId" },
@@ -381,12 +425,18 @@ function Employees() {
             </thead>
 
             <tbody className="divide-y divide-gray-50">
-              {loading && rows.length === 0 ? (
-                <TableLoader colSpan={8} label={t("list.loading")} />
+              {loading ? (
+                <TableLoader colSpan={canUpdate ? 9 : 8} label={t("list.loading")} />
+              ) : error ? (
+                <tr>
+                  <td colSpan={canUpdate ? 9 : 8} className="px-4 py-6">
+                    <ScreenError error={error} onRetry={reload} />
+                  </td>
+                </tr>
               ) : rows.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={canUpdate ? 9 : 8}
                     className="py-14 text-center text-sm text-gray-400"
                   >
                     {t("list.empty")}
@@ -399,6 +449,17 @@ function Employees() {
                     onClick={() => navigate(`/admin/employees/${emp.id}`)}
                     className="cursor-pointer transition-colors hover:bg-gray-50"
                   >
+                    {canUpdate && (
+                      <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selected.includes(emp.id)}
+                          onChange={() => toggleOne(emp.id)}
+                          className="w-4 h-4 accent-cyan-600 cursor-pointer"
+                          aria-label={emp.name}
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-4 text-sm text-gray-500 whitespace-nowrap">
                       {(page - 1) * LIMIT + index + 1}
                     </td>
