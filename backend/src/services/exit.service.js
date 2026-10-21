@@ -1,5 +1,5 @@
 const { Op } = require("sequelize");
-const { sequelize, Employee, User, EmployeeExit, ExitEvent, ExitSetting } = require("../models");
+const { sequelize, ApprovalRequest, Employee, User, EmployeeExit, ExitEvent, ExitSetting } = require("../models");
 const ErrorHandler = require("../utils/ErrorHandler");
 const { addDays } = require("../utils/clock");
 const { ACCESS_LEVELS } = require("../constants/accessLevels");
@@ -7,13 +7,59 @@ const { UUID, likePattern } = require("./department.service");
 const { companyToday } = require("./companyTime.service");
 const approvals = require("./approval.service");
 
-// Raising exits, the exit list/detail and Exit settings (docs/plans/workforce-and-lifecycle.md
-// D58, D61, D62, D66). Approval outcomes, withdraw and emails are ticket 16b.
+// Raising exits, approval outcomes, withdraw, the exit list/detail and Exit settings
+// (docs/plans/workforce-and-lifecycle.md D58, D59, D61, D62, D66, D68).
 
 const ENTITY = "EXIT";
 const OPEN = ["PENDING_APPROVAL", "IN_NOTICE"];
-// Type label from the UI's navigation ("Exits" / "إنهاء الخدمة"); emails come with 16b.
-approvals.registerEntity(ENTITY, { moduleKey: "EXIT", label: { en: "Exit", ar: "إنهاء الخدمة" }, codePrefix: "EXT" });
+
+const userTo = (id, transaction) => (id ? User.findByPk(id, { attributes: ["id", "email", "lang_key"], transaction }) : null);
+const mailTo = (user, template, data) => ({ to: user.email, lang: user.lang_key, template, data });
+
+// The exit an approval request is for, locked (the request is already locked by the engine).
+const exitOfRequest = (request, transaction) =>
+  EmployeeExit.findOne({ where: { id: request.entity_id, employer_id: request.employer_id }, transaction, lock: transaction.LOCK.UPDATE });
+
+// D59, D68: final approval → exit and employee IN_NOTICE; the raiser is emailed, and so is the
+// leaving employee when someone else raised it. (An LWD already past is processed by ticket 18.)
+const onApproved = async (request, { transaction }) => {
+  const exit = await exitOfRequest(request, transaction);
+  if (!exit || exit.status !== "PENDING_APPROVAL") return;
+  const employee = await Employee.findByPk(exit.employee_id, { transaction, lock: transaction.LOCK.UPDATE });
+  await exit.update({ status: "IN_NOTICE" }, { transaction });
+  await employee.update({ employment_status: "IN_NOTICE" }, { transaction });
+  await ExitEvent.create({ exit_id: exit.id, event_type: "APPROVED" }, { transaction });
+
+  const mails = [];
+  const raiser = await userTo(exit.raised_by, transaction);
+  if (raiser) mails.push(mailTo(raiser, "exit-approved", { employeeName: employee.full_name, lastWorkingDay: exit.last_working_day }));
+  if (employee.user_id && employee.user_id !== exit.raised_by) {
+    const leaver = await userTo(employee.user_id, transaction);
+    if (leaver) mails.push(mailTo(leaver, "exit-approved-employee", { lastWorkingDay: exit.last_working_day }));
+  }
+  approvals.queueMails(transaction, mails);
+};
+
+// D59, D68: rejection → exit REJECTED with the reason (the employee is unchanged); the raiser is emailed.
+const onRejected = async (request, { transaction, reason }) => {
+  const exit = await exitOfRequest(request, transaction);
+  if (!exit || exit.status !== "PENDING_APPROVAL") return;
+  await exit.update({ status: "REJECTED", reject_reason: reason }, { transaction });
+  await ExitEvent.create({ exit_id: exit.id, event_type: "REJECTED", payload: { reason } }, { transaction });
+  const raiser = await userTo(exit.raised_by, transaction);
+  const employee = await Employee.findByPk(exit.employee_id, { attributes: ["full_name"], transaction });
+  if (raiser) approvals.queueMails(transaction, [mailTo(raiser, "exit-rejected", { employeeName: employee.full_name, reason })]);
+};
+
+// Type label from the UI's navigation ("Exits" / "إنهاء الخدمة").
+approvals.registerEntity(ENTITY, {
+  moduleKey: "EXIT",
+  label: { en: "Exit", ar: "إنهاء الخدمة" },
+  codePrefix: "EXT",
+  approvalTemplate: "exit-approval-needed",
+  onApproved,
+  onRejected,
+});
 
 const fieldError = (field, key) => new ErrorHandler("VALIDATION_FAILED", { errors: { [field]: key } });
 
@@ -95,15 +141,31 @@ const findExit = async (employerId, id, options = {}) => {
   return exit;
 };
 
-const getExit = async ({ employerId }, id) => {
-  const exit = await findExit(employerId, id, { include: DETAIL_INCLUDE });
+// D68: a termination raised by someone else stays hidden from the leaving employee until its
+// final approval (one never approved stays hidden). Returns the hidden exit ids.
+const hiddenFrom = async (auth) => {
+  const own = await Employee.findOne({ where: { user_id: auth.userId, employer_id: auth.employerId }, attributes: ["id"] });
+  if (!own) return [];
+  const ids = (
+    await EmployeeExit.findAll({ where: { employee_id: own.id, exit_type: "TERMINATION", raised_by: { [Op.ne]: auth.userId } }, attributes: ["id"] })
+  ).map((e) => e.id);
+  if (!ids.length) return [];
+  const approved = new Set((await ExitEvent.findAll({ where: { exit_id: ids, event_type: "APPROVED" }, attributes: ["exit_id"] })).map((e) => e.exit_id));
+  return ids.filter((id) => !approved.has(id));
+};
+
+const getExit = async (auth, id) => {
+  const exit = await findExit(auth.employerId, id, { include: DETAIL_INCLUDE });
+  if ((await hiddenFrom(auth)).includes(exit.id)) throw new ErrorHandler("NOT_FOUND");
   const events = await ExitEvent.findAll({ where: { exit_id: exit.id }, order: [["created_at", "ASC"], ["id", "ASC"]] });
   return toDetail(exit, events);
 };
 
 // GET /exits?status=&type=&reason=&lwdMonth=&search= (name, Employee ID), newest first.
-const listExits = async ({ employerId }, { page, limit, search, status, type, reason, lwdMonth }) => {
-  const where = { employer_id: employerId };
+const listExits = async (auth, { page, limit, search, status, type, reason, lwdMonth }) => {
+  const where = { employer_id: auth.employerId };
+  const hidden = await hiddenFrom(auth);
+  if (hidden.length) where.id = { [Op.notIn]: hidden };
   if (status) where.status = status;
   if (type) where.exit_type = type;
   if (reason) where.reason_category = reason;
@@ -214,4 +276,22 @@ const raiseExit = async (auth, id, body) =>
     return exit.id;
   });
 
-module.exports = { raiseExit, listExits, getExit, getSettings, saveSettings, findExit, ENTITY, OPEN };
+// ---------- POST /exits/:id/withdraw ----------
+
+// D59: the raiser, the owner, or employee:create + update withdraws a pending exit with a reason →
+// exit CANCELLED, its approval request CANCELLED (it leaves every inbox), exit event WITHDRAWN.
+const withdrawExit = async (auth, id, { reason }) =>
+  sequelize.transaction(async (transaction) => {
+    const found = await findExit(auth.employerId, id, { transaction });
+    if (found.raised_by !== auth.userId && !(can(auth, "create") && can(auth, "update"))) throw new ErrorHandler("FORBIDDEN");
+    // Lock order as in an approval decision: the request, then the exit.
+    if (found.approval_request_id) await ApprovalRequest.findByPk(found.approval_request_id, { transaction, lock: transaction.LOCK.UPDATE });
+    const exit = await findExit(auth.employerId, id, { transaction, lock: transaction.LOCK.UPDATE });
+    if (exit.status !== "PENDING_APPROVAL") throw new ErrorHandler("EXIT_INVALID_STATE");
+    if (exit.approval_request_id) await approvals.cancel(exit.approval_request_id, { transaction });
+    await exit.update({ status: "CANCELLED", cancel_reason: reason }, { transaction });
+    await ExitEvent.create({ exit_id: exit.id, event_type: "WITHDRAWN", payload: { reason }, actor_user_id: auth.userId }, { transaction });
+    return exit.id;
+  });
+
+module.exports = { raiseExit, withdrawExit, listExits, getExit, getSettings, saveSettings, findExit, ENTITY, OPEN };

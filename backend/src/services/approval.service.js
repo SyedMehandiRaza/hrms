@@ -385,5 +385,6 @@ module.exports = {
   reevaluate,
   reevaluateGroup,
   employeeOf,
+  queueMails,
   PENDING,
 };

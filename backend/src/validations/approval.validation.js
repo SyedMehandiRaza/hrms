@@ -18,4 +18,4 @@ const approveSchema = Joi.object({
 });
 const rejectSchema = Joi.object({ reason: reason.required() });
 
-module.exports = { approveSchema, rejectSchema };
+module.exports = { approveSchema, rejectSchema, reason };

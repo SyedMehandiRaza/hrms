@@ -1,6 +1,7 @@
 const Joi = require("joi");
 const { required, INVALID } = require("./department.validation");
 const { isRealDate } = require("./dates");
+const { reason } = require("./approval.validation");
 
 // Exits (standards §7.2 "Exit (raise, edit terms)", "Exit settings"; workforce D61, D62). Date
 // ranges that depend on today, the notice start or the caller are checked by the service.
@@ -87,4 +88,7 @@ const exitSettingsSchema = Joi.object({
   blockLoansDuringNotice: yesNo.required().messages({ "any.required": "yesNo" }),
 });
 
-module.exports = { raiseExitSchema, listExitsSchema, exitSettingsSchema, REASONS };
+// POST /exits/:id/withdraw (standards §7.2 "Exit withdraw / cancel").
+const withdrawExitSchema = Joi.object({ reason: reason.required() });
+
+module.exports = { raiseExitSchema, withdrawExitSchema, listExitsSchema, exitSettingsSchema, REASONS };

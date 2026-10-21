@@ -5,6 +5,11 @@ const raiseExit = async (req, res) => {
   res.status(201).json({ success: true, data: await exitService.getExit(req.auth, id) });
 };
 
+const withdrawExit = async (req, res) => {
+  const id = await exitService.withdrawExit(req.auth, req.params.id, req.body);
+  res.json({ success: true, data: await exitService.getExit(req.auth, id) });
+};
+
 const listExits = async (req, res) => {
   res.json({ success: true, data: await exitService.listExits(req.auth, req.query) });
 };
@@ -21,4 +26,4 @@ const saveSettings = async (req, res) => {
   res.json({ success: true, data: await exitService.saveSettings(req.auth, req.body) });
 };
 
-module.exports = { raiseExit, listExits, getExit, getSettings, saveSettings };
+module.exports = { raiseExit, withdrawExit, listExits, getExit, getSettings, saveSettings };

@@ -98,4 +98,57 @@ module.exports = {
       ].join("\n"),
     }),
   },
+
+  // Exit approvals (workforce D68): the current level's approvers, then the raiser and the leaving employee.
+  "exit-approval-needed": {
+    required: ["employeeName"],
+    en: ({ employeeName }) => ({
+      subject: "Exit approval needed",
+      text: `An exit request for ${employeeName} needs your approval.`,
+    }),
+    // AR: needs native review
+    ar: ({ employeeName }) => ({
+      subject: "موافقة مطلوبة على إنهاء خدمة",
+      text: `طلب إنهاء خدمة للموظف ${employeeName} بانتظار موافقتك.`,
+    }),
+  },
+
+  "exit-approved": {
+    required: ["employeeName", "lastWorkingDay"],
+    en: ({ employeeName, lastWorkingDay }) => ({
+      subject: "Exit request approved",
+      text: `The exit request for ${employeeName} has been approved.\n\nLast working day: ${lastWorkingDay}`,
+    }),
+    // AR: needs native review
+    ar: ({ employeeName, lastWorkingDay }) => ({
+      subject: "تمت الموافقة على طلب إنهاء الخدمة",
+      text: `تمت الموافقة على طلب إنهاء الخدمة للموظف ${employeeName}.\n\nآخر يوم عمل: ${lastWorkingDay}`,
+    }),
+  },
+
+  "exit-rejected": {
+    required: ["employeeName", "reason"],
+    en: ({ employeeName, reason }) => ({
+      subject: "Exit request rejected",
+      text: `The exit request for ${employeeName} has been rejected.\n\nReason: ${reason}`,
+    }),
+    // AR: needs native review
+    ar: ({ employeeName, reason }) => ({
+      subject: "تم رفض طلب إنهاء الخدمة",
+      text: `تم رفض طلب إنهاء الخدمة للموظف ${employeeName}.\n\nالسبب: ${reason}`,
+    }),
+  },
+
+  "exit-approved-employee": {
+    required: ["lastWorkingDay"],
+    en: ({ lastWorkingDay }) => ({
+      subject: "Your exit has been confirmed",
+      text: `Your exit has been approved.\n\nYour last working day is ${lastWorkingDay}.`,
+    }),
+    // AR: needs native review
+    ar: ({ lastWorkingDay }) => ({
+      subject: "تم تأكيد إنهاء خدمتك",
+      text: `تمت الموافقة على إنهاء خدمتك.\n\nآخر يوم عمل لك هو ${lastWorkingDay}.`,
+    }),
+  },
 };

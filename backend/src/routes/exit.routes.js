@@ -4,7 +4,7 @@ const requireAuth = require("../middlewares/requireAuth");
 const requireAccessLevel = require("../middlewares/requireAccessLevel");
 const requirePermission = require("../middlewares/requirePermission");
 const { ACCESS_LEVELS } = require("../constants/accessLevels");
-const { listExitsSchema, exitSettingsSchema } = require("../validations/exit.validation");
+const { listExitsSchema, exitSettingsSchema, withdrawExitSchema } = require("../validations/exit.validation");
 const exitController = require("../controllers/exit.controller");
 
 // /exits and /exit-settings (workforce D58–D66): ADMIN, or a role with the matching exit flag.
@@ -19,6 +19,8 @@ const can = (action) => [...companyLogin, requirePermission("exit", action)];
 const exitRouter = Router();
 exitRouter.get("/", ...can("read"), validate(listExitsSchema, "query"), exitController.listExits);
 exitRouter.get("/:id", ...can("read"), exitController.getExit);
+// Withdraw a pending exit (D59): its raiser, the owner, or employee:create + update — checked by the service.
+exitRouter.post("/:id/withdraw", ...companyLogin, validate(withdrawExitSchema), exitController.withdrawExit);
 
 const exitSettingsRouter = Router();
 exitSettingsRouter.get("/", ...can("read"), exitController.getSettings);
