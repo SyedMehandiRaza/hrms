@@ -113,7 +113,8 @@
     "DOCUMENT_SENT": "Documents e-mailed",
     "APPROVED": "Exit approved",
     "REJECTED": "Exit rejected",
-    "WITHDRAWN": "Exit request withdrawn"
+    "WITHDRAWN": "Exit request withdrawn",
+    "LWD_EARLIER": "Last working day moved earlier"
   },
   "payrollStatus": {
     "NOT_GENERATED": "Not generated",
@@ -469,7 +470,8 @@
       "noHistory": "No extensions so far.",
       "extendedBy": "Extended by {{days}}",
       "revertedBy": "Extension of {{days}} reverted",
-      "leaveRef": "Leave request #{{id}}"
+      "leaveRef": "Leave request #{{id}}",
+      "movedEarlier": "Moved earlier by {{days}}"
     },
     "activity": {
       "title": "Activity",

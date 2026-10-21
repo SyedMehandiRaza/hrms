@@ -61,7 +61,7 @@ Workforce tickets 03, 04, 13a, 20, 21, 28a are also blocked by geo tickets (show
 ## Workforce structure + Employee lifecycle (`workforce/`)
 
 Plan: `docs/plans/workforce-and-lifecycle.md`. ADRs 0010 (1:1 head office ↔ project), 0011 (one approval group per
-employee). Builds on Auth + Company (all done). Senior review 2026-10-20 applied (plan §8). Frontier now: **33, 35**.
+employee). Builds on Auth + Company (all done). Senior review 2026-10-20 applied (plan §8). Frontier now: **none — all workforce tickets done**.
 
 ### Backend + tests
 
@@ -113,4 +113,4 @@ employee). Builds on Auth + Company (all done). Senior review 2026-10-20 applied
 | 33 | [Exit list](workforce/33-ui-exit-list.md) | done | 16b |
 | 34 | [Exit detail](workforce/34-ui-exit-detail.md) | done | 33, 17, 19 |
 | 35 | [Settings → Exit settings tab](workforce/35-ui-exit-settings.md) | done | 16a |
-| 36 | [End-to-end workforce lifecycle](workforce/36-e2e-workforce-lifecycle.md) | ready-for-agent | all other workforce tickets |
+| 36 | [End-to-end workforce lifecycle](workforce/36-e2e-workforce-lifecycle.md) | done | all other workforce tickets |

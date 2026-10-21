@@ -113,7 +113,8 @@
     "DOCUMENT_SENT": "تم إرسال المستندات",
     "APPROVED": "تمت الموافقة على المغادرة",
     "REJECTED": "تم رفض المغادرة",
-    "WITHDRAWN": "تم سحب طلب المغادرة"
+    "WITHDRAWN": "تم سحب طلب المغادرة",
+    "LWD_EARLIER": "تم تقديم آخر يوم عمل"
   },
   "payrollStatus": {
     "NOT_GENERATED": "لم يتم إنشاؤه",
@@ -481,7 +482,8 @@
       "noHistory": "لا توجد تمديدات حتى الآن.",
       "extendedBy": "تم التمديد بمقدار {{days}}",
       "revertedBy": "تم التراجع عن تمديد بمقدار {{days}}",
-      "leaveRef": "طلب الإجازة رقم {{id}}"
+      "leaveRef": "طلب الإجازة رقم {{id}}",
+      "movedEarlier": "تم تقديمه بمقدار {{days}}"
     },
     "activity": {
       "title": "سجل النشاط",

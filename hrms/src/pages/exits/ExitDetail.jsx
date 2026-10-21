@@ -30,7 +30,7 @@ import { useFormat } from "../../hooks/useFormat";
 import useYearLock from "../../hooks/useYearLock";
 import useFiscalYear from "../../hooks/useFiscalYear";
 import { diffDays } from "../../utils/exitValidation";
-import { ExitStatusBadge, EmploymentStatusBadge } from "../../components/exits/ExitBadges";
+import { ExitStatusBadge } from "../../components/exits/ExitBadges";
 import EditExitTermsModal from "../../components/exits/EditExitTermsModal";
 import CancelExitModal from "../../components/exits/CancelExitModal";
 import RehireModal from "../../components/exits/RehireModal";
@@ -84,7 +84,8 @@ const toView = (d) => {
       if (e.event_type === "LWD_EXTENDED") {
         const from = e.payload?.old?.last_working_day;
         const to = e.payload?.new?.last_working_day;
-        return { ...e, payload: { from, to, days: Math.abs(diffDays(to, from) || 0) } };
+        const earlier = (diffDays(to, from) || 0) < 0;
+        return { ...e, event_type: earlier ? "LWD_EARLIER" : e.event_type, payload: { from, to, days: Math.abs(diffDays(to, from) || 0) } };
       }
       if (e.event_type === "TERMS_UPDATED") {
         const old = e.payload?.old || {};
@@ -351,7 +352,6 @@ function Header({ exit, actions }) {
                 <span className="text-xl font-bold text-gray-900">{t("list.unknownEmployee")}</span>
               )}
               <ExitStatusBadge status={exit.status} />
-              <EmploymentStatusBadge status={emp.employment_status} />
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs">
               {emp.country_emp_id && (
@@ -464,7 +464,7 @@ function LwdPanel({ exit }) {
   const today = useFiscalYear().today;
   const n = exit.notice || {};
   const ext = Number(n.extended_days || 0);
-  const changes = (exit.events || []).filter((e) => e.event_type === "LWD_EXTENDED" || e.event_type === "LWD_REVERTED");
+  const changes = (exit.events || []).filter((e) => ["LWD_EXTENDED", "LWD_REVERTED", "LWD_EARLIER"].includes(e.event_type));
   const left =
     exit.status === "IN_NOTICE"
       ? Math.max(Number(n.days_left ?? diffDays(n.last_working_day, today) ?? 0), 0)
@@ -516,7 +516,9 @@ function LwdPanel({ exit }) {
                       <p className="text-sm font-medium text-gray-900">
                         {extended
                           ? t("detail.lwd.extendedBy", { days: t("common.days", { count: days }) })
-                          : t("detail.lwd.revertedBy", { days: t("common.days", { count: days }) })}
+                          : e.event_type === "LWD_EARLIER"
+                            ? t("detail.lwd.movedEarlier", { days: t("common.days", { count: days }) })
+                            : t("detail.lwd.revertedBy", { days: t("common.days", { count: days }) })}
                       </p>
                       <p className="text-xs text-gray-500 flex flex-wrap items-center gap-1">
                         {fmtDate(p.from)}
@@ -649,6 +651,7 @@ function EventDetail({ event }) {
       );
     case "LWD_EXTENDED":
     case "LWD_REVERTED":
+    case "LWD_EARLIER":
       return (
         <div className={box}>
           <p className="flex flex-wrap items-center gap-1">
