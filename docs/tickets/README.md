@@ -98,7 +98,7 @@ employee). Builds on Auth + Company (all done). Senior review 2026-10-20 applied
 |---|---|---|---|
 | 20 | [Head offices screens](workforce/20-ui-head-offices.md) | done | 03, geo 05 |
 | 21 | [Projects page, full list, create/edit](workforce/21-ui-projects-list-create.md) | done | 04, geo 05 |
-| 22 | [Project detail + assign / remove](workforce/22-ui-project-detail.md) | ready-for-agent | 21, 05 |
+| 22 | [Project detail + assign / remove](workforce/22-ui-project-detail.md) | done | 21, 05 |
 | 23 | [Shift list + add/edit, week-offs, copy](workforce/23-ui-shifts.md) | done | 06, 07 |
 | 24 | [Leave policy screen](workforce/24-ui-leave-policy.md) | done | 08 |
 | 25 | [Salary components screen](workforce/25-ui-salary-components.md) | done | 09 |

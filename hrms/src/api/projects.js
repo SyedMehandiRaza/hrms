@@ -46,3 +46,31 @@ export const uploadProjectImage = (id, file) => {
 // DELETE /projects/:id/image → the item (photo null).
 export const removeProjectImage = (id) =>
   client.delete(`/projects/${encodeURIComponent(id)}/image`).then((res) => res.data.data);
+
+// ── Workforce (D13–D15) ──
+// A member: { id, employee_code, name, role, access_level, employment_type, staffing_company,
+//   employment_status ("ACTIVE"|"IN_NOTICE"), is_main, start_date }
+
+// GET /projects/:id/employees?page=&limit=&search=&status= (ACTIVE | IN_NOTICE | "") → { items, total, page, limit }
+export const listProjectWorkforce = (id, { page = 1, limit = 20, search = "", status = "" } = {}) =>
+  client
+    .get(`/projects/${encodeURIComponent(id)}/employees`, { params: { page, limit, search, status } })
+    .then((res) => res.data.data);
+
+// GET /projects/:id/assignable-employees?search=&page=&limit= → { items: [{ id, employee_code, name,
+//   employment_type }], total, page, limit }: active employees not on the project yet.
+export const listAssignableEmployees = (id, { page = 1, limit = 100, search = "" } = {}) =>
+  client
+    .get(`/projects/${encodeURIComponent(id)}/assignable-employees`, { params: { page, limit, search } })
+    .then((res) => res.data.data);
+
+// POST /projects/:id/employees { employeeIds } → { assigned }. All or nothing.
+// 409 PROJECT_NOT_ACTIVE, PROJECT_GENERAL_EMPLOYEE_SINGLE.
+export const assignProjectEmployees = (id, employeeIds) =>
+  client.post(`/projects/${encodeURIComponent(id)}/employees`, { employeeIds }).then((res) => res.data.data);
+
+// DELETE /projects/:id/employees/:employeeId → { id }. 409 PROJECT_REMOVE_MAIN.
+export const removeProjectEmployee = (id, employeeId) =>
+  client
+    .delete(`/projects/${encodeURIComponent(id)}/employees/${encodeURIComponent(employeeId)}`)
+    .then((res) => res.data.data);

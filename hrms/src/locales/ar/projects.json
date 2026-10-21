@@ -346,13 +346,15 @@
         "movedIn": "نُقل إليه",
         "movedOut": "نُقل منه"
       }
-    }
+    },
+    "main": "رئيسي"
   },
   "empStatus": {
     "ACTIVE": "نشط",
     "INACTIVE": "غير نشط",
     "BLOCKED": "محظور",
-    "SUSPENDED": "موقوف"
+    "SUSPENDED": "موقوف",
+    "IN_NOTICE": "في فترة الإشعار"
   },
   "list": {
     "allProjects": "جميع المشاريع",

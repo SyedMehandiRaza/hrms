@@ -1,6 +1,4 @@
-import { useEffect, useMemo } from "react";
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   MdOutlineLocationOn,
   MdOutlineCalendarToday,
@@ -16,16 +14,21 @@ import CustomDropdown from "../../components/CustomDropdown";
 import { Link, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
-import { projectById, projectEmployeesFor, ASSIGNABLE_EMPLOYEES } from "../../data/groupC";
+import { getProject, listProjectWorkforce, removeProjectEmployee, updateProject } from "../../api/projects";
+import { assetUrl } from "../../api/client";
 import AssignEmployeesModal from "../../components/AssignEmployeesModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import { TableLoader } from "../../components/Loader";
+import { ScreenError } from "../../components/ScreenState";
 import Ltr from "../../components/Ltr";
 import { useFormat } from "../../hooks/useFormat";
+import useApiQuery from "../../hooks/useApiQuery";
 import Can from "../../components/Can";
 import EditProjectModal from "../../components/EditProjectModal";
 import OfflineAttendanceTile from "../../components/projects/OfflineAttendanceTile";
 import { MODULES, ACTIONS } from "../../constants/permissions";
+import { toastApiError } from "../../utils/apiError";
+import { toProjectBody, toProjectFormValues } from "../../utils/projectRules";
 import constructionImage from "../../assets/images/constructionimage.png";
 
 const EMP_AVATAR_COLORS = [
@@ -60,7 +63,7 @@ const PAGE_SIZE = 4;
 
 const apiStatusToDisplay = (s) => {
   if (s === "COMPLETED") return "Completed";
-  if (s === "INACTIVE") return "On Hold";
+  if (s === "ON_HOLD") return "On Hold";
   if (s === "ACTIVE") return "Active";
   return "—";
 };
@@ -80,35 +83,49 @@ const STATUS_PILL = {
   "—": "bg-gray-50 border-gray-200 text-gray-500 [&_.dot]:bg-gray-300",
 };
 
-function ProjectDetail({ projectId, onBack, isStaffingCompany = false }) {
+// Workforce status = the member's employment status (D15): Active / In notice.
+const EMP_STATUS_PILL = {
+  ACTIVE: "bg-green-50 text-green-700 border-green-200",
+  IN_NOTICE: "bg-amber-50 text-amber-700 border-amber-200",
+};
+
+// The admin project page (D13–D15): the project from GET /projects/:id, its workforce from
+// GET /projects/:id/employees (paged on the server), assign and remove.
+function ProjectDetail() {
   const { t } = useTranslation("projects");
   const { fmtDate } = useFormat();
-  const params = useParams();
-  const id = projectId ?? params.id;
-  // Static build: the project + its roster live in local state.
-  const initialProject = useMemo(() => projectById(id), [id]);
-  const [current, setCurrent] = useState(initialProject);
-  const detailLoading = false;
+  const { id } = useParams();
+
+  const { data: current, loading: detailLoading, error: detailError, reload: reloadProject, setData: setCurrent } =
+    useApiQuery(() => getProject(id), [id]);
 
   const [tab, setTab] = useState("ALL");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
 
-  const [employees, setEmployees] = useState(() => projectEmployeesFor(initialProject.id, isStaffingCompany));
-  const empLoading = false;
+  const status = tab === "ALL" ? "" : tab;
+  const {
+    data: workforce,
+    loading: empLoading,
+    error: empError,
+    reload: reloadEmployees,
+  } = useApiQuery(
+    () => listProjectWorkforce(id, { page, limit: PAGE_SIZE, search: debouncedSearch, status }),
+    [id, page, debouncedSearch, status],
+  );
+  const employees = workforce?.items || [];
+  const total = workforce?.total || 0;
+
   const [openAssign, setOpenAssign] = useState(false);
   const [editProject, setEditProject] = useState(null);
   const [employeeToRemove, setEmployeeToRemove] = useState(null);
+  const [removing, setRemoving] = useState(false);
 
-  // Add the people picked in the assign modal to the local roster.
-  const loadEmployees = (ids = []) => {
-    const added = ASSIGNABLE_EMPLOYEES.filter((e) => ids.includes(e.id)).map((e) => ({
-      ...e,
-      role: e.roles?.[0]?.name,
-      staffing_company: null,
-    }));
-    setEmployees((prev) => [...prev, ...added.filter((a) => !prev.some((p) => p.id === a.id))]);
+  // After an assign: the new members show in the table and the project's head count changes.
+  const loadEmployees = () => {
+    reloadEmployees();
+    reloadProject();
   };
 
   useEffect(() => {
@@ -119,21 +136,8 @@ function ProjectDetail({ projectId, onBack, isStaffingCompany = false }) {
     return () => clearTimeout(handler);
   }, [search]);
 
-  const filteredEmployees = employees.filter((emp) => {
-    if (tab !== "ALL" && emp.status !== tab) {
-      return false;
-    }
-    if (debouncedSearch) {
-      return (emp.full_name || emp.name || "").toLowerCase().includes(debouncedSearch.toLowerCase());
-    }
-    return true;
-  });
-
-  const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / PAGE_SIZE));
-  const paginated = filteredEmployees.slice(
-    (page - 1) * PAGE_SIZE,
-    page * PAGE_SIZE,
-  );
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const paginated = employees;
 
   const handleClearFilters = () => {
     setSearch("");
@@ -142,16 +146,41 @@ function ProjectDetail({ projectId, onBack, isStaffingCompany = false }) {
     setPage(1);
   };
 
+  // The offline switch saves the project as it is with only that flag changed.
+  const saveOffline = (allowed) =>
+    updateProject(id, {
+      ...toProjectBody(toProjectFormValues(current), {
+        officeId: current.office?.id,
+        position: { lat: current.latitude, lng: current.longitude },
+        address: current.location,
+      }),
+      allowOfflineAttendance: allowed,
+    });
+
   const handleRemove = (emp) => {
     setEmployeeToRemove(emp);
   };
 
   const confirmRemove = async () => {
-    if (!employeeToRemove) return;
-    setEmployees((prev) => prev.filter((e) => e.id !== employeeToRemove.id));
-    toast.success(t("detail.toast.employeeRemoved"));
+    if (!employeeToRemove || removing) return;
+    setRemoving(true);
+    try {
+      await removeProjectEmployee(id, employeeToRemove.id);
+      toast.success(t("detail.toast.employeeRemoved"));
+      // The last row of a page went: step back a page.
+      if (employees.length === 1 && page > 1) setPage(page - 1);
+      else reloadEmployees();
+      reloadProject();
+    } catch (err) {
+      toastApiError(err, t("detail.toast.removeFailed"));
+    }
+    setRemoving(false);
     setEmployeeToRemove(null);
   };
+
+  if (detailError && !current) {
+    return <ScreenError error={detailError} onRetry={reloadProject} />;
+  }
 
   const displayStatus = apiStatusToDisplay(current?.status);
   const pillCls = STATUS_PILL[displayStatus] || STATUS_PILL["—"];
@@ -160,6 +189,7 @@ function ProjectDetail({ projectId, onBack, isStaffingCompany = false }) {
     : displayStatus;
   const typeDisplay = (type) =>
     type === "CONTRACT" ? t("type.contract") : t("type.fullTime");
+  const empStatusLabel = (s) => (s ? t(`empStatus.${s}`, { defaultValue: s }) : t("detail.unknown"));
 
   return (
     <>
@@ -168,24 +198,15 @@ function ProjectDetail({ projectId, onBack, isStaffingCompany = false }) {
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-1.5 text-sm flex-wrap mb-2">
-              {onBack ? (
-                <button
-                  onClick={onBack}
-                  className="text-gray-400 hover:text-cyan-600 transition-colors"
-                >
-                  {t("detail.breadcrumbProjects")}
-                </button>
-              ) : (
-                <Link
-                  to="/admin/projects"
-                  className="text-gray-400 hover:text-cyan-600 transition-colors"
-                >
-                  {t("detail.breadcrumbProjects")}
-                </Link>
-              )}
+              <Link
+                to="/admin/projects"
+                className="text-gray-400 hover:text-cyan-600 transition-colors"
+              >
+                {t("detail.breadcrumbProjects")}
+              </Link>
               <MdOutlineChevronRight className="text-gray-300 rtl:rotate-180" />
               <span className="text-cyan-600 font-semibold">
-                <Ltr>{current?.project_code || (id ? `P-${id}` : "—")}</Ltr>
+                <Ltr>{current?.code || "—"}</Ltr>
               </span>
             </div>
 
@@ -193,7 +214,7 @@ function ProjectDetail({ projectId, onBack, isStaffingCompany = false }) {
               <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
                 {detailLoading && !current
                   ? t("detail.loading")
-                  : current?.project_name || "—"}
+                  : current?.name || "—"}
               </h1>
               <span
                 className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-xs font-semibold ${pillCls}`}
@@ -208,6 +229,7 @@ function ProjectDetail({ projectId, onBack, isStaffingCompany = false }) {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setEditProject(current)}
+                disabled={!current}
                 className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-lg font-medium text-sm transition-colors flex-shrink-0"
               >
                 <MdEdit className="text-lg" />
@@ -215,6 +237,7 @@ function ProjectDetail({ projectId, onBack, isStaffingCompany = false }) {
               </button>
               <button
                 onClick={() => setOpenAssign(true)}
+                disabled={!current}
                 className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2.5 rounded-lg font-medium text-sm transition-colors flex-shrink-0 self-start"
               >
                 <MdOutlinePersonAdd className="text-lg" />
@@ -229,7 +252,7 @@ function ProjectDetail({ projectId, onBack, isStaffingCompany = false }) {
           {/* Image */}
           <div className="w-full lg:w-2/5 flex-shrink-0">
             <img
-              src={current?.photo_url || constructionImage}
+              src={current?.photo ? assetUrl(current.photo) : constructionImage}
               alt={t("detail.imageAlt")}
               className="w-full h-48 sm:h-64 object-cover rounded-xl bg-gray-100"
             />
@@ -259,18 +282,18 @@ function ProjectDetail({ projectId, onBack, isStaffingCompany = false }) {
                 <div>
                   <p className="text-xs text-gray-500">{t("detail.radius")}</p>
                   <p className="text-sm font-semibold text-gray-900">
-                    {current?.radius_meters ? <Ltr>{current.radius_meters}m</Ltr> : "—"}
+                    {current?.radius ? <Ltr>{current.radius}m</Ltr> : "—"}
                   </p>
                 </div>
               </div>
               {/* Offline (mobile) attendance for employees whose main project this is */}
-              <OfflineAttendanceTile project={current} onSaved={(patch) => setCurrent((p) => ({ ...p, ...patch }))} />
+              <OfflineAttendanceTile project={current} save={saveOffline} onSaved={(saved) => setCurrent(saved)} />
               <div className="bg-gray-50 rounded-lg p-3 flex items-start gap-3 sm:col-span-2">
                 <MdOutlineLocationOn className="text-gray-400 text-xl mt-0.5" />
                 <div>
                   <p className="text-xs text-gray-500">{t("card.location")}</p>
                   <p className="text-sm font-semibold text-gray-900">
-                    {current?.project_location || "—"}
+                    {current?.location || "—"}
                   </p>
                 </div>
               </div>
@@ -287,7 +310,7 @@ function ProjectDetail({ projectId, onBack, isStaffingCompany = false }) {
                 {t("detail.assignedWorkforce")}
               </h3>
               <p className="text-xs text-gray-500 mt-1">
-                {t("detail.totalPersonnel", { count: employees.length })}
+                {t("detail.totalPersonnel", { count: current?.employee_count ?? total })}
               </p>
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-3 sm:mt-0">
@@ -303,8 +326,8 @@ function ProjectDetail({ projectId, onBack, isStaffingCompany = false }) {
                 <CustomDropdown
                   options={[
                     { value: "ALL", label: t("detail.allStatus") },
-                    { value: "ACTIVE", label: t("status.active") },
-                    { value: "INACTIVE", label: t("status.inactive") },
+                    { value: "ACTIVE", label: t("empStatus.ACTIVE") },
+                    { value: "IN_NOTICE", label: t("empStatus.IN_NOTICE") },
                   ]}
                   value={tab}
                   onChange={(val) => {
@@ -352,6 +375,12 @@ function ProjectDetail({ projectId, onBack, isStaffingCompany = false }) {
               <tbody className="divide-y divide-gray-50">
                 {empLoading && employees.length === 0 ? (
                   <TableLoader colSpan={7} label={t("detail.loading")} />
+                ) : empError ? (
+                  <tr>
+                    <td colSpan={7}>
+                      <ScreenError error={empError} onRetry={reloadEmployees} />
+                    </td>
+                  </tr>
                 ) : paginated.length === 0 ? (
                   <tr>
                     <td
@@ -377,20 +406,20 @@ function ProjectDetail({ projectId, onBack, isStaffingCompany = false }) {
                             <div
                               className={`w-9 h-9 rounded ${EMP_AVATAR_COLORS[idx % EMP_AVATAR_COLORS.length]} text-white text-xs font-bold flex items-center justify-center flex-shrink-0`}
                             >
-                              {empInitials(emp.full_name)}
+                              {empInitials(emp.name)}
                             </div>
                             <div>
                               <p className="text-sm font-semibold text-gray-900">
-                                {emp.full_name}
+                                {emp.name}
                               </p>
                               <p className="text-xs text-gray-400">
-                                {emp.email ? <Ltr>{emp.email}</Ltr> : "—"}
+                                {emp.employee_code ? <Ltr>{emp.employee_code}</Ltr> : "—"}
                               </p>
                             </div>
                           </div>
                         </td>
                         <td className="px-5 py-4 text-sm text-gray-700">
-                          {emp.roles?.[0]?.name || emp.role || "—"}
+                          {emp.role || "—"}
                         </td>
                         <td className="px-5 py-4">
                           <span
@@ -400,20 +429,13 @@ function ProjectDetail({ projectId, onBack, isStaffingCompany = false }) {
                           </span>
                         </td>
                         <td className="px-5 py-4 text-sm text-gray-600">
-                          {emp.staffingCompany?.name || emp.staffing_company || "—"}
+                          {emp.staffing_company || "—"}
                         </td>
                         <td className="px-5 py-4">
                           <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${emp.status === "ACTIVE"
-                              ? "bg-green-50 text-green-700 border-green-200"
-                              : emp.status === "INACTIVE"
-                                ? "bg-gray-50 text-gray-700 border-gray-200"
-                                : emp.status === "BLOCKED" || emp.status === "SUSPENDED"
-                                  ? "bg-red-50 text-red-700 border-red-200"
-                                  : "bg-gray-50 text-gray-600 border-gray-200"
-                              }`}
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${EMP_STATUS_PILL[emp.employment_status] || "bg-gray-50 text-gray-600 border-gray-200"}`}
                           >
-                            {emp.status ? t(`empStatus.${emp.status}`, { defaultValue: emp.status.charAt(0).toUpperCase() + emp.status.slice(1).toLowerCase() }) : t("detail.unknown")}
+                            {empStatusLabel(emp.employment_status)}
                           </span>
                         </td>
                         <td className="px-5 py-4">
@@ -437,10 +459,12 @@ function ProjectDetail({ projectId, onBack, isStaffingCompany = false }) {
 
           {/* Mobile Cards */}
           <div className="lg:hidden divide-y divide-gray-100">
-            {empLoading ? (
+            {empLoading && employees.length === 0 ? (
               <div className="px-4 py-10 text-center text-sm text-gray-400">
                 {t("detail.loadingEmployees")}
               </div>
+            ) : empError ? (
+              <ScreenError error={empError} onRetry={reloadEmployees} />
             ) : paginated.length === 0 ? (
               <div className="px-4 py-10 text-center text-sm text-gray-400">
                 {t("detail.emptyMobile")}
@@ -455,14 +479,14 @@ function ProjectDetail({ projectId, onBack, isStaffingCompany = false }) {
                         <div
                           className={`w-10 h-10 rounded-full ${EMP_AVATAR_COLORS[idx % EMP_AVATAR_COLORS.length]} text-white text-xs font-bold flex items-center justify-center flex-shrink-0`}
                         >
-                          {empInitials(emp.full_name)}
+                          {empInitials(emp.name)}
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-gray-900">
-                            {emp.full_name}
+                            {emp.name}
                           </p>
                           <p className="text-xs text-gray-400">
-                            {emp.email ? <Ltr>{emp.email}</Ltr> : "—"}
+                            {emp.employee_code ? <Ltr>{emp.employee_code}</Ltr> : "—"}
                           </p>
                         </div>
                       </div>
@@ -484,16 +508,9 @@ function ProjectDetail({ projectId, onBack, isStaffingCompany = false }) {
                         {typeDisplay(emp.employment_type)}
                       </span>
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${emp.status === "ACTIVE"
-                          ? "bg-green-50 text-green-700 border-green-200"
-                          : emp.status === "INACTIVE"
-                            ? "bg-gray-50 text-gray-700 border-gray-200"
-                            : emp.status === "BLOCKED" || emp.status === "SUSPENDED"
-                              ? "bg-red-50 text-red-700 border-red-200"
-                              : "bg-gray-50 text-gray-600 border-gray-200"
-                          }`}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${EMP_STATUS_PILL[emp.employment_status] || "bg-gray-50 text-gray-600 border-gray-200"}`}
                       >
-                        {emp.status ? t(`empStatus.${emp.status}`, { defaultValue: emp.status.charAt(0).toUpperCase() + emp.status.slice(1).toLowerCase() }) : t("detail.unknown")}
+                        {empStatusLabel(emp.employment_status)}
                       </span>
                       <span className="text-xs text-gray-500">
                         {emp.staffing_company || "—"}
@@ -508,7 +525,7 @@ function ProjectDetail({ projectId, onBack, isStaffingCompany = false }) {
           {/* Pagination */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-4 border-t border-gray-100">
             <p className="text-sm text-gray-500 font-medium order-2 sm:order-1">
-              {t("detail.showing", { from: employees.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1, to: Math.min(page * PAGE_SIZE, employees.length), total: employees.length })}
+              {t("detail.showing", { from: total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1, to: Math.min(page * PAGE_SIZE, total), total })}
             </p>
             <div className="flex items-center gap-1 order-1 sm:order-2">
               <button
@@ -532,16 +549,6 @@ function ProjectDetail({ projectId, onBack, isStaffingCompany = false }) {
                 </button>
               ))}
 
-              {/* Fake Ellipsis for design match */}
-              {totalPages > 3 && <span className="text-gray-400 text-xs px-1">...</span>}
-              {totalPages > 3 && (
-                <button
-                  className="w-8 h-8 flex items-center justify-center rounded-md text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors"
-                >
-                  40
-                </button>
-              )}
-
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
@@ -557,7 +564,6 @@ function ProjectDetail({ projectId, onBack, isStaffingCompany = false }) {
       {openAssign && (
         <AssignEmployeesModal
           projectId={id}
-          assignedIds={employees.map((e) => e.id)}
           onClose={() => setOpenAssign(false)}
           onAssigned={loadEmployees}
         />
@@ -579,7 +585,7 @@ function ProjectDetail({ projectId, onBack, isStaffingCompany = false }) {
         onClose={() => setEmployeeToRemove(null)}
         onConfirm={confirmRemove}
         title={t("detail.removeTitle")}
-        message={t("detail.removeMessage", { name: employeeToRemove?.full_name })}
+        message={t("detail.removeMessage", { name: employeeToRemove?.name })}
         type="delete"
         confirmText={t("buttons.remove")}
       />

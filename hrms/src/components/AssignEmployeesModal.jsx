@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { MdClose, MdOutlineSearch, MdOutlinePersonAdd } from "react-icons/md";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
-import { ASSIGNABLE_EMPLOYEES } from "../data/groupC";
+import { assignProjectEmployees, listAssignableEmployees } from "../api/projects";
+import useApiQuery from "../hooks/useApiQuery";
+import { apiErrorMessage } from "../utils/apiError";
+import { ScreenError } from "./ScreenState";
 import Ltr from "./Ltr";
-
-const getEmpId = (e) => e?.id ?? e?._id ?? e?.employee_id;
 
 const initialsOf = (name = "") =>
   name
@@ -17,27 +18,23 @@ const initialsOf = (name = "") =>
     .join("")
     .toUpperCase() || "?";
 
-// projectId, assignedIds (array of ids already on the project), onClose, onAssigned()
-export default function AssignEmployeesModal({
-  // eslint-disable-next-line no-unused-vars
-  projectId,
-  assignedIds = [],
-  onClose,
-  onAssigned,
-}) {
+// projectId, onClose, onAssigned(). The list is GET /projects/:id/assignable-employees: active
+// employees who aren't on the project (people serving notice or exited can't be assigned, D13).
+export default function AssignEmployeesModal({ projectId, onClose, onAssigned }) {
   const { t } = useTranslation("projects");
-  // People serving notice or exited can't be assigned.
-  const [employees] = useState(() =>
-    ASSIGNABLE_EMPLOYEES.filter((e) => !["IN_NOTICE", "EXITED"].includes(e.employment_status)),
-  );
-  const loading = false;
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selected, setSelected] = useState(new Set());
 
-  const assignedSet = useMemo(
-    () => new Set(assignedIds.map((x) => String(x))),
-    [assignedIds]
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedSearch(search.trim()), 400);
+    return () => clearTimeout(handler);
+  }, [search]);
+
+  const { data, loading, error, reload } = useApiQuery(
+    () => listAssignableEmployees(projectId, { search: debouncedSearch, limit: 100 }),
+    [projectId, debouncedSearch],
   );
 
   useEffect(() => {
@@ -47,15 +44,7 @@ export default function AssignEmployeesModal({
     };
   }, []);
 
-  const filtered = useMemo(() => {
-    if (!search) return employees;
-    const q = search.toLowerCase();
-    return employees.filter(
-      (e) =>
-        (e.full_name || "").toLowerCase().includes(q) ||
-        (e.User?.email || "").toLowerCase().includes(q)
-    );
-  }, [employees, search]);
+  const filtered = useMemo(() => data?.items || [], [data]);
 
   const toggle = (id) => {
     setSelected((prev) => {
@@ -67,16 +56,23 @@ export default function AssignEmployeesModal({
   };
 
   const handleAssign = async () => {
-    const ids = Array.from(selected).map(Number);
+    const ids = Array.from(selected);
     if (ids.length === 0) {
       toast.error(t("assign.toast.selectAtLeastOne"));
       return;
     }
     setSaving(true);
+    try {
+      await assignProjectEmployees(projectId, ids);
+    } catch (err) {
+      // All or nothing: the server's reason (on hold project, general employee on another project).
+      toast.error(apiErrorMessage(err, t("assign.toast.assignFailed")));
+      setSaving(false);
+      return;
+    }
     toast.success(t("assign.toast.assigned"));
-    // Static build: hand the picked people back so the caller can add them locally.
-    onAssigned?.(ids, employees.filter((e) => ids.includes(Number(getEmpId(e)))));
     setSaving(false);
+    onAssigned?.(ids);
     onClose();
   };
 
@@ -133,6 +129,8 @@ export default function AssignEmployeesModal({
               <span className="w-5 h-5 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin me-3" />
               {t("modal.loadingEmployees")}
             </div>
+          ) : error ? (
+            <ScreenError error={error} onRetry={reload} />
           ) : filtered.length === 0 ? (
             <p className="py-16 text-center text-sm text-gray-400">
               {t("modal.noEmployees")}
@@ -140,38 +138,30 @@ export default function AssignEmployeesModal({
           ) : (
             <div className="divide-y divide-gray-100">
               {filtered.map((emp) => {
-                const id = getEmpId(emp);
-                const already = assignedSet.has(String(id));
-                const checked = already || selected.has(String(id));
+                const id = emp.id;
+                const checked = selected.has(String(id));
                 return (
                   <label
                     key={id}
-                    className={`flex items-center gap-3 py-3 ${already ? "opacity-60 cursor-default" : "cursor-pointer hover:bg-gray-50"} px-2 rounded-lg`}
+                    className="flex items-center gap-3 py-3 cursor-pointer hover:bg-gray-50 px-2 rounded-lg"
                   >
                     <input
                       type="checkbox"
                       checked={checked}
-                      disabled={already}
                       onChange={() => toggle(id)}
                       className="w-4 h-4 accent-cyan-600 cursor-pointer disabled:cursor-default"
                     />
                     <div className="w-9 h-9 rounded-full bg-cyan-100 text-cyan-700 text-xs font-bold flex items-center justify-center shrink-0">
-                      {initialsOf(emp.full_name)}
+                      {initialsOf(emp.name)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-gray-900 truncate">
-                        {emp.full_name}
+                        {emp.name}
                       </p>
                       <p className="text-xs text-gray-400 truncate">
-                        {emp.User?.email ? <Ltr>{emp.User.email}</Ltr> : "—"}
-                        {emp.roles?.[0]?.name ? ` • ${emp.roles[0].name}` : ""}
+                        {emp.employee_code ? <Ltr>{emp.employee_code}</Ltr> : "—"}
                       </p>
                     </div>
-                    {already && (
-                      <span className="text-[10px] font-bold text-green-600 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full shrink-0">
-                        {t("modal.assignedBadge")}
-                      </span>
-                    )}
                   </label>
                 );
               })}

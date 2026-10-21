@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import ProjectDetail from "../projects/ProjectDetail";
+import StaticProjectDetail from "./StaticProjectDetail";
 
 export default function StaffingCompanyProjectDetail() {
   const { id } = useParams();
@@ -10,7 +10,7 @@ export default function StaffingCompanyProjectDetail() {
   };
 
   return (
-    <ProjectDetail
+    <StaticProjectDetail
       projectId={id}
       onBack={handleBack}
       isStaffingCompany={true}

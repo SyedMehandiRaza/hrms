@@ -342,13 +342,15 @@
         "movedIn": "Moved in",
         "movedOut": "Moved out"
       }
-    }
+    },
+    "main": "Main"
   },
   "empStatus": {
     "ACTIVE": "Active",
     "INACTIVE": "Inactive",
     "BLOCKED": "Blocked",
-    "SUSPENDED": "Suspended"
+    "SUSPENDED": "Suspended",
+    "IN_NOTICE": "In notice"
   },
   "list": {
     "allProjects": "All Projects",
